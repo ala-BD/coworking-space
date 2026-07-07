@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+
+<html class="light" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Encre & Cobalt Admin — Refund Processing</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Sora:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed-dim": "#b1c5ff",
+                    "surface": "#fbf9fb",
+                    "on-tertiary-fixed-variant": "#60401d",
+                    "error": "#ba1a1a",
+                    "surface-container-highest": "#e4e2e5",
+                    "primary-container": "#10233f",
+                    "on-tertiary-container": "#aa8259",
+                    "surface-dim": "#dbd9dc",
+                    "secondary-fixed": "#dae2ff",
+                    "surface-tint": "#4d5f7e",
+                    "outline": "#75777e",
+                    "tertiary-fixed": "#ffdcbc",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed-dim": "#ecbe90",
+                    "background": "#fbf9fb",
+                    "on-tertiary-fixed": "#2c1700",
+                    "outline-variant": "#c5c6ce",
+                    "on-surface": "#1b1b1e",
+                    "on-surface-variant": "#44474d",
+                    "on-primary": "#ffffff",
+                    "surface-bright": "#fbf9fb",
+                    "primary-fixed-dim": "#b5c7eb",
+                    "on-secondary-container": "#fefcff",
+                    "surface-container-high": "#e9e7ea",
+                    "inverse-surface": "#303033",
+                    "on-primary-container": "#798bac",
+                    "on-secondary": "#ffffff",
+                    "inverse-on-surface": "#f2f0f3",
+                    "surface-container-low": "#f5f3f6",
+                    "secondary": "#0054cb",
+                    "tertiary-container": "#361d00",
+                    "tertiary": "#180a00",
+                    "on-background": "#1b1b1e",
+                    "on-primary-fixed": "#071b37",
+                    "on-primary-fixed-variant": "#364765",
+                    "primary-fixed": "#d6e3ff",
+                    "on-tertiary": "#ffffff",
+                    "secondary-container": "#2d6deb",
+                    "on-error-container": "#93000a",
+                    "inverse-primary": "#b5c7eb",
+                    "on-secondary-fixed": "#001847",
+                    "on-error": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-fixed-variant": "#0040a0",
+                    "surface-container": "#efedf0",
+                    "success": "#2FBE8F",
+                    "alert": "#FF6F59",
+                    "marine": "#10233F",
+                    "cobalt": "#2F6FED"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "16px",
+                    "xl": "24px",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "sm": "16px",
+                    "gutter": "24px",
+                    "lg": "32px",
+                    "base": "4px",
+                    "md": "24px",
+                    "xs": "8px",
+                    "xl": "48px",
+                    "margin-desktop": "32px",
+                    "container-max": "1280px",
+                    "margin-mobile": "16px"
+            },
+            "fontFamily": {
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg-mobile": ["Sora"],
+                    "headline-xl": ["Sora"],
+                    "label-sm": ["Inter"],
+                    "headline-sm": ["Sora"],
+                    "headline-md": ["Sora"],
+                    "headline-lg": ["Sora"]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .sidebar-transition { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .glass-effect { backdrop-filter: blur(8px); background-color: rgba(255, 255, 255, 0.8); }
+        .tab-active { border-bottom: 2px solid #0054cb; color: #0054cb; font-weight: 600; }
+        
+        /* Custom shadows based on level 1 and 2 from brand guide */
+        .shadow-level-1 { shadow: 0px 2px 4px rgba(16, 35, 63, 0.04); }
+        .shadow-level-2 { shadow: 0px 8px 16px rgba(16, 35, 63, 0.08); }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f5f3f6; }
+        ::-webkit-scrollbar-thumb { background: #c5c6ce; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-[#F4F6F9] text-on-surface font-body-md min-h-screen flex overflow-hidden">
+<!-- SideNavBar Component -->
+<aside class="hidden md:flex flex-col h-screen w-64 left-0 sidebar-transition bg-primary-container text-on-primary py-lg px-sm z-50">
+<div class="px-sm mb-xl">
+<h1 class="font-headline-md text-headline-md text-on-primary tracking-tight">Coworking Ops</h1>
+<p class="font-label-sm text-on-primary-fixed-variant opacity-70">Refund Management</p>
+</div>
+<nav class="flex-grow space-y-xs">
+<a class="flex items-center px-sm py-xs space-x-3 text-on-primary-fixed-variant hover:text-on-primary hover:bg-primary-fixed-dim/10 transition-all scale-95 active:scale-90 rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center px-sm py-xs space-x-3 bg-secondary text-on-secondary rounded-lg scale-95" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-md text-label-md">Refunds</span>
+</a>
+<a class="flex items-center px-sm py-xs space-x-3 text-on-primary-fixed-variant hover:text-on-primary hover:bg-primary-fixed-dim/10 transition-all scale-95 active:scale-90 rounded-lg" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-md text-label-md">Members</span>
+</a>
+<a class="flex items-center px-sm py-xs space-x-3 text-on-primary-fixed-variant hover:text-on-primary hover:bg-primary-fixed-dim/10 transition-all scale-95 active:scale-90 rounded-lg" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-label-md text-label-md">Bookings</span>
+</a>
+<a class="flex items-center px-sm py-xs space-x-3 text-on-primary-fixed-variant hover:text-on-primary hover:bg-primary-fixed-dim/10 transition-all scale-95 active:scale-90 rounded-lg" href="#">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="font-label-md text-label-md">Analytics</span>
+</a>
+</nav>
+<div class="mt-auto space-y-xs pt-lg border-t border-white/10">
+<button class="w-full mb-gutter flex items-center justify-center space-x-2 py-3 bg-secondary-container text-on-secondary-container rounded-lg font-label-md hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined">add_circle</span>
+<span>New Refund</span>
+</button>
+<a class="flex items-center px-sm py-xs space-x-3 text-on-primary-fixed-variant hover:text-on-primary hover:bg-primary-fixed-dim/10 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">support_agent</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+<a class="flex items-center px-sm py-xs space-x-3 text-on-primary-fixed-variant hover:text-on-primary hover:bg-primary-fixed-dim/10 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-md text-label-md">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Shell -->
+<div class="flex-1 flex flex-col h-screen overflow-hidden">
+<!-- TopNavBar Component -->
+<header class="flex justify-between items-center w-full px-margin-desktop h-16 bg-surface shadow-sm docked full-width top-0 z-40">
+<div class="flex items-center flex-1 max-w-xl">
+<div class="relative w-full mr-gutter">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-full pl-10 pr-4 py-2 focus:ring-2 focus:ring-secondary text-body-sm font-body-sm" placeholder="Rechercher une transaction..." type="text"/>
+</div>
+</div>
+<div class="flex items-center space-x-gutter">
+<div class="flex items-center space-x-sm">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<div class="flex items-center space-x-3 border-l border-outline-variant pl-gutter">
+<div class="text-right">
+<p class="font-label-md text-label-md text-on-surface">Admin User</p>
+<p class="font-label-sm text-on-surface-variant opacity-70">Super Admin</p>
+</div>
+<img class="w-10 h-10 rounded-full border border-outline-variant object-cover" data-alt="A professional close-up headshot of a female technology executive in her 40s, looking directly at the camera with a confident smile. She has short, neatly styled dark hair and is wearing a sleek navy blue blazer. The background is a soft-focus modern office environment with cool blue and grey tones, perfectly aligned with a premium B2B SaaS aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBY2gQ-NzEsRQe3IO7OEpPc3qLEHENdUIPw91DhfIbPqRRNzHo0DkynAtkYlOEUOGWk_WcZMvrHA2loQAOFYHIyCwsDtkQ_l7_9dpbw5PVsqbPKW2cz0LmAUpEwtLOY7TTTh5j5F-y91bj-ugwczPu8s-diikXM8bBKbH6L6E4W-5JT3JxwFiFLCUQKuCPOz9VDR_DP_VIVwhmPHMcpe27CHWvKl49FcPKe7obccr3Lppgzvl-2vUGWDyUxegFK-vOqdqdC_1vN"/>
+</div>
+</div>
+</header>
+<!-- Page Body (Scrollable) -->
+<main class="flex-1 overflow-y-auto p-lg lg:max-w-container-max mx-auto w-full">
+<!-- Page Header -->
+<div class="mb-xl flex justify-between items-end">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-marine">Gestion des Remboursements</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">Traitez les demandes de remboursement suite aux annulations</p>
+</div>
+<button class="flex items-center space-x-2 px-md py-3 bg-secondary text-on-secondary rounded-lg font-label-md shadow-md hover:brightness-110 transition-all">
+<span class="material-symbols-outlined">file_download</span>
+<span>Exporter le rapport</span>
+</button>
+</div>
+<!-- Stat Cards (Bento Grid) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-xl">
+<div class="bg-white p-gutter rounded-lg shadow-sm border border-outline-variant/10 flex items-start space-x-sm">
+<div class="w-12 h-12 bg-alert/10 text-alert rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined">warning</span>
+</div>
+<div>
+<p class="font-label-sm text-on-surface-variant">Remboursements en attente</p>
+<h3 class="font-headline-md text-headline-md text-marine mt-1">5</h3>
+</div>
+</div>
+<div class="bg-white p-gutter rounded-lg shadow-sm border border-outline-variant/10 flex items-start space-x-sm">
+<div class="w-12 h-12 bg-marine/10 text-marine rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</div>
+<div>
+<p class="font-label-sm text-on-surface-variant">Total remboursé (Mois)</p>
+<h3 class="font-headline-md text-headline-md text-marine mt-1">2,450 DT</h3>
+</div>
+</div>
+<div class="bg-white p-gutter rounded-lg shadow-sm border border-outline-variant/10 flex items-start space-x-sm">
+<div class="w-12 h-12 bg-success/10 text-success rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined">savings</span>
+</div>
+<div>
+<p class="font-label-sm text-on-surface-variant">Économies Crédit Portefeuille</p>
+<h3 class="font-headline-md text-headline-md text-success mt-1">1,120 DT</h3>
+</div>
+</div>
+</div>
+<!-- Content Area: Tabs + Table -->
+<div class="bg-white rounded-lg shadow-md overflow-hidden border border-outline-variant/10">
+<div class="px-gutter border-b border-outline-variant/10 flex items-center">
+<button class="px-md py-4 tab-active font-label-md text-label-md">En attente (5)</button>
+<button class="px-md py-4 text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors">Historique</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-marine text-white">
+<tr>
+<th class="px-gutter py-4 font-label-sm text-label-sm">Membre</th>
+<th class="px-gutter py-4 font-label-sm text-label-sm">Réservation</th>
+<th class="px-gutter py-4 font-label-sm text-label-sm">Date Annulation</th>
+<th class="px-gutter py-4 font-label-sm text-label-sm text-right">Montant Initial</th>
+<th class="px-gutter py-4 font-label-sm text-label-sm text-center">Pénalité (%)</th>
+<th class="px-gutter py-4 font-label-sm text-label-sm text-right">Montant Net</th>
+<th class="px-gutter py-4 font-label-sm text-label-sm text-center">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<!-- Sample Row 1 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-gutter py-4">
+<div class="flex items-center space-x-3">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A portrait of a young North African female professional, Selma B. Khalfallah, with dark wavy hair and stylish glasses, wearing a smart cream blazer. She is smiling gently. The image is clean and bright with a minimalist office background, using soft daylighting to emphasize a warm and professional demeanor, consistent with a high-end corporate application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUylPG8JBkO6Pod84lwReMqJ_9vCLisDrUsI25Y7hvCEj0eVwL76BQNOgGQVb97qmYNMSYd4wGkESkntuHF9uY683cLzdIYz2G3O9WMayOgk6TeL3d5ZZZhwXiNAo3nnd9tppGd3VmJPv9NMaj2T_1G5rmHS7RYP7hnT4_vZScRFdhoa3AnJY2p6l4xfrB9bTA9PB7I5MxZH1CrMOeoT4M58L_3whE3SsN2205MP8R1suIxBFF1YuCeJ6xxJg212LDjklvfC4G"/>
+<span class="font-body-sm text-body-sm font-medium text-marine">Selma B. Khalfallah</span>
+</div>
+</td>
+<td class="px-gutter py-4 font-body-sm text-body-sm text-on-surface-variant">Open Space (12 Oct)</td>
+<td class="px-gutter py-4 font-body-sm text-body-sm text-on-surface-variant">11 Oct</td>
+<td class="px-gutter py-4 font-body-sm text-body-sm text-on-surface text-right">45,000 DT</td>
+<td class="px-gutter py-4 text-center">
+<span class="px-2 py-1 bg-alert/10 text-alert text-label-sm font-label-sm rounded-full">25%</span>
+</td>
+<td class="px-gutter py-4 font-body-sm text-body-sm font-bold text-marine text-right">33,750 DT</td>
+<td class="px-gutter py-4 text-center">
+<button class="px-4 py-2 bg-secondary/10 text-secondary hover:bg-secondary hover:text-white rounded-lg font-label-md text-label-md transition-all" onclick="openModal()">Traiter</button>
+</td>
+</tr>
+<!-- Sample Row 2 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-gutter py-4">
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-marine font-bold text-xs">AY</div>
+<span class="font-body-sm text-body-sm font-medium text-marine">Ahmed Yassine</span>
+</div>
+</td>
+<td class="px-gutter py-4 font-body-sm text-body-sm text-on-surface-variant">Bureau Privé (15 Oct)</td>
+<td class="px-gutter py-4 font-body-sm text-body-sm text-on-surface-variant">10 Oct</td>
+<td class="px-gutter py-4 font-body-sm text-body-sm text-on-surface text-right">120,000 DT</td>
+<td class="px-gutter py-4 text-center">
+<span class="px-2 py-1 bg-alert/10 text-alert text-label-sm font-label-sm rounded-full">10%</span>
+</td>
+<td class="px-gutter py-4 font-body-sm text-body-sm font-bold text-marine text-right">108,000 DT</td>
+<td class="px-gutter py-4 text-center">
+<button class="px-4 py-2 bg-secondary/10 text-secondary hover:bg-secondary hover:text-white rounded-lg font-label-md text-label-md transition-all">Traiter</button>
+</td>
+</tr>
+<!-- Sample Row 3 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-gutter py-4">
+<div class="flex items-center space-x-3">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A portrait of a middle-aged male executive with short greying hair, wearing a high-quality navy polo shirt. He has a friendly but professional expression. The background is a blurred high-end coworking lounge with wooden textures and warm lighting, creating an atmosphere of comfort and reliability for a professional B2B platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6jH3X1h8dt0JlEo8swd608eAGd5tgK5G3wX8D4YwBHoZ-0DVhddNmNL9sVob2G1ZaRfNxeytI-WujupI4cZ-d1sVSQjC8LPOWOUH_Qj3fcw0wXLtFL2gGwuvOZaPz4GLfrsq8nw4NnaHAM3DmYRXxaQLiOTP17Cms0KhHZGQwj4MM9EVpgxJmKKs-HZ1tD7wJ4Zkysao4-ycefbjGfS5wy4ZrlFI58wediDjXySBA910WuGjk3HdvaNz8fBrRyFHJAwnIk2bX"/>
+<span class="font-body-sm text-body-sm font-medium text-marine">Moncef L.</span>
+</div>
+</td>
+<td class="px-gutter py-4 font-body-sm text-body-sm text-on-surface-variant">Salle de Réunion B</td>
+<td class="px-gutter py-4 font-body-sm text-body-sm text-on-surface-variant">14 Oct</td>
+<td class="px-gutter py-4 font-body-sm text-body-sm text-on-surface text-right">65,000 DT</td>
+<td class="px-gutter py-4 text-center">
+<span class="px-2 py-1 bg-alert/10 text-alert text-label-sm font-label-sm rounded-full">50%</span>
+</td>
+<td class="px-gutter py-4 font-body-sm text-body-sm font-bold text-marine text-right">32,500 DT</td>
+<td class="px-gutter py-4 text-center">
+<button class="px-4 py-2 bg-secondary/10 text-secondary hover:bg-secondary hover:text-white rounded-lg font-label-md text-label-md transition-all">Traiter</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination / Footer -->
+<div class="px-gutter py-4 bg-surface-container-low flex justify-between items-center">
+<p class="font-body-sm text-body-sm text-on-surface-variant">Affichage de 1-3 sur 5 demandes</p>
+<div class="flex space-x-2">
+<button class="p-2 border border-outline-variant rounded-lg hover:bg-white transition-colors disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="p-2 border border-outline-variant rounded-lg hover:bg-white transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Modal UI Overlay -->
+<div class="fixed inset-0 z-[100] hidden" id="refundModal">
+<!-- Backdrop -->
+<div class="absolute inset-0 bg-marine/60 backdrop-blur-sm" onclick="closeModal()"></div>
+<!-- Modal Content -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg">
+<div class="bg-white rounded-xl shadow-level-3 overflow-hidden border border-outline-variant/10">
+<div class="p-lg bg-surface-container border-b border-outline-variant/10 flex justify-between items-center">
+<div>
+<h4 class="font-headline-sm text-headline-sm text-marine">Traiter le remboursement</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Selma B. Khalfallah — 33,750 DT</p>
+</div>
+<button class="text-on-surface-variant hover:text-marine transition-colors" onclick="closeModal()">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-lg space-y-gutter">
+<!-- Options -->
+<div class="space-y-sm">
+<label class="font-label-md text-label-md text-marine block mb-sm">Méthode de remboursement</label>
+<div class="grid grid-cols-1 gap-sm">
+<label class="flex items-center p-md border border-outline-variant/20 rounded-lg cursor-pointer hover:bg-surface-container-low transition-all has-[:checked]:border-secondary has-[:checked]:bg-secondary/5">
+<input class="w-5 h-5 text-secondary border-outline-variant focus:ring-secondary" name="refundMethod" type="radio"/>
+<div class="ml-4">
+<span class="font-label-md text-label-md text-marine block">Crédit portefeuille (Recommandé)</span>
+<span class="font-body-sm text-body-sm text-success">Instantané • Réduit les frais de transaction</span>
+</div>
+</label>
+<label class="flex items-center p-md border border-outline-variant/20 rounded-lg cursor-pointer hover:bg-surface-container-low transition-all has-[:checked]:border-secondary has-[:checked]:bg-secondary/5">
+<input class="w-5 h-5 text-secondary border-outline-variant focus:ring-secondary" name="refundMethod" type="radio"/>
+<div class="ml-4">
+<span class="font-label-md text-label-md text-marine block">Retour Flouci</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">2-3 jours ouvrables</span>
+</div>
+</label>
+<label class="flex items-center p-md border border-outline-variant/20 rounded-lg cursor-pointer hover:bg-surface-container-low transition-all has-[:checked]:border-secondary has-[:checked]:bg-secondary/5">
+<input class="w-5 h-5 text-secondary border-outline-variant focus:ring-secondary" name="refundMethod" type="radio"/>
+<div class="ml-4">
+<span class="font-label-md text-label-md text-marine block">Virement bancaire</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Requiert un RIB vérifié</span>
+</div>
+</label>
+<label class="flex items-center p-md border border-outline-variant/20 rounded-lg cursor-pointer hover:bg-surface-container-low transition-all has-[:checked]:border-secondary has-[:checked]:bg-secondary/5">
+<input class="w-5 h-5 text-secondary border-outline-variant focus:ring-secondary" name="refundMethod" type="radio"/>
+<div class="ml-4">
+<span class="font-label-md text-label-md text-marine block">Espèces</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">À retirer à l'accueil</span>
+</div>
+</label>
+</div>
+</div>
+<!-- Note Field -->
+<div class="space-y-sm">
+<label class="font-label-md text-label-md text-marine block">Note interne</label>
+<textarea class="w-full bg-white border border-outline-variant/20 rounded-lg p-md text-body-sm focus:ring-2 focus:ring-secondary focus:border-secondary transition-all h-24" placeholder="Commentaires internes..."></textarea>
+</div>
+</div>
+<div class="p-lg bg-surface-container border-t border-outline-variant/10 flex justify-end space-x-sm">
+<button class="px-md py-3 text-marine font-label-md hover:bg-surface-container-highest rounded-lg transition-colors" onclick="closeModal()">Annuler</button>
+<button class="px-lg py-3 bg-secondary text-on-secondary font-label-md rounded-lg shadow-md hover:brightness-110 transition-all">Confirmer le remboursement</button>
+</div>
+</div>
+</div>
+</div>
+<script>
+        function openModal() {
+            const modal = document.getElementById('refundModal');
+            modal.classList.remove('hidden');
+            modal.querySelector('.translate-y-1/2').classList.add('animate-in', 'fade-in', 'zoom-in', 'duration-300');
+        }
+
+        function closeModal() {
+            document.getElementById('refundModal').classList.add('hidden');
+        }
+
+        // Micro-interaction for hover effects on table rows
+        document.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('mouseenter', () => {
+                row.querySelector('button')?.classList.add('scale-105');
+            });
+            row.addEventListener('mouseleave', () => {
+                row.querySelector('button')?.classList.remove('scale-105');
+            });
+        });
+    </script>
+</body></html>

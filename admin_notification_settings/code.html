@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+
+<html class="light" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin — Notification Settings | WorkSpace Pro</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Sora:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#e4e2e5",
+                    "secondary-fixed-dim": "#b1c5ff",
+                    "secondary": "#0054cb",
+                    "surface-dim": "#dbd9dc",
+                    "secondary-container": "#2d6deb",
+                    "surface-container-high": "#e9e7ea",
+                    "surface-bright": "#fbf9fb",
+                    "primary-fixed-dim": "#b5c7eb",
+                    "on-secondary-fixed": "#001847",
+                    "on-primary-container": "#798bac",
+                    "surface-tint": "#4d5f7e",
+                    "on-surface-variant": "#44474d",
+                    "error-container": "#ffdad6",
+                    "secondary-fixed": "#dae2ff",
+                    "on-secondary-container": "#fefcff",
+                    "tertiary-container": "#361d00",
+                    "surface-container-low": "#f5f3f6",
+                    "outline": "#75777e",
+                    "primary-fixed": "#d6e3ff",
+                    "inverse-surface": "#303033",
+                    "on-primary-fixed": "#071b37",
+                    "error": "#ba1a1a",
+                    "on-tertiary-fixed": "#2c1700",
+                    "on-error-container": "#93000a",
+                    "inverse-on-surface": "#f2f0f3",
+                    "inverse-primary": "#b5c7eb",
+                    "tertiary-fixed-dim": "#ecbe90",
+                    "on-tertiary-container": "#aa8259",
+                    "on-tertiary": "#ffffff",
+                    "background": "#fbf9fb",
+                    "primary": "#000d23",
+                    "on-surface": "#1b1b1e",
+                    "on-background": "#1b1b1e",
+                    "on-primary-fixed-variant": "#364765",
+                    "surface": "#fbf9fb",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed": "#ffdcbc",
+                    "primary-container": "#10233f",
+                    "tertiary": "#180a00",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#e4e2e5",
+                    "on-tertiary-fixed-variant": "#60401d",
+                    "surface-container": "#efedf0",
+                    "on-secondary-fixed-variant": "#0040a0",
+                    "outline-variant": "#c5c6ce",
+                    "on-error": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "gris-perle": "#F4F6F9",
+                    "bleu-cobalt": "#2F6FED",
+                    "encre-marine": "#10233F",
+                    "vert-seve": "#2FBE8F",
+                    "corail-chaleureux": "#FF6F59",
+                    "anthracite": "#1C1F26"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px",
+                    "round-eight": "16px"
+            },
+            "spacing": {
+                    "container-max": "1280px",
+                    "xs": "8px",
+                    "sm": "16px",
+                    "md": "24px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "gutter": "24px",
+                    "xl": "48px",
+                    "base": "4px",
+                    "lg": "32px"
+            },
+            "fontFamily": {
+                    "headline-sm": ["Sora"],
+                    "body-lg": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg": ["Sora"],
+                    "label-sm": ["Inter"],
+                    "headline-md": ["Sora"],
+                    "headline-xl": ["Sora"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        vertical-align: middle;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #e4e2e5;
+        border-radius: 10px;
+      }
+      .switch-checkbox:checked + .switch-label {
+        background-color: #2FBE8F;
+      }
+      .switch-checkbox:checked + .switch-label::after {
+        transform: translateX(100%);
+        background-color: white;
+      }
+      .switch-label::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background-color: #ffffff;
+        transition: transform 0.2s ease-in-out;
+      }
+    </style>
+</head>
+<body class="bg-gris-perle font-body-md text-anthracite overflow-hidden">
+<!-- Persistent SideNavBar -->
+<aside class="w-64 h-screen fixed left-0 top-0 bg-primary dark:bg-primary-container shadow-md flex flex-col h-full py-md px-sm z-50">
+<div class="mb-xl px-sm">
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-primary">WorkSpace Pro</h1>
+<p class="font-body-sm text-on-primary-container opacity-70">Admin Portal</p>
+</div>
+<nav class="flex-grow space-y-xs overflow-y-auto custom-scrollbar">
+<a class="flex items-center gap-sm px-sm py-xs text-on-primary-container opacity-70 hover:opacity-100 hover:bg-primary-fixed-variant transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs text-on-primary-container opacity-70 hover:opacity-100 hover:bg-primary-fixed-variant transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-body-md">Bookings</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs text-on-primary-container opacity-70 hover:opacity-100 hover:bg-primary-fixed-variant transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-body-md">Members</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs text-on-primary-container opacity-70 hover:opacity-100 hover:bg-primary-fixed-variant transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">meeting_room</span>
+<span class="font-body-md">Resources</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs text-on-primary-container opacity-70 hover:opacity-100 hover:bg-primary-fixed-variant transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-body-md">Billing</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs text-on-primary bg-secondary-container rounded-lg font-semibold" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md">Settings</span>
+</a>
+</nav>
+<div class="mt-auto space-y-xs pt-md border-t border-on-primary-container border-opacity-10">
+<a class="flex items-center gap-sm px-sm py-xs text-on-primary-container opacity-70 hover:opacity-100 transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-body-md">Support</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs text-on-primary-container opacity-70 hover:opacity-100 transition-colors" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-body-md">Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<div class="ml-64 h-screen flex flex-col overflow-hidden">
+<!-- TopAppBar -->
+<header class="h-16 bg-surface dark:bg-surface-dim shadow-sm flex items-center justify-between px-lg z-40 sticky top-0">
+<div class="flex items-center bg-surface-container-low rounded-full px-md py-xs w-96 border border-outline-variant focus-within:ring-2 focus-within:ring-secondary transition-all">
+<span class="material-symbols-outlined text-on-surface-variant mr-xs">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-label-md w-full placeholder:text-on-surface-variant" placeholder="Rechercher une notification..." type="text"/>
+</div>
+<div class="flex items-center gap-md">
+<button class="relative p-xs hover:bg-surface-container-low rounded-full transition-all">
+<span class="material-symbols-outlined text-on-surface">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-corail-chaleureux rounded-full"></span>
+</button>
+<button class="p-xs hover:bg-surface-container-low rounded-full transition-all">
+<span class="material-symbols-outlined text-on-surface">help</span>
+</button>
+<div class="flex items-center gap-xs pl-md border-l border-outline-variant">
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a female administrator with a friendly expression, wearing a navy blue blazer. The background is a clean, bright coworking space with natural light. High-end professional photography style, sharp focus, 4k resolution." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_xVBdNEVl7JfVIAl71nnfVwUoGnnovEMLhAzNVZnHvGEUMDjUSkcAuIiYtMvHZjPFy4ug8VhBEIodo1eBweprf8tHAzk3jSfGB8mDtFd_vuKdRreCOIatGvdjxPfJJobUa0ke_ng81lVExoBptepbTZ14UsLkpF6SBOsKl2dpTMDifpvc48fZoikW5ig9FNzEVyQI6QMrOkCE-Wp5etgxWhsKoD27aYmGPNeWgQVm84vxILiM_oDO-6ZdPVC3S1q6vKHvovKl"/>
+</div>
+<span class="font-label-md text-on-surface">Admin Cobalt</span>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<main class="flex-grow overflow-y-auto custom-scrollbar p-lg">
+<div class="max-w-container-max mx-auto">
+<!-- Page Header -->
+<div class="flex items-start justify-between mb-lg">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-encre-marine mb-xs">Notifications Automatiques</h2>
+<p class="font-body-md text-on-surface-variant">Configurez les alertes envoyées à vos membres, staff et formateurs</p>
+</div>
+<button class="bg-bleu-cobalt hover:opacity-90 text-white px-md py-sm rounded-lg font-label-md flex items-center gap-xs transition-all shadow-md active:scale-95">
+<span class="material-symbols-outlined">save</span>
+                        Enregistrer les modifications
+                    </button>
+</div>
+<!-- API Banner -->
+<div class="bg-secondary-fixed text-on-secondary-fixed p-sm rounded-xl flex items-center gap-sm mb-lg border border-secondary-fixed-dim">
+<span class="material-symbols-outlined text-secondary">info</span>
+<p class="font-label-md">Les SMS sont optionnels — nécessite une intégration <span class="font-bold underline cursor-pointer">Telnet SMS API</span></p>
+</div>
+<!-- Bento Grid Layout for Sections -->
+<div class="grid grid-cols-1 gap-lg">
+<!-- Section Generator Function -->
+<!-- 1. Sessions -->
+<section class="bg-white rounded-round-eight shadow-[0px_2px_4px_rgba(16,35,63,0.04)] border border-outline-variant/10 overflow-hidden">
+<div class="bg-surface-container px-md py-sm flex items-center gap-sm">
+<span class="material-symbols-outlined text-encre-marine">timer</span>
+<h3 class="font-headline-sm text-headline-sm text-encre-marine">Sessions</h3>
+</div>
+<div class="divide-y divide-outline-variant/10">
+<!-- Row -->
+<div class="p-md flex items-center hover:bg-surface-container-low transition-colors">
+<div class="w-1/3">
+<p class="font-label-md text-anthracite">Session : 15 min avant la fin</p>
+<p class="text-[11px] text-on-surface-variant font-medium">Auto-trigger à T-15</p>
+</div>
+<div class="w-1/4 flex gap-xs">
+<span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Membre</span>
+<span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Staff</span>
+</div>
+<div class="w-1/3 flex items-center gap-lg">
+<div class="flex items-center gap-xs">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only switch-checkbox" type="checkbox"/>
+<div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div>
+</label>
+<span class="font-label-sm text-on-surface-variant uppercase">Email</span>
+</div>
+<div class="flex items-center gap-xs">
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only switch-checkbox" type="checkbox"/>
+<div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div>
+</label>
+<span class="font-label-sm text-on-surface-variant uppercase">SMS</span>
+</div>
+<div class="flex items-center gap-xs">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only switch-checkbox" type="checkbox"/>
+<div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div>
+</label>
+<span class="font-label-sm text-on-surface-variant uppercase">Dash</span>
+</div>
+</div>
+<div class="flex-grow text-right">
+<button class="p-xs text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded-full transition-all">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</div>
+<!-- Row -->
+<div class="p-md flex items-center hover:bg-surface-container-low transition-colors">
+<div class="w-1/3">
+<p class="font-label-md text-anthracite">Dépassement de session</p>
+<p class="text-[11px] text-on-surface-variant font-medium">Détection temps réel</p>
+</div>
+<div class="w-1/4 flex gap-xs">
+<span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Staff</span>
+<span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Admin</span>
+</div>
+<div class="w-1/3 flex items-center gap-lg">
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Email</span></div>
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">SMS</span></div>
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Dash</span></div>
+</div>
+<div class="flex-grow text-right"><button class="p-xs text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded-full transition-all"><span class="material-symbols-outlined">edit</span></button></div>
+</div>
+</div>
+</section>
+<!-- 2. Réservations -->
+<section class="bg-white rounded-round-eight shadow-[0px_2px_4px_rgba(16,35,63,0.04)] border border-outline-variant/10 overflow-hidden">
+<div class="bg-surface-container px-md py-sm flex items-center gap-sm">
+<span class="material-symbols-outlined text-encre-marine">event_available</span>
+<h3 class="font-headline-sm text-headline-sm text-encre-marine">Réservations</h3>
+</div>
+<div class="divide-y divide-outline-variant/10">
+<div class="p-md flex items-center hover:bg-surface-container-low transition-colors">
+<div class="w-1/3"><p class="font-label-md text-anthracite">Confirmation de réservation</p></div>
+<div class="w-1/4 flex gap-xs"><span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Membre</span></div>
+<div class="w-1/3 flex items-center gap-lg">
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Email</span></div>
+<div class="flex items-center gap-xs"><input class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">SMS</span></div>
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Dash</span></div>
+</div>
+<div class="flex-grow text-right"><button class="p-xs text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded-full transition-all"><span class="material-symbols-outlined">edit</span></button></div>
+</div>
+<div class="p-md flex items-center hover:bg-surface-container-low transition-colors">
+<div class="w-1/3"><p class="font-label-md text-anthracite">Annulation (24h avant)</p></div>
+<div class="w-1/4 flex gap-xs">
+<span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Membre</span>
+<span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Staff</span>
+</div>
+<div class="w-1/3 flex items-center gap-lg">
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Email</span></div>
+<div class="flex items-center gap-xs"><input class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">SMS</span></div>
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Dash</span></div>
+</div>
+<div class="flex-grow text-right"><button class="p-xs text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded-full transition-all"><span class="material-symbols-outlined">edit</span></button></div>
+</div>
+</div>
+</section>
+<!-- 3. Abonnements -->
+<section class="bg-white rounded-round-eight shadow-[0px_2px_4px_rgba(16,35,63,0.04)] border border-outline-variant/10 overflow-hidden">
+<div class="bg-surface-container px-md py-sm flex items-center gap-sm">
+<span class="material-symbols-outlined text-encre-marine">card_membership</span>
+<h3 class="font-headline-sm text-headline-sm text-encre-marine">Abonnements</h3>
+</div>
+<div class="divide-y divide-outline-variant/10">
+<div class="p-md flex items-center hover:bg-surface-container-low transition-colors">
+<div class="w-1/3"><p class="font-label-md text-anthracite">Abonnement expirant J-7</p></div>
+<div class="w-1/4 flex gap-xs"><span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Membre</span></div>
+<div class="w-1/3 flex items-center gap-lg">
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Email</span></div>
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">SMS</span></div>
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Dash</span></div>
+</div>
+<div class="flex-grow text-right"><button class="p-xs text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded-full transition-all"><span class="material-symbols-outlined">edit</span></button></div>
+</div>
+<div class="p-md flex items-center hover:bg-surface-container-low transition-colors">
+<div class="w-1/3"><p class="font-label-md text-anthracite">Renouvellement réussi</p></div>
+<div class="w-1/4 flex gap-xs"><span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Membre</span></div>
+<div class="w-1/3 flex items-center gap-lg">
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Email</span></div>
+<div class="flex items-center gap-xs"><input class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">SMS</span></div>
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Dash</span></div>
+</div>
+<div class="flex-grow text-right"><button class="p-xs text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded-full transition-all"><span class="material-symbols-outlined">edit</span></button></div>
+</div>
+</div>
+</section>
+<!-- 4. Paiements -->
+<section class="bg-white rounded-round-eight shadow-[0px_2px_4px_rgba(16,35,63,0.04)] border border-outline-variant/10 overflow-hidden">
+<div class="bg-surface-container px-md py-sm flex items-center gap-sm">
+<span class="material-symbols-outlined text-encre-marine">receipt_long</span>
+<h3 class="font-headline-sm text-headline-sm text-encre-marine">Paiements</h3>
+</div>
+<div class="divide-y divide-outline-variant/10">
+<div class="p-md flex items-center hover:bg-surface-container-low transition-colors">
+<div class="w-1/3"><p class="font-label-md text-anthracite">Paiement en retard J+3</p></div>
+<div class="w-1/4 flex gap-xs">
+<span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Membre</span>
+<span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Admin</span>
+</div>
+<div class="w-1/3 flex items-center gap-lg">
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Email</span></div>
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">SMS</span></div>
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Dash</span></div>
+</div>
+<div class="flex-grow text-right"><button class="p-xs text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded-full transition-all"><span class="material-symbols-outlined">edit</span></button></div>
+</div>
+<div class="p-md flex items-center hover:bg-surface-container-low transition-colors">
+<div class="w-1/3"><p class="font-label-md text-anthracite">Facture disponible</p></div>
+<div class="w-1/4 flex gap-xs"><span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Membre</span></div>
+<div class="w-1/3 flex items-center gap-lg">
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Email</span></div>
+<div class="flex items-center gap-xs"><input class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">SMS</span></div>
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Dash</span></div>
+</div>
+<div class="flex-grow text-right"><button class="p-xs text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded-full transition-all"><span class="material-symbols-outlined">edit</span></button></div>
+</div>
+</div>
+</section>
+<!-- 5. Formations -->
+<section class="bg-white rounded-round-eight shadow-[0px_2px_4px_rgba(16,35,63,0.04)] border border-outline-variant/10 overflow-hidden mb-xl">
+<div class="bg-surface-container px-md py-sm flex items-center gap-sm">
+<span class="material-symbols-outlined text-encre-marine">school</span>
+<h3 class="font-headline-sm text-headline-sm text-encre-marine">Formations</h3>
+</div>
+<div class="divide-y divide-outline-variant/10">
+<div class="p-md flex items-center hover:bg-surface-container-low transition-colors">
+<div class="w-1/3"><p class="font-label-md text-anthracite">Inscription confirmée</p></div>
+<div class="w-1/4 flex gap-xs">
+<span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Membre</span>
+<span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Formateur</span>
+</div>
+<div class="w-1/3 flex items-center gap-lg">
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Email</span></div>
+<div class="flex items-center gap-xs"><input class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">SMS</span></div>
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Dash</span></div>
+</div>
+<div class="flex-grow text-right"><button class="p-xs text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded-full transition-all"><span class="material-symbols-outlined">edit</span></button></div>
+</div>
+<div class="p-md flex items-center hover:bg-surface-container-low transition-colors">
+<div class="w-1/3"><p class="font-label-md text-anthracite">Rappel J-1</p></div>
+<div class="w-1/4 flex gap-xs"><span class="bg-secondary/10 text-secondary px-xs py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Membre</span></div>
+<div class="w-1/3 flex items-center gap-lg">
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Email</span></div>
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">SMS</span></div>
+<div class="flex items-center gap-xs"><input checked="" class="sr-only switch-checkbox" type="checkbox"/><div class="w-10 h-5 bg-surface-container-highest rounded-full switch-label relative"></div><span class="font-label-sm text-on-surface-variant uppercase">Dash</span></div>
+</div>
+<div class="flex-grow text-right"><button class="p-xs text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded-full transition-all"><span class="material-symbols-outlined">edit</span></button></div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+<!-- Notification Micro-interaction -->
+<div class="fixed bottom-lg right-lg bg-encre-marine text-white px-md py-sm rounded-lg shadow-xl translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-sm" id="toast">
+<span class="material-symbols-outlined text-vert-seve">check_circle</span>
+<p class="font-label-md">Paramètres enregistrés avec succès</p>
+</div>
+<script>
+        // Simple micro-interaction for the Save button
+        const saveBtn = document.querySelector('button.bg-bleu-cobalt');
+        const toast = document.getElementById('toast');
+
+        saveBtn.addEventListener('click', () => {
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 3000);
+        });
+
+        // Toggle logic visual feedback
+        const switches = document.querySelectorAll('.switch-checkbox');
+        switches.forEach(sw => {
+            sw.addEventListener('change', function() {
+                const label = this.nextElementSibling;
+                if(this.checked) {
+                    console.log('Enabled notification channel');
+                } else {
+                    console.log('Disabled notification channel');
+                }
+            });
+        });
+    </script>
+</body></html>

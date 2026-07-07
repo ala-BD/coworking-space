@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+
+<html class="light" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NexusDesk | Workshop Catalog</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Sora & Inter -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Sora:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Design System Config -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "on-tertiary-fixed": "#2c1700",
+                "on-error-container": "#93000a",
+                "error": "#ba1a1a",
+                "primary-fixed": "#d6e3ff",
+                "inverse-surface": "#303033",
+                "on-primary-fixed": "#071b37",
+                "tertiary-container": "#361d00",
+                "surface-container-low": "#f5f3f6",
+                "outline": "#75777e",
+                "on-secondary-container": "#fefcff",
+                "secondary-fixed": "#dae2ff",
+                "error-container": "#ffdad6",
+                "surface-tint": "#4d5f7e",
+                "on-surface-variant": "#44474d",
+                "primary-fixed-dim": "#b5c7eb",
+                "on-secondary-fixed": "#001847",
+                "on-primary-container": "#798bac",
+                "surface-bright": "#fbf9fb",
+                "surface-container-high": "#e9e7ea",
+                "secondary-container": "#2d6deb",
+                "secondary-fixed-dim": "#b1c5ff",
+                "secondary": "#0054cb",
+                "surface-dim": "#dbd9dc",
+                "surface-variant": "#e4e2e5",
+                "on-secondary": "#ffffff",
+                "on-error": "#ffffff",
+                "outline-variant": "#c5c6ce",
+                "surface-container": "#efedf0",
+                "on-secondary-fixed-variant": "#0040a0",
+                "on-tertiary-fixed-variant": "#60401d",
+                "primary-container": "#10233f",
+                "tertiary": "#180a00",
+                "surface-container-lowest": "#ffffff",
+                "surface-container-highest": "#e4e2e5",
+                "on-primary": "#ffffff",
+                "tertiary-fixed": "#ffdcbc",
+                "surface": "#fbf9fb",
+                "primary": "#000d23",
+                "on-surface": "#1b1b1e",
+                "on-background": "#1b1b1e",
+                "on-primary-fixed-variant": "#364765",
+                "background": "#fbf9fb",
+                "on-tertiary-container": "#aa8259",
+                "on-tertiary": "#ffffff",
+                "inverse-primary": "#b5c7eb",
+                "tertiary-fixed-dim": "#ecbe90",
+                "inverse-on-surface": "#f2f0f3",
+                "success": "#2FBE8F",
+                "alert": "#FF6F59",
+                "gris-perle": "#F4F6F9",
+                "bleu-cobalt": "#2F6FED",
+                "encre-marine": "#10233F"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "16px",
+                "xl": "24px",
+                "full": "9999px"
+            },
+            "spacing": {
+                "container-max": "1280px",
+                "xs": "8px",
+                "sm": "16px",
+                "md": "24px",
+                "lg": "32px",
+                "xl": "48px",
+                "base": "4px",
+                "margin-mobile": "16px",
+                "margin-desktop": "32px",
+                "gutter": "24px"
+            },
+            "fontFamily": {
+                "headline-sm": ["Sora"],
+                "body-lg": ["Inter"],
+                "body-sm": ["Inter"],
+                "label-md": ["Inter"],
+                "headline-lg": ["Sora"],
+                "label-sm": ["Inter"],
+                "headline-md": ["Sora"],
+                "headline-xl": ["Sora"],
+                "body-md": ["Inter"]
+            },
+            "fontSize": {
+                "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                "label-md": ["14px", {"lineHeight": "16px", "fontWeight": "600"}],
+                "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(16, 35, 63, 0.05);
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0px 8px 16px rgba(16, 35, 63, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-gris-perle font-body-md text-on-surface antialiased">
+<!-- Top Navigation (Authority: JSON) -->
+<header class="bg-surface-container-lowest fixed top-0 w-full z-50 shadow-sm">
+<nav class="flex justify-between items-center px-margin-desktop py-sm max-w-container-max mx-auto">
+<div class="font-headline-md text-headline-md font-bold text-primary">NexusDesk</div>
+<!-- Desktop Links -->
+<div class="hidden md:flex items-center gap-lg">
+<a class="font-body-md text-body-md text-on-primary-container hover:text-secondary transition-colors duration-200" href="#">Spaces</a>
+<a class="font-body-md text-body-md text-secondary border-b-2 border-secondary pb-1" href="#">Workshops</a>
+<a class="font-body-md text-body-md text-on-primary-container hover:text-secondary transition-colors duration-200" href="#">Pricing</a>
+<a class="font-body-md text-body-md text-on-primary-container hover:text-secondary transition-colors duration-200" href="#">Contact</a>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-sm">
+<button class="hidden md:block font-label-md text-label-md text-secondary active:scale-95 transition-transform px-md py-xs rounded-lg">Sign In</button>
+<button class="bg-secondary-container text-on-secondary font-label-md text-label-md px-md py-sm rounded-lg hover:opacity-90 active:scale-95 transition-all">Book Now</button>
+</div>
+</nav>
+</header>
+<main class="pt-32 pb-xl px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+<!-- Hero Section -->
+<section class="mb-xl text-center md:text-left">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-md">
+<div>
+<h1 class="font-headline-xl text-headline-xl text-primary mb-xs">Workshop Catalog</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
+                        Elevate your professional skills with our expert-led sessions. Join a community of innovators and builders.
+                    </p>
+</div>
+<div class="flex gap-sm justify-center md:justify-end">
+<div class="flex items-center bg-surface-container-low rounded-lg px-sm py-xs border border-outline-variant/30">
+<span class="material-symbols-outlined text-secondary mr-xs" data-icon="filter_list">filter_list</span>
+<span class="font-label-md text-label-md">Filtrer</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Bento Grid Layout for Workshops -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Card 1: UX Masterclass (Active) -->
+<article class="bg-surface-container-lowest rounded-lg overflow-hidden flex flex-col transition-all duration-300 card-hover shadow-sm border border-outline-variant/10">
+<div class="relative h-48 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional studio photo of a minimalist desk with high-end UI design books, a sleek laptop showing complex wireframes, and soft morning sunlight. The aesthetic is clean and corporate, featuring a palette of deep blues and whites consistent with a B2B SaaS environment. The atmosphere is quiet, focused, and intellectually stimulating." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBVDtgxgVCqs-tZCPTIXcX9-RSP63HRpA7JlUcw5fTFY4UkALwwU_zWPyqkYtQjUjRTzKVaaVanVePJyOCQ-4JmYk6VTxFBrB1TC8seTUXpGh_Y5bW5UHr7HgXYSBf1tG3sHIW80NzRzls6XanQPAjaWU_k8v_URq9RRHDlGo0SUBjC4zNBJB8l_gr727xM8vbAXCFK270wcDrjzsnq8pZRgEYG8lho2OFIz7hJWIXXGdyPE7xJhyGoIA33gfIkjojQ0IIWx3UJgfg"/>
+<div class="absolute top-sm right-sm">
+<span class="bg-secondary-container/90 backdrop-blur-md text-white font-label-sm text-label-sm px-sm py-xs rounded-full">Planifiée</span>
+</div>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-sm">
+<h3 class="font-headline-sm text-headline-sm text-primary">UX Masterclass</h3>
+<span class="font-headline-sm text-headline-sm text-secondary">85€</span>
+</div>
+<div class="flex items-center gap-sm mb-md">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="A close-up portrait of a professional female design lead in her late 30s. She is smiling confidently, wearing modern glasses and a navy blue blazer. The background is a soft-focus office environment with plants. High-end editorial lighting with crisp details, reflecting a sense of authority and expertise." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsOXrMoTHguJrx-BInabWym0_fokYtqda-wIIqbiqEoVxhTmvtU_5uY4PmMAi4HOJ5UDu4IprKulLG5Q3Pt5kcMfYRQG2PcwbwM0Lqp8_WAxG7D8z-M9VhISu-LE4W7Y7iA7KkZ5E63okJcMcldl3WZS5_7nEFjNIkn56Ib6Gy4HP-ZGnRDKlyupodqBiWdAK9K5sHIVbyObZ91eHYnbOdZ4qCET5zjmisn4CVZx0jrKhJ60KC95gTqJ80K4DDIs1t2FLT4PFsoIU"/>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Elena Rodriguez</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Senior Product Designer</p>
+</div>
+</div>
+<div class="space-y-xs mb-lg">
+<div class="flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-body-md mr-xs" data-icon="calendar_today">calendar_today</span>
+<span class="font-body-sm text-body-sm">12 Octobre • 14:00 - 17:00</span>
+</div>
+<div class="flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-body-md mr-xs" data-icon="group">group</span>
+<span class="font-body-sm text-body-sm">12 / 20 participants</span>
+</div>
+</div>
+<button class="mt-auto w-full bg-secondary text-on-secondary font-label-md text-label-md py-sm rounded-lg active:scale-95 transition-transform">S'inscrire</button>
+</div>
+</article>
+<!-- Card 2: Digital Marketing (En Cours) -->
+<article class="bg-surface-container-lowest rounded-lg overflow-hidden flex flex-col transition-all duration-300 card-hover shadow-sm border border-outline-variant/10">
+<div class="relative h-48 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A vibrant digital marketing dashboard displayed on multiple screens in a contemporary workspace. Glowing charts, social media icons, and analytics data create an energetic technological vibe. Lighting is dynamic with hints of cobalt blue and seafoam green. Professional, data-driven, and modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQTyWFANzN2B5gQdDy8qpsK0iV1ltVJGMRG8Cs_G11XIzkWtm_Xzxlmm0n1qWPkoyKC6ehmAEKDBhibBOFfl5EXxfCCnZ4Jzb5NdN3-k3smlfpQl2v4XfkB7xM7EU9du3_7aXq5rgMNrqQkgKwsLykyEC-T8n81nRFfdps4c_67RNtuX4gSt7x3zVeE-tkNokL8F8bndL2ZriGi7iedtJhhr2QiOzRkFbfWZ26hBCc_--y6hM-nWgqmkpDJq61qchf3kiOERzoqck"/>
+<div class="absolute top-sm right-sm">
+<span class="bg-success/90 backdrop-blur-md text-white font-label-sm text-label-sm px-sm py-xs rounded-full">En cours</span>
+</div>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-sm">
+<h3 class="font-headline-sm text-headline-sm text-primary">Digital Marketing</h3>
+<span class="font-headline-sm text-headline-sm text-success">Gratuit</span>
+</div>
+<div class="flex items-center gap-sm mb-md">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Headshot of a charismatic male marketing expert with a short beard, wearing a casual grey sweater. He looks engaged and energetic. The setting is a bright, modern studio with natural light. The photograph has a shallow depth of field and high clarity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWhoySSN1FuEMf3pPMCam9uxrqmQtA1IYmXpRvi6N-hUfWfYa0UzkxzVXTw6CAyCQRfMcloIqlvHaMcRj1yYzQxjuQXdVB_Dvht8ReoJXGHAZtjcn2PT8Vdgf7vG1RGGtfgdXRms-SciXA_9xve4u4l8aUg1-IPwIEVNfjkqNfAkZKIxmyrIuwj4d13Eesi0VHpjehNOC1ZKjje7X5e1zZpjlvmk2mmO6n6k6H3bdZrWPWzQZD7SH3hYiXfhfxl3aTDCTKrTLCk1I"/>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Marc Lefebvre</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Growth Specialist</p>
+</div>
+</div>
+<div class="space-y-xs mb-lg">
+<div class="flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-body-md mr-xs" data-icon="schedule">schedule</span>
+<span class="font-body-sm text-body-sm">Aujourd'hui • Fini à 18:30</span>
+</div>
+<div class="flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-body-md mr-xs" data-icon="group">group</span>
+<span class="font-body-sm text-body-sm">Session Complète</span>
+</div>
+</div>
+<button class="mt-auto w-full bg-gris-perle text-on-surface-variant font-label-md text-label-md py-sm rounded-lg cursor-not-allowed">Rejoindre le Live</button>
+</div>
+</article>
+<!-- Card 3: Startup Pitching (Terminée) -->
+<article class="bg-surface-container-lowest rounded-lg overflow-hidden flex flex-col transition-all duration-300 card-hover shadow-sm border border-outline-variant/10 opacity-80 grayscale-[0.3]">
+<div class="relative h-48 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A sophisticated presentation stage with a large screen displaying 'Startup Pitch' in bold typography. Warm stage lighting silhouettes an audience in a high-end corporate auditorium. The mood is professional, high-stakes, and inspiring. Deep encre marine tones and crisp highlights." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAB3PRag515ITs9jDECXcBawcglD8vJks1cnXu5x83t9DC1njywKwwCfnAJ57rraNsn6B8l6fCgZjtFFhhulQgC0Wxa46BwnYEIdv13UYibPBB2EWCHUMCR3JOb62FB4_0VR-pZa33sKgHul1jjM3nl4uYZzA3y25DBgq9lrjqbL4ETaN6Iy1_t1C4sA6DJszpzFmSaqBnn07T2Opbm_xQTeQJnJ33hf3El5Dj29lAFj4UwrbcNVurVPh6LZkXe45f5upnyiLVIDqc"/>
+<div class="absolute top-sm right-sm">
+<span class="bg-on-surface-variant/90 backdrop-blur-md text-white font-label-sm text-label-sm px-sm py-xs rounded-full">Terminée</span>
+</div>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-sm">
+<h3 class="font-headline-sm text-headline-sm text-primary">Startup Pitching</h3>
+<span class="font-headline-sm text-headline-sm text-on-surface-variant">120€</span>
+</div>
+<div class="flex items-center gap-sm mb-md">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Portrait of a senior venture capitalist, a man in his 50s with silver hair and a sharp tailored navy suit. He radiates authority and experience. Neutral office background with soft bokeh. Professional corporate photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLrt242b9Dky4GrF6qkEh5TDux-TJZfK-rKFR0lLF9ff37GakcPXLUNq6FGeA08s9TTwJPyaxgpw5UmVCOQMom4Kjv3sNzrS5bGfIGYYEL7LRSbtz7mcXT7D8iKMIQEu4TiZAj0pi4KwcleTqIKFTsWAXG3J53ku0LEmFNaelqajP9Z0P3bOujFAYBlz6dMX__ESdMkq_OwlpGnVvSs_Osr_-_yM-O1H9MAN2D_OWcKMeDoee4VI0pCag0ecOPh8Y821UKvRktahQ"/>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Jean-Pierre Dupont</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">VC Partner</p>
+</div>
+</div>
+<div class="space-y-xs mb-lg">
+<div class="flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-body-md mr-xs" data-icon="event_available">event_available</span>
+<span class="font-body-sm text-body-sm">28 Septembre 2024</span>
+</div>
+<div class="flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-body-md mr-xs" data-icon="reviews">reviews</span>
+<span class="font-body-sm text-body-sm">Note: 4.9/5</span>
+</div>
+</div>
+<button class="mt-auto w-full border border-outline-variant text-on-surface-variant font-label-md text-label-md py-sm rounded-lg hover:bg-surface-container transition-colors">Voir le Replay</button>
+</div>
+</article>
+<!-- Card 4: Web Development (Upcoming) -->
+<article class="bg-surface-container-lowest rounded-lg overflow-hidden flex flex-col transition-all duration-300 card-hover shadow-sm border border-outline-variant/10">
+<div class="relative h-48 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Abstract visualization of code lines in a futuristic IDE, glowing with neon blue and purple accents on a dark charcoal background. The composition is sleek and technical, representing high-end software development. Cinematic lighting with deep shadows and vibrant data streams." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA44YnkshtkA1ESKtd6rEUf_ZGm63xpTyJmX7m8CSM7QLHvQ2bCEl3ivn0KRA6dQVKts3mwyQ4WSycnFAv1QbPKLTAQZYtnzXYxMrlJAnIZ_qWTBiT874oD2IK0-mvrLN8Rb8wGh5EUbqsGj8_X8fkX3d09O0-suHPR-EYB9PEu5u3vvJhyN5xQFZk7Lgpmo1KneWjUPBI972MOov2pHCUjQa0XTKbxZnNcYjf3oIinPlRYE19OOSImwgqwRnT-gEmwecQ12N3UMrs"/>
+<div class="absolute top-sm right-sm">
+<span class="bg-secondary-container/90 backdrop-blur-md text-white font-label-sm text-label-sm px-sm py-xs rounded-full">Planifiée</span>
+</div>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-sm">
+<h3 class="font-headline-sm text-headline-sm text-primary">React Essentials</h3>
+<span class="font-headline-sm text-headline-sm text-secondary">45€</span>
+</div>
+<div class="flex items-center gap-sm mb-md">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Portrait of a young tech lead, a woman with a creative style, wearing a modern turtleneck. She is in a bright developer hub with monitors and plants in the background. Fresh, modern, and highly technical look." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCheSGb7j-FrWLaQ6H5ZgZWcvMPPu5C6qLv3t2wD1CU2rKgvDQweUqkMIThjcAkuxXHXLzVDB7CMd_G3polE-06j3YSgICV_seMyFyp15ut3H5Uh8zYal7bWzLodp4xQEFqYropfWCrhmuo3NYU5wVU23kCzKPPLmEPUIaSvhblNT5RlQm0rxK8v1fOtHm-cxcV2Yqi8AWqWXsSenM9Js06CSKRkz32j2FpcdU7wMVe8ng6-6cmuRxKbg9UIPz3OJDO6So9M-lO_jI"/>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Sarah Chen</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Full-stack Architect</p>
+</div>
+</div>
+<div class="space-y-xs mb-lg">
+<div class="flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-body-md mr-xs" data-icon="calendar_today">calendar_today</span>
+<span class="font-body-sm text-body-sm">24 Octobre • 09:00 - 13:00</span>
+</div>
+<div class="flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-body-md mr-xs" data-icon="group">group</span>
+<span class="font-body-sm text-body-sm">5 / 15 participants</span>
+</div>
+</div>
+<button class="mt-auto w-full bg-secondary text-on-secondary font-label-md text-label-md py-sm rounded-lg active:scale-95 transition-transform">S'inscrire</button>
+</div>
+</article>
+<!-- Special Offer Card (Asymmetric) -->
+<article class="bg-primary rounded-lg overflow-hidden flex flex-col justify-center items-center text-center p-xl relative lg:col-span-2">
+
+<div class="relative z-10">
+<h2 class="font-headline-lg text-headline-lg text-on-primary mb-md">Devenez Membre Nexus+</h2>
+<p class="font-body-lg text-body-lg text-on-primary/80 mb-lg max-w-lg mx-auto">
+                        Accédez à tous les workshops gratuitement, des sessions exclusives de mentorat et des ressources premium.
+                    </p>
+<button class="bg-on-primary text-primary font-label-md text-label-md px-xl py-md rounded-lg hover:scale-105 transition-transform shadow-lg">En savoir plus</button>
+</div>
+</article>
+</div>
+</main>
+<!-- Footer (Authority: JSON) -->
+<footer class="bg-primary w-full py-xl mt-xl">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter px-margin-desktop max-w-container-max mx-auto">
+<div class="col-span-1 md:col-span-1">
+<div class="font-headline-sm text-headline-sm font-bold text-on-primary mb-sm">NexusDesk</div>
+<p class="font-body-sm text-body-sm text-on-primary-container">
+                    Coworking management for the next generation of professional spaces.
+                </p>
+</div>
+<div>
+<h4 class="text-on-primary font-label-md mb-md">Navigation</h4>
+<ul class="space-y-xs">
+<li><a class="text-on-primary-container hover:text-secondary-fixed transition-colors text-body-sm" href="#">Spaces</a></li>
+<li><a class="text-secondary-fixed hover:text-secondary-fixed transition-colors text-body-sm" href="#">Workshops</a></li>
+<li><a class="text-on-primary-container hover:text-secondary-fixed transition-colors text-body-sm" href="#">Pricing</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-on-primary font-label-md mb-md">Legal</h4>
+<ul class="space-y-xs">
+<li><a class="text-on-primary-container hover:text-secondary-fixed transition-colors text-body-sm" href="#">Privacy Policy</a></li>
+<li><a class="text-on-primary-container hover:text-secondary-fixed transition-colors text-body-sm" href="#">Terms of Service</a></li>
+<li><a class="text-on-primary-container hover:text-secondary-fixed transition-colors text-body-sm" href="#">Cookie Policy</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-on-primary font-label-md mb-md">Newsletter</h4>
+<div class="flex">
+<input class="bg-primary-container border-none text-white text-body-sm rounded-l-lg w-full focus:ring-1 focus:ring-secondary" placeholder="votre@email.com" type="email"/>
+<button class="bg-secondary text-white px-md py-xs rounded-r-lg">
+<span class="material-symbols-outlined" data-icon="send">send</span>
+</button>
+</div>
+</div>
+</div>
+<div class="px-margin-desktop max-w-container-max mx-auto mt-xl pt-lg border-t border-primary-container text-center">
+<p class="font-body-sm text-body-sm text-on-primary-container opacity-80">© 2024 NexusDesk Coworking Management. All rights reserved.</p>
+</div>
+</footer>
+<!-- Interactive Scripts -->
+<script>
+        // Simple filter button interaction
+        document.querySelector('[data-icon="filter_list"]').parentElement.addEventListener('click', () => {
+            console.log('Filter dialog requested');
+        });
+
+        // Add smooth scroll behavior
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body></html>

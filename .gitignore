@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+dist-ssr/
+*.local
+
+# Secrets — ne jamais committer
+.env
+.env.local
+backend/.env
+frontend/.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+*.sw?
+
+# Vite cache
+frontend/node_modules/.vite/
+
+# Scripts de test locaux
+backend/test-supabase.js
+backend/verify-migration.js
+backend/test-output.txt

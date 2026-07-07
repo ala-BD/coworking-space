@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Profile &amp; Privacy | Encre &amp; Cobalt</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Sora:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary": "#ffffff",
+                    "outline-variant": "#c5c6ce",
+                    "tertiary-fixed": "#ffdcbc",
+                    "tertiary": "#180a00",
+                    "secondary-fixed": "#dae2ff",
+                    "outline": "#75777e",
+                    "secondary-fixed-dim": "#b1c5ff",
+                    "inverse-surface": "#303033",
+                    "surface-dim": "#dbd9dc",
+                    "surface-container-high": "#e9e7ea",
+                    "on-tertiary-fixed": "#2c1700",
+                    "surface-bright": "#fbf9fb",
+                    "error": "#ba1a1a",
+                    "on-secondary-container": "#fefcff",
+                    "surface-container-highest": "#e4e2e5",
+                    "on-tertiary-fixed-variant": "#60401d",
+                    "inverse-primary": "#b5c7eb",
+                    "tertiary-fixed-dim": "#ecbe90",
+                    "on-secondary-fixed": "#001847",
+                    "primary-container": "#10233f",
+                    "surface-variant": "#e4e2e5",
+                    "secondary": "#0054cb",
+                    "secondary-container": "#2d6deb",
+                    "primary": "#000d23",
+                    "on-primary-fixed": "#071b37",
+                    "inverse-on-surface": "#f2f0f3",
+                    "surface-tint": "#4d5f7e",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#efedf0",
+                    "on-primary-container": "#798bac",
+                    "on-error-container": "#93000a",
+                    "on-primary-fixed-variant": "#364765",
+                    "tertiary-container": "#361d00",
+                    "on-secondary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-container": "#aa8259",
+                    "on-background": "#1b1b1e",
+                    "on-secondary-fixed-variant": "#0040a0",
+                    "on-surface": "#1b1b1e",
+                    "surface": "#fbf9fb",
+                    "background": "#fbf9fb",
+                    "primary-fixed": "#d6e3ff",
+                    "on-primary": "#ffffff",
+                    "surface-container-low": "#f5f3f6",
+                    "primary-fixed-dim": "#b5c7eb",
+                    "on-surface-variant": "#44474d"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "16px",
+                    "xl": "24px",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xs": "8px",
+                    "sm": "16px",
+                    "base": "4px",
+                    "xl": "48px",
+                    "container-max": "1280px",
+                    "lg": "32px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "md": "24px",
+                    "gutter": "24px"
+            },
+            "fontFamily": {
+                    "label-sm": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "headline-xl": ["Sora"],
+                    "headline-sm": ["Sora"],
+                    "headline-md": ["Sora"],
+                    "label-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-lg-mobile": ["Sora"],
+                    "headline-lg": ["Sora"],
+                    "body-lg": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(16, 35, 63, 0.08);
+        }
+        .sidebar-item-active {
+            background: #dae2ff;
+            color: #001847;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-surface-container-low text-on-surface font-body-md min-h-screen">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop py-4 bg-surface/80 backdrop-blur-md shadow-sm">
+<div class="flex items-center gap-4">
+<span class="font-headline-md text-headline-md font-bold text-primary">Encre &amp; Cobalt</span>
+</div>
+<nav class="hidden md:flex items-center gap-lg">
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-body-md text-body-md" href="#">Workspaces</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-body-md text-body-md" href="#">Amenities</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-body-md text-body-md" href="#">Pricing</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-body-md text-body-md" href="#">Contact</a>
+</nav>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-on-surface-variant">notifications</button>
+<div class="h-10 w-10 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A sharp, professional headshot of a creative executive in a minimalist studio. High-end portrait photography with soft rim lighting and a neutral grey background. The subject is wearing a dark, textured blazer. Elegant and trustworthy atmosphere suitable for a premium coworking member profile." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQ4gPB_yU5k2banMomluqadfVb8kPPz16iNVGBgBT3-hqzKG9SQVcgTizfa0v78fyMhxuFbQIVKDSZRZaOUfxtxfoumekd3T_rEBt7K-NmvtrDQewRvAAgrAKEmenO0jajzc5zFKP6S2rPNoFcmrG_aVd0L3MwY_euQRmF7xCilTmZtFXcTu_02fAnp4od-fiWwqMiOFmvt9FDRU3wQnTbIDWk0Zv8JlslnzF4mLOIagQJk1uvv66GsH8Oot3ULigXQkCcP8x_1LY"/>
+</div>
+</div>
+</header>
+<div class="flex pt-20 h-screen">
+<!-- SideNav (Fixed 256px) -->
+<aside class="hidden md:flex flex-col w-64 bg-surface-container-lowest border-r border-outline-variant p-md gap-xs">
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">event_available</span>
+<span class="font-label-md text-label-md">Bookings</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-md text-label-md">Invoices</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg sidebar-item-active" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-md text-label-md">Profile &amp; Security</span>
+</a>
+<div class="mt-auto border-t border-outline-variant pt-md">
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-label-md text-label-md">Help Center</span>
+</a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto p-margin-mobile md:p-margin-desktop bg-surface-container-low">
+<div class="max-w-[1280px] mx-auto space-y-lg">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-md">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary">Member Profile</h1>
+<p class="text-on-surface-variant font-body-md text-body-md">Manage your personal information, documents, and privacy rights.</p>
+</div>
+<div class="flex items-center gap-sm">
+<span class="flex items-center gap-1 bg-green-100 text-green-800 px-3 py-1 rounded-full text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-[14px]">verified</span> Active Member
+                        </span>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-lg">
+<!-- Section 1: Editable Personal Info (6/12) -->
+<section class="lg:col-span-8 bg-white p-lg rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex justify-between items-center mb-md">
+<h2 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">edit_square</span> Personal Information
+                            </h2>
+<button class="text-secondary font-label-md text-label-md hover:underline">Edit Details</button>
+</div>
+<div class="flex flex-col md:flex-row gap-lg items-start">
+<div class="relative group">
+<div class="w-32 h-32 rounded-xl overflow-hidden shadow-md">
+<img class="w-full h-full object-cover" data-alt="Close-up of a premium member profile photo, showing a modern professional with a slight smile. The background features a blurred, high-end coworking space with Bleu Cobalt accents and natural wooden textures. Warm, high-key lighting suggests an inviting and trustworthy persona. Professional studio quality." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBM4FksNc0kCM_tzN8EXGqbRWE_NSy9XmkxMBZCLV0WzSxgTYsPvUN_OSA7Tt6MWT4Gn-RfygJvrNNrslC8F6Mn5cKzWXiSzkORzMJTJtdq_cv2O1wn6RYH4LiAoer6yaLsaaRsdjRKP0YJLCVJ5lDQSk4b52vEPw1Jx8wUb4hlo7GuFe0QnSQCEIZ9IcZwfg3bCdrQEyZ144vXyfYu4O1C2kN8A24VVbtMGONvRJYFY1nEbnHDdppj_81ybwuu8a_PAyQp6f1yi50"/>
+</div>
+<button class="absolute -bottom-2 -right-2 bg-secondary text-white p-2 rounded-full shadow-lg hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[18px]">photo_camera</span>
+</button>
+</div>
+<div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-md w-full">
+<div class="space-y-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Full Name</label>
+<p class="font-body-md text-body-md font-semibold text-on-surface">Alexandre de Vallon</p>
+</div>
+<div class="space-y-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Membership ID</label>
+<p class="font-body-md text-body-md font-semibold text-on-surface">EC-88492-2024</p>
+</div>
+<div class="space-y-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Email Address</label>
+<p class="font-body-md text-body-md font-semibold text-on-surface">a.vallon@encrecobalt.com</p>
+</div>
+<div class="space-y-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Phone Number</label>
+<p class="font-body-md text-body-md font-semibold text-on-surface">+33 6 12 34 56 78</p>
+</div>
+<div class="md:col-span-2 space-y-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Company / Workspace</label>
+<p class="font-body-md text-body-md font-semibold text-on-surface">Cobalt Design Group • Private Suite 04</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Digital Membership QR (4/12) -->
+<section class="lg:col-span-4 bg-primary text-white p-lg rounded-xl shadow-lg flex flex-col items-center justify-between text-center">
+<div class="space-y-2">
+<h2 class="font-headline-sm text-headline-sm">Member Access</h2>
+<p class="text-on-primary-container font-body-sm text-body-sm">Scan at any Cobalt station to enter.</p>
+</div>
+<div class="bg-white p-4 rounded-xl my-md">
+<img class="w-40 h-40" data-alt="A clean, minimalist QR code displayed on a white rounded square background. The QR code represents digital membership access for a high-end coworking brand. The background around the square should feel like a deep Encre Marine navy blue textured surface. Sharp, high-contrast digital asset." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAOkk6JVJ2MfMl-vc06horUZ_LrqtrgXAvRouIhetcQh0eNsJy9MwRn8NZLG7OZyeROC0wWPai4gumu37ZZM96eo6NeqE6F5ZqWZowIfwWz-P8eqdADbO-BOllQFDxG3F3z88rTLBtGN1ARLyLL04XWGxY_JxBPR5GvwEwiu-VgncItaad40eihSUTvMq5ceQ8m5WXnKsqfAKhTkvnfqfvKpqIndybDycqHsd0qYHuuFh5pT5aDul8qYw5VJl9IPFyPx-VJUFCljSc"/>
+</div>
+<div class="w-full space-y-sm">
+<button class="w-full bg-secondary py-3 rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">download</span> Download Pass
+                            </button>
+<p class="text-on-primary-container text-[11px] font-label-sm">Valid until 12/2025</p>
+</div>
+</section>
+<!-- Section 2: Document Vault (7/12) -->
+<section class="lg:col-span-7 bg-white p-lg rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex justify-between items-center mb-md">
+<h2 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">account_balance_wallet</span> Document Vault
+                            </h2>
+<button class="bg-surface-container-high px-4 py-2 rounded-lg text-primary font-label-sm text-label-sm hover:bg-outline-variant/20 transition-colors">
+                                Upload New
+                            </button>
+</div>
+<div class="space-y-md">
+<div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg group">
+<div class="flex items-center gap-md">
+<div class="bg-primary-container/10 p-3 rounded-lg text-secondary">
+<span class="material-symbols-outlined">badge</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">National ID / CIN</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Verified on Jan 12, 2024</p>
+</div>
+</div>
+<div class="flex gap-sm">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-secondary">visibility</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-error">delete</button>
+</div>
+</div>
+<div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg group">
+<div class="flex items-center gap-md">
+<div class="bg-primary-container/10 p-3 rounded-lg text-secondary">
+<span class="material-symbols-outlined">school</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Student Proof / Professional Cert</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Expires in 3 months</p>
+</div>
+</div>
+<div class="flex gap-sm">
+<span class="material-symbols-outlined text-amber-500" title="Expires Soon">warning</span>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-secondary">update</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 4: GDPR Rights (5/12) -->
+<section class="lg:col-span-5 bg-white p-lg rounded-xl shadow-sm border border-outline-variant/10">
+<h2 class="font-headline-sm text-headline-sm text-primary mb-md flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">policy</span> GDPR &amp; Privacy
+                        </h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-lg">
+                            Manage your data and privacy rights according to European regulation. You have full control over your digital footprint.
+                        </p>
+<div class="space-y-sm">
+<button class="w-full flex items-center justify-between p-md border border-outline-variant rounded-lg hover:bg-surface-container-low transition-all group">
+<span class="font-label-md text-label-md">Request Data Export</span>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">download_2</span>
+</button>
+<button class="w-full flex items-center justify-between p-md border border-outline-variant rounded-lg hover:bg-surface-container-low transition-all group">
+<span class="font-label-md text-label-md">Access Privacy Logs</span>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">history</span>
+</button>
+<button class="w-full flex items-center justify-between p-md border border-red-100 bg-red-50/30 text-error rounded-lg hover:bg-red-50 transition-all group">
+<span class="font-label-md text-label-md">Delete Account</span>
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">delete_forever</span>
+</button>
+</div>
+<div class="mt-lg p-md bg-secondary-fixed/30 rounded-lg">
+<div class="flex gap-sm items-start">
+<span class="material-symbols-outlined text-secondary">info</span>
+<p class="text-[12px] text-on-secondary-fixed-variant leading-relaxed">
+                                    Encre &amp; Cobalt uses end-to-end encryption for all vault documents. We never share your biometric or identification data with third parties.
+                                </p>
+</div>
+</div>
+</section>
+</div>
+</div>
+<!-- Footer Integration -->
+<footer class="mt-xl pt-lg border-t border-outline-variant flex flex-col md:flex-row justify-between items-center gap-md">
+<div class="flex flex-col gap-xs items-center md:items-start">
+<span class="font-headline-sm text-headline-sm font-bold text-primary">Encre &amp; Cobalt</span>
+<p class="text-on-surface-variant font-body-sm text-body-sm">© 2024 Encre &amp; Cobalt. Premium Coworking Management.</p>
+</div>
+<div class="flex gap-lg">
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-label-sm text-label-sm" href="#">Privacy Policy</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-label-sm text-label-sm" href="#">Terms of Service</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-label-sm text-label-sm" href="#">Cookies</a>
+</div>
+</footer>
+</main>
+</div>
+<!-- Micro-interaction Scripts -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Placeholder for real logic - simple hover effect enrichment
+            const actionCards = document.querySelectorAll('.group');
+            actionCards.forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    card.classList.add('shadow-md');
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.classList.remove('shadow-md');
+                });
+            });
+        });
+    </script>
+</body></html>

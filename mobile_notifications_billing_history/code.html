@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CoWork Space - Notifications & Invoices</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Sora:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-container": "#798bac",
+                    "inverse-on-surface": "#f2f0f3",
+                    "inverse-surface": "#303033",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "on-surface-variant": "#44474d",
+                    "on-tertiary-fixed-variant": "#60401d",
+                    "tertiary-fixed": "#ffdcbc",
+                    "error-container": "#ffdad6",
+                    "background": "#fbf9fb",
+                    "surface-bright": "#fbf9fb",
+                    "primary-fixed": "#d6e3ff",
+                    "primary": "#000d23",
+                    "on-primary": "#ffffff",
+                    "on-surface": "#1b1b1e",
+                    "secondary-container": "#2d6deb",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed-dim": "#b1c5ff",
+                    "secondary": "#0054cb",
+                    "surface-dim": "#dbd9dc",
+                    "on-error-container": "#93000a",
+                    "primary-container": "#10233f",
+                    "on-primary-fixed-variant": "#364765",
+                    "inverse-primary": "#b5c7eb",
+                    "surface": "#fbf9fb",
+                    "on-tertiary-fixed": "#2c1700",
+                    "on-primary-fixed": "#071b37",
+                    "primary-fixed-dim": "#b5c7eb",
+                    "tertiary": "#180a00",
+                    "surface-container": "#efedf0",
+                    "on-secondary-container": "#fefcff",
+                    "surface-tint": "#4d5f7e",
+                    "on-tertiary-container": "#aa8259",
+                    "on-secondary-fixed-variant": "#0040a0",
+                    "error": "#ba1a1a",
+                    "secondary-fixed": "#dae2ff",
+                    "outline-variant": "#c5c6ce",
+                    "on-error": "#ffffff",
+                    "on-secondary-fixed": "#001847",
+                    "tertiary-container": "#361d00",
+                    "outline": "#75777e",
+                    "on-background": "#1b1b1e",
+                    "tertiary-fixed-dim": "#ecbe90",
+                    "surface-container-highest": "#e4e2e5",
+                    "surface-container-high": "#e9e7ea",
+                    "surface-variant": "#e4e2e5",
+                    "surface-container-low": "#f5f3f6"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "16px",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "24px",
+                    "sm": "16px",
+                    "lg": "32px",
+                    "md": "24px",
+                    "xl": "48px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "container-max": "1280px",
+                    "base": "4px",
+                    "xs": "8px"
+            },
+            "fontFamily": {
+                    "label-sm": ["Inter"],
+                    "headline-lg": ["Sora"],
+                    "body-sm": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg-mobile": ["Sora"],
+                    "headline-xl": ["Sora"],
+                    "body-md": ["Inter"],
+                    "headline-sm": ["Sora"],
+                    "headline-md": ["Sora"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                    "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #F4F6F9; /* Gris Perle as per guide */
+        }
+        .soft-shadow-level-1 {
+            box-shadow: 0px 2px 4px rgba(16, 35, 63, 0.04);
+        }
+        .soft-shadow-level-2 {
+            box-shadow: 0px 8px 16px rgba(16, 35, 63, 0.08);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-on-surface antialiased pb-24">
+<!-- TopAppBar Section -->
+<header class="bg-surface dark:bg-surface-dim shadow-sm flex justify-between items-center w-full px-margin-mobile h-16 sticky top-0 z-50">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="A professional portrait of a young entrepreneur in a modern, light-filled co-working space. The image is clean and bright, with a shallow depth of field focusing on her friendly expression. The color palette features soft neutrals and a touch of professional blue, reflecting a high-end B2B SaaS aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTNfacDHZHghE3t8ERmox9dOHsuxYPmllSjJ0QwUD3MtWA1_oA1_mBwtXuIRMAF-8DuKUIQqQaS3ZwgnaVCD11Qrmkf04fj0uDmvy-rrRY0wU_yIgWgbyJogrogVzaZGMrAkoGGM8Ec5rz3ite1ACrsv6EaZKpDxJyCqj7JR3kXgw0ibH4hDLNgNwoq-d-QUOv_x6DF3ao8Eo2klzlfaoKQbBGoQUJXZBxDUJPj-uYdVvsuqSlNbCzRJe1RWUFgYHifQQtED-VQaE"/>
+</div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary">CoWork Space</h1>
+</div>
+<button class="text-primary dark:text-primary-fixed hover:bg-surface-container-low transition-colors p-2 rounded-full active:scale-95 transition-all">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</header>
+<main class="px-margin-mobile py-6 max-w-container-max mx-auto space-y-8">
+<!-- Notification Center (Top Half) -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-primary-container">Notifications</h2>
+<button class="font-label-md text-label-md text-secondary hover:underline">Mark all as read</button>
+</div>
+<!-- Notification Cards -->
+<div class="space-y-3">
+<!-- Session Reminder -->
+<div class="bg-white rounded-lg p-4 soft-shadow-level-1 border-l-4 border-secondary flex gap-4 hover:soft-shadow-level-2 transition-all cursor-pointer active:scale-[0.98]">
+<div class="w-10 h-10 rounded-full bg-secondary-fixed flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-secondary">schedule</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-label-md text-label-md text-primary">Session Starting Soon</h3>
+<span class="font-label-sm text-label-sm text-outline">15m ago</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Your booked hot desk in Zone A is ready. Your session starts in 15 minutes.</p>
+</div>
+</div>
+<!-- Training Alert -->
+<div class="bg-white rounded-lg p-4 soft-shadow-level-1 border-l-4 border-secondary-container flex gap-4 hover:soft-shadow-level-2 transition-all cursor-pointer active:scale-[0.98]">
+<div class="w-10 h-10 rounded-full bg-secondary-fixed-dim flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-secondary-fixed-variant">school</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-label-md text-label-md text-primary">Training Tomorrow</h3>
+<span class="font-label-sm text-label-sm text-outline">2h ago</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Reminder: "Agile Leadership" workshop tomorrow at 10:00 AM in Conference Room 4.</p>
+</div>
+</div>
+<!-- Subscription Renewal -->
+<div class="bg-white rounded-lg p-4 soft-shadow-level-1 border-l-4 border-on-tertiary-container flex gap-4 hover:soft-shadow-level-2 transition-all cursor-pointer active:scale-[0.98]">
+<div class="w-10 h-10 rounded-full bg-tertiary-fixed flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-tertiary-fixed-variant">autorenew</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-label-md text-label-md text-primary">Subscription Renewal</h3>
+<span class="font-label-sm text-label-sm text-outline">Yesterday</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Your Premium Plan will automatically renew on Oct 1st. View details here.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Invoices Section (Bottom Half) -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-primary-container">Invoices</h2>
+<button class="font-label-md text-label-md text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                    Filter
+                </button>
+</div>
+<!-- Invoice List Layout -->
+<div class="bg-white rounded-lg soft-shadow-level-1 overflow-hidden">
+<!-- Table Header (Styled as per Data Tables guidance) -->
+<div class="bg-primary-container text-white px-4 py-3 flex items-center justify-between">
+<span class="font-label-sm text-label-sm">Document & Date</span>
+<span class="font-label-sm text-label-sm">Status</span>
+</div>
+<!-- Invoice Rows -->
+<div class="divide-y divide-outline/10">
+<!-- Invoice 1 -->
+<div class="p-4 flex items-center justify-between hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-background flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-primary">INV-2023-009</h4>
+<p class="font-body-sm text-body-sm text-outline">Sept 15, 2023</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="px-3 py-1 rounded-full bg-[#2FBE8F1A] text-[#2FBE8F] font-label-sm text-label-sm">Paid</span>
+<button class="p-2 text-secondary hover:bg-secondary/5 rounded-full transition-all">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+<!-- Invoice 2 -->
+<div class="p-4 flex items-center justify-between hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-background flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-primary">INV-2023-008</h4>
+<p class="font-body-sm text-body-sm text-outline">Aug 15, 2023</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="px-3 py-1 rounded-full bg-[#2FBE8F1A] text-[#2FBE8F] font-label-sm text-label-sm">Paid</span>
+<button class="p-2 text-secondary hover:bg-secondary/5 rounded-full transition-all">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+<!-- Invoice 3 -->
+<div class="p-4 flex items-center justify-between hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-background flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-primary">INV-2023-007</h4>
+<p class="font-body-sm text-body-sm text-outline">July 15, 2023</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="px-3 py-1 rounded-full bg-[#FF6F591A] text-[#FF6F59] font-label-sm text-label-sm">Pending</span>
+<button class="p-2 text-secondary hover:bg-secondary/5 rounded-full transition-all">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Footer Action -->
+<div class="bg-surface-container-low p-4 text-center">
+<button class="font-label-md text-label-md text-secondary hover:underline">View All Invoices</button>
+</div>
+</div>
+</section>
+<!-- Decorative Spacer for FAB/Nav -->
+<div class="h-20"></div>
+</main>
+<!-- BottomNavBar Section -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-surface-container-lowest dark:bg-surface-container-high shadow-lg rounded-t-xl">
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline hover:bg-surface-container-high transition-colors p-2 rounded-lg">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-sm text-label-sm mt-1">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline hover:bg-surface-container-high transition-colors p-2 rounded-lg">
+<span class="material-symbols-outlined">event_available</span>
+<span class="font-label-sm text-label-sm mt-1">Bookings</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full px-4 py-1 active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">notifications</span>
+<span class="font-label-sm text-label-sm">Alerts</span>
+</button>
+</nav>
+<script>
+        // Micro-interaction for clicking notification items
+        document.querySelectorAll('.bg-white.rounded-lg').forEach(card => {
+            card.addEventListener('click', function() {
+                // Visual feedback only for demo
+                this.style.opacity = '0.7';
+                setTimeout(() => {
+                    this.style.opacity = '1';
+                }, 150);
+            });
+        });
+
+        // Simple mock download action for invoices
+        document.querySelectorAll('button:has(.material-symbols-outlined:contains("download"))').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                alert('Preparing your invoice for download...');
+            });
+        });
+    </script>
+</body></html>

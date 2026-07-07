@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CoWork Space - Member Home</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#798bac",
+                        "inverse-on-surface": "#f2f0f3",
+                        "inverse-surface": "#303033",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#44474d",
+                        "on-tertiary-fixed-variant": "#60401d",
+                        "tertiary-fixed": "#ffdcbc",
+                        "error-container": "#ffdad6",
+                        "background": "#fbf9fb",
+                        "surface-bright": "#fbf9fb",
+                        "primary-fixed": "#d6e3ff",
+                        "primary": "#000d23",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#1b1b1e",
+                        "secondary-container": "#2d6deb",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#b1c5ff",
+                        "secondary": "#0054cb",
+                        "surface-dim": "#dbd9dc",
+                        "on-error-container": "#93000a",
+                        "primary-container": "#10233f",
+                        "on-primary-fixed-variant": "#364765",
+                        "inverse-primary": "#b5c7eb",
+                        "surface": "#fbf9fb",
+                        "on-tertiary-fixed": "#2c1700",
+                        "on-primary-fixed": "#071b37",
+                        "primary-fixed-dim": "#b5c7eb",
+                        "tertiary": "#180a00",
+                        "surface-container": "#efedf0",
+                        "on-secondary-container": "#fefcff",
+                        "surface-tint": "#4d5f7e",
+                        "on-tertiary-container": "#aa8259",
+                        "on-secondary-fixed-variant": "#0040a0",
+                        "error": "#ba1a1a",
+                        "secondary-fixed": "#dae2ff",
+                        "outline-variant": "#c5c6ce",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed": "#001847",
+                        "tertiary-container": "#361d00",
+                        "outline": "#75777e",
+                        "on-background": "#1b1b1e",
+                        "tertiary-fixed-dim": "#ecbe90",
+                        "surface-container-highest": "#e4e2e5",
+                        "surface-container-high": "#e9e7ea",
+                        "surface-variant": "#e4e2e5",
+                        "surface-container-low": "#f5f3f6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "16px",
+                        "xl": "24px",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "sm": "16px",
+                        "lg": "32px",
+                        "md": "24px",
+                        "xl": "48px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px",
+                        "container-max": "1280px",
+                        "base": "4px",
+                        "xs": "8px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "headline-lg": ["Sora"],
+                        "body-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Sora"],
+                        "headline-xl": ["Sora"],
+                        "body-md": ["Inter"],
+                        "headline-sm": ["Sora"],
+                        "headline-md": ["Sora"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-md": ["14px", {"lineHeight": "16px", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                        "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { background-color: #fbf9fb; color: #1b1b1e; -webkit-font-smoothing: antialiased; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        .bento-wide { grid-column: span 2; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(16, 35, 63, 0.08);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="fixed top-0 left-0 w-full z-50 bg-surface h-16 flex justify-between items-center px-margin-mobile shadow-sm">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="A professional studio headshot of a premium member in a well-lit co-working environment. The subject is wearing a smart-casual blazer, looking confident and approachable. The background is softly blurred, showing a modern office with sleek wooden textures and glass partitions, using a sophisticated color palette of deep blues and warm greys to match the premium B2B SaaS aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAgSbtmyowtWlvlvhVzUJjrPBXMcvfbvxel6pGBjxdaIqKp8nNAtGoJVbsNS_yyRV8zchht1cUhH7CgZara6pD59GKagulG5F7JRHB1T9R_v_5Dazt0GqSYZSblnqQTxl15BbZOruzj_47pKiHwfmndLJDxNntGDtEE2IvBf9wEKTtRUIiiuEgc9DSZZWgtGO1NeiALPojUKKDR9vNUK5cYCeOxkfCUjC3nqhcYh5Sz15Kk1TlX7Cr3FGhGLYBMUs9ez6sL5Td2gnk"/>
+</div>
+<span class="font-headline-sm text-headline-sm font-bold text-primary">CoWork Space</span>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors scale-95 active:opacity-80">
+<span class="material-symbols-outlined text-primary">settings</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-20 pb-24 px-margin-mobile max-w-md mx-auto">
+<!-- Active Session / Countdown Timer Section -->
+<section class="mb-lg">
+<div class="glass-card rounded-xl p-md flex flex-col items-center justify-center relative overflow-hidden">
+<!-- Background visual element -->
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-secondary/5 rounded-full blur-3xl"></div>
+<h2 class="font-label-md text-label-md text-on-surface-variant mb-sm uppercase tracking-wider">Current Session</h2>
+<div class="relative flex items-center justify-center mb-sm">
+<svg class="w-48 h-48">
+<circle class="text-surface-container-high" cx="96" cy="96" fill="transparent" r="85" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-secondary progress-ring__circle" cx="96" cy="96" fill="transparent" r="85" stroke="currentColor" stroke-dasharray="534.07" stroke-dashoffset="133.51" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-headline-xl text-headline-xl text-primary" id="timer-display">01:42</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Remaining</span>
+</div>
+</div>
+<div class="flex gap-xs items-center bg-secondary-container/10 px-3 py-1.5 rounded-full">
+<span class="w-2 h-2 bg-secondary rounded-full animate-pulse"></span>
+<span class="font-label-sm text-label-sm text-secondary">Meeting Room B • Level 2</span>
+</div>
+</div>
+</section>
+<!-- Bento Grid for Member Info -->
+<section class="bento-grid mb-lg">
+<!-- Active Subscription Card -->
+<div class="bento-wide bg-primary-container text-on-primary-container rounded-xl p-md shadow-lg relative overflow-hidden">
+<div class="relative z-10">
+<div class="flex justify-between items-start mb-lg">
+<div>
+<p class="font-label-sm text-label-sm text-on-primary-container/80 mb-1">Membership Plan</p>
+<h3 class="font-headline-sm text-headline-sm text-on-secondary-container">Founder Platinum</h3>
+</div>
+<span class="material-symbols-outlined text-on-secondary-container">workspace_premium</span>
+</div>
+<div class="flex justify-between items-end">
+<p class="font-body-sm text-body-sm text-on-primary-container/70">Next billing: Oct 12, 2023</p>
+<button class="bg-secondary px-4 py-2 rounded-lg text-on-secondary font-label-md text-label-md hover:bg-secondary/90 transition-all active:scale-95">Manage</button>
+</div>
+</div>
+<!-- Abstract pattern background -->
+<div class="absolute top-0 right-0 w-full h-full opacity-10 pointer-events-none">
+<div class="absolute -right-4 -top-4 w-32 h-32 border-4 border-white rounded-full"></div>
+<div class="absolute right-12 top-8 w-16 h-16 border-2 border-white rounded-full"></div>
+</div>
+</div>
+<!-- Next Reservation -->
+<div class="glass-card rounded-xl p-md flex flex-col justify-between aspect-square">
+<div>
+<div class="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center mb-sm">
+<span class="material-symbols-outlined text-secondary text-[20px]">event_available</span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-1">Next Booking</p>
+<h4 class="font-label-md text-label-md text-primary leading-tight">Tomorrow, 09:00 AM</h4>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Hot Desk 14</p>
+</div>
+<!-- Recent Activity / Stats -->
+<div class="glass-card rounded-xl p-md flex flex-col justify-between aspect-square">
+<div>
+<div class="w-8 h-8 rounded-lg bg-tertiary-fixed-dim/20 flex items-center justify-center mb-sm">
+<span class="material-symbols-outlined text-tertiary-fixed-variant text-[20px]">insights</span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-1">This Week</p>
+<h4 class="font-headline-sm text-headline-sm text-primary">24.5h</h4>
+</div>
+<div class="flex items-center gap-1 text-[#2FBE8F]">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+<span class="font-label-sm text-label-sm">12% vs last week</span>
+</div>
+</div>
+</section>
+<!-- Quick Access Actions -->
+<section>
+<h3 class="font-label-md text-label-md text-primary mb-md">Quick Actions</h3>
+<div class="space-y-sm">
+<button class="w-full flex items-center justify-between p-sm bg-white border border-outline-variant/30 rounded-xl hover:shadow-md transition-all group">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-secondary transition-colors">wifi</span>
+<span class="font-body-md text-body-md text-on-surface">Member Wi-Fi Access</span>
+</div>
+<span class="material-symbols-outlined text-outline">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between p-sm bg-white border border-outline-variant/30 rounded-xl hover:shadow-md transition-all group">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-secondary transition-colors">coffee</span>
+<span class="font-body-md text-body-md text-on-surface">Order from Barista</span>
+</div>
+<span class="material-symbols-outlined text-outline">chevron_right</span>
+</button>
+</div>
+</section>
+</main>
+<!-- Floating Action Button for QR Key -->
+<button class="fixed bottom-20 right-6 w-16 h-16 bg-secondary text-on-secondary rounded-full shadow-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90 z-50" id="qr-key-fab">
+<span class="material-symbols-outlined text-[32px]">qr_code_2</span>
+</button>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-surface-container-lowest dark:bg-surface-container-high shadow-lg rounded-t-xl">
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 Active: scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">event_available</span>
+<span class="font-label-sm text-label-sm">Bookings</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">notifications</span>
+<span class="font-label-sm text-label-sm">Alerts</span>
+</div>
+</nav>
+<!-- QR Code Modal (Hidden by Default) -->
+<div class="fixed inset-0 z-[60] flex items-center justify-center p-md opacity-0 pointer-events-none transition-opacity duration-300" id="qr-modal">
+<div class="absolute inset-0 bg-primary/40 backdrop-blur-sm"></div>
+<div class="relative bg-white w-full max-w-sm rounded-xl p-lg shadow-2xl scale-90 transition-transform duration-300 transform" id="modal-container">
+<div class="flex justify-between items-center mb-md">
+<h4 class="font-headline-sm text-headline-sm text-primary">Member Key</h4>
+<button class="text-on-surface-variant hover:text-primary" id="close-modal">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="bg-white p-lg rounded-xl border border-outline-variant flex flex-col items-center">
+<img class="w-48 h-48 mb-lg" data-alt="A clean, minimalist vector of a digital QR code displayed on a high-end smartphone screen. The design includes branding for CoWork Space in the center of the QR code. The aesthetic is modern and professional, with sharp lines and high contrast, rendered against a pristine white background to symbolize security and digital precision." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCV_0vYaT99ymFWqps7RCcnm6UzLpnBE46G95MeVu6ilfjsrGrcbUJaOoHiWFZV1bPRbAs3r2Dq3_NCHUFJ1OL9sDAf67DYdOwWAEiqVcI3_7NizVKUSXyQIWZp9GF92tmSLXmXoWUhoNQSnmG1uJrhXcGh8ucvOpYPoQ4xNNPq35uhMU2l8dMu-9Y-0CEaarUq0v2s98xlrUdpWdKY8Y5oz2qUQR-uWKmbYCopOe83CAJAOrFz14JWQ50u6vbmkfcLJo9PO7WBnTc"/>
+<p class="font-body-sm text-body-sm text-on-surface-variant text-center mb-md">Scan this at any access point to unlock doors and amenities.</p>
+<div class="w-full bg-surface-container-low p-sm rounded-lg flex items-center justify-center gap-sm">
+<span class="material-symbols-outlined text-secondary">verified_user</span>
+<span class="font-label-md text-label-md text-primary">Identity Verified</span>
+</div>
+</div>
+</div>
+</div>
+<script>
+        // Micro-interactions and Modal Logic
+        const fab = document.getElementById('qr-key-fab');
+        const modal = document.getElementById('qr-modal');
+        const modalContainer = document.getElementById('modal-container');
+        const closeModal = document.getElementById('close-modal');
+
+        fab.addEventListener('click', () => {
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100');
+            modalContainer.classList.remove('scale-90');
+            modalContainer.classList.add('scale-100');
+        });
+
+        const closeFunc = () => {
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.classList.remove('opacity-100');
+            modalContainer.classList.add('scale-90');
+            modalContainer.classList.remove('scale-100');
+        };
+
+        closeModal.addEventListener('click', closeFunc);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal.firstElementChild) closeFunc();
+        });
+
+        // Countdown Timer Animation (Visual Only)
+        let secondsLeft = 102; // 1:42
+        const display = document.getElementById('timer-display');
+        const ring = document.querySelector('.progress-ring__circle');
+        const circumference = 534.07;
+
+        setInterval(() => {
+            if (secondsLeft > 0) {
+                secondsLeft--;
+                const mins = Math.floor(secondsLeft / 60);
+                const secs = secondsLeft % 60;
+                display.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                
+                // Update circle
+                const offset = circumference - (secondsLeft / 120) * circumference;
+                ring.style.strokeDashoffset = offset;
+            }
+        }, 1000);
+    </script>
+</body></html>

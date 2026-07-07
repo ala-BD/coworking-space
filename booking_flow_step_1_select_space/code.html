@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Select Your Space | Encre &amp; Cobalt</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Sora:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-container": "#361d00",
+                    "on-secondary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-container": "#aa8259",
+                    "on-error": "#ffffff",
+                    "on-surface": "#1b1b1e",
+                    "surface": "#fbf9fb",
+                    "background": "#fbf9fb",
+                    "on-background": "#1b1b1e",
+                    "on-secondary-fixed-variant": "#0040a0",
+                    "surface-container-low": "#f5f3f6",
+                    "primary-fixed-dim": "#b5c7eb",
+                    "on-surface-variant": "#44474d",
+                    "primary-fixed": "#d6e3ff",
+                    "on-primary": "#ffffff",
+                    "secondary-container": "#2d6deb",
+                    "primary": "#000d23",
+                    "on-primary-fixed": "#071b37",
+                    "inverse-on-surface": "#f2f0f3",
+                    "surface-variant": "#e4e2e5",
+                    "secondary": "#0054cb",
+                    "surface-tint": "#4d5f7e",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#efedf0",
+                    "on-primary-container": "#798bac",
+                    "on-primary-fixed-variant": "#364765",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed": "#2c1700",
+                    "surface-bright": "#fbf9fb",
+                    "error": "#ba1a1a",
+                    "on-secondary-container": "#fefcff",
+                    "tertiary-fixed-dim": "#ecbe90",
+                    "surface-container-highest": "#e4e2e5",
+                    "on-tertiary-fixed-variant": "#60401d",
+                    "inverse-primary": "#b5c7eb",
+                    "on-secondary-fixed": "#001847",
+                    "primary-container": "#10233f",
+                    "tertiary-fixed": "#ffdcbc",
+                    "tertiary": "#180a00",
+                    "secondary-fixed": "#dae2ff",
+                    "on-tertiary": "#ffffff",
+                    "outline-variant": "#c5c6ce",
+                    "outline": "#75777e",
+                    "secondary-fixed-dim": "#b1c5ff",
+                    "inverse-surface": "#303033",
+                    "surface-container-high": "#e9e7ea",
+                    "surface-dim": "#dbd9dc"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "16px",
+                    "xl": "24px",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "md": "24px",
+                    "gutter": "24px",
+                    "xs": "8px",
+                    "sm": "16px",
+                    "base": "4px",
+                    "xl": "48px",
+                    "container-max": "1280px",
+                    "lg": "32px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Inter"],
+                    "headline-lg": ["Sora"],
+                    "label-md": ["Inter"],
+                    "headline-xl": ["Sora"],
+                    "headline-sm": ["Sora"],
+                    "headline-md": ["Sora"],
+                    "label-sm": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .active-step-line {
+            background: linear-gradient(90deg, #2F6FED 0%, #10233F 100%);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e4e2e5;
+            border-radius: 10px;
+        }
+        .card-glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(16, 35, 63, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body-md text-on-surface">
+<!-- Top Navigation (Shared Component) -->
+<nav class="sticky top-0 z-50 bg-surface shadow-sm h-20 flex items-center">
+<div class="flex justify-between items-center w-full px-margin-desktop max-w-container-max mx-auto">
+<div class="text-headline-md font-headline-md font-bold text-primary">Encre &amp; Cobalt</div>
+<div class="hidden md:flex items-center gap-lg">
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-label-md text-label-md" href="#">Workspaces</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-label-md text-label-md" href="#">Memberships</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-label-md text-label-md" href="#">Events</a>
+</div>
+<div class="flex items-center gap-md">
+<button class="text-on-surface-variant font-label-md text-label-md px-base hover:text-primary transition-colors">Log In</button>
+<button class="bg-secondary text-on-secondary px-lg py-sm rounded-lg font-label-md text-label-md hover:bg-opacity-90 transition-all shadow-md">Book Now</button>
+</div>
+</div>
+</nav>
+<main class="max-w-container-max mx-auto px-margin-desktop py-xl">
+<!-- Booking Stepper -->
+<div class="mb-xl max-w-2xl mx-auto">
+<div class="flex justify-between items-center relative">
+<!-- Stepper Progress Line Background -->
+<div class="absolute top-5 left-0 w-full h-[2px] bg-surface-variant z-0"></div>
+<!-- Active Line Segment -->
+<div class="absolute top-5 left-0 w-1/2 h-[2px] active-step-line z-0"></div>
+<!-- Step 1 (Active) -->
+<div class="relative z-10 flex flex-col items-center gap-xs">
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold shadow-lg">1</div>
+<span class="font-label-md text-label-md text-primary font-bold">Select Your Space</span>
+</div>
+<!-- Step 2 -->
+<div class="relative z-10 flex flex-col items-center gap-xs">
+<div class="w-10 h-10 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center font-bold border border-outline-variant">2</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Time &amp; Details</span>
+</div>
+<!-- Step 3 -->
+<div class="relative z-10 flex flex-col items-center gap-xs">
+<div class="w-10 h-10 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center font-bold border border-outline-variant">3</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Confirmation</span>
+</div>
+</div>
+</div>
+<!-- Page Header & Filters -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
+<div>
+<h1 class="font-headline-xl text-headline-xl text-primary mb-xs">Select Your Space</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl">Find the perfect environment for productivity. Filter by type to narrow your search.</p>
+</div>
+<div class="flex flex-wrap gap-xs">
+<button class="px-lg py-sm rounded-full bg-primary text-on-primary font-label-md text-label-md transition-all">All</button>
+<button class="px-lg py-sm rounded-full bg-surface-container text-on-surface-variant border border-outline-variant/30 font-label-md text-label-md hover:border-secondary transition-all">Open Space</button>
+<button class="px-lg py-sm rounded-full bg-surface-container text-on-surface-variant border border-outline-variant/30 font-label-md text-label-md hover:border-secondary transition-all">Private Office</button>
+<button class="px-lg py-sm rounded-full bg-surface-container text-on-surface-variant border border-outline-variant/30 font-label-md text-label-md hover:border-secondary transition-all">Meeting Room</button>
+<button class="px-lg py-sm rounded-full bg-surface-container text-on-surface-variant border border-outline-variant/30 font-label-md text-label-md hover:border-secondary transition-all">Event Space</button>
+</div>
+</div>
+<!-- Space Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Space Card 1: Available -->
+<div class="group card-glass rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer border-2 border-transparent hover:border-secondary/20" onclick="selectSpace(this)">
+<div class="relative h-64 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A bright and airy open-plan coworking space with ergonomic minimalist furniture, warm wood accents, and large windows looking out to a modern city skyline. The interior style is professional B2B SaaS aesthetic with Bleu Cobalt and Encre Marine accents. Soft natural light creates a productive and premium atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB48cqzn2H3Lrji4fItb0nFf7KMSqVJLdJ0K6rcrvi4V_UeloVYoZmWX1sAyhHBLmqRs4o9LyJh3_Zf8VYs23REsi_XWqCtFBXl0YFHCsFoZ7WBZN1YmGVk-iXuHPM917WhPJwGleF76k3g8vH2v_Lj22x58S6YJsmOxQfUh9tmcwcekArNIYOILaPrM-4vmO5E3YzkNkBKyxeT6MCgL59PtzGTmO_LQFWZcMFU5XOMxZGB5ErCwJdaYg5sw0RWs2FqDNw7rC6G4nA"/>
+<div class="absolute top-4 left-4 bg-[#2FBE8F1A] text-[#2FBE8F] px-sm py-1 rounded-full font-label-sm text-label-sm flex items-center gap-1 backdrop-blur-md">
+<span class="w-2 h-2 rounded-full bg-[#2FBE8F]"></span> Available
+                    </div>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-xs">
+<h3 class="font-headline-sm text-headline-sm text-primary">Indigo Collective Hub</h3>
+<span class="font-label-md text-label-md text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">groups</span> 24
+                        </span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-md">Vibrant shared workspace with high-speed fiber and specialty coffee lounge access.</p>
+<!-- Mini Calendar -->
+<div class="mt-auto">
+<p class="font-label-sm text-label-sm text-outline mb-2 uppercase tracking-wider">Availability today</p>
+<div class="flex gap-1 h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full w-1/4 bg-secondary"></div>
+<div class="h-full w-1/12 bg-outline-variant/30"></div>
+<div class="h-full w-1/3 bg-secondary"></div>
+<div class="h-full w-1/6 bg-outline-variant/30"></div>
+<div class="h-full w-1/6 bg-secondary"></div>
+</div>
+<div class="flex justify-between text-[10px] text-outline mt-1 font-medium">
+<span>09:00</span>
+<span>13:00</span>
+<span>18:00</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Space Card 2: Occupied -->
+<div class="group bg-surface-container-low/50 border border-outline-variant/20 rounded-xl overflow-hidden flex flex-col opacity-90 relative">
+<div class="relative h-64 overflow-hidden grayscale-[0.4]">
+<img class="w-full h-full object-cover" data-alt="An elegant, private executive office suite featuring a large dark oak desk, premium leather chairs, and a glass-enclosed meeting area. The lighting is sophisticated and warm, reflecting a high-end corporate environment. The palette uses deep Encre Marine tones and subtle metallic accents in a modern minimalist style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAC3sD5vanTsaoTpItCw9bhPdViFSCdtoXqNHD7iVq839pBMzgjLw1bcSDp1_CCREfs_AEN1pGCZxzqvPF7xP14mDoWEtGgHPMDRMPKhrxnNH3q5f5s0jD4FKoCxdJsQ1Az06v1aGPokB8eW9Y2mjetWN9vsxMmKzSYkFao22Eh4XxQ890yzkfn1QSy5OmezHieBnODQzOnodQmSsp_xCU3hca08KBCxPZmzK9j8nEOD5tRLjrSdYjCAF_1MzGAUCcoRvTMzOu5Yzg"/>
+<div class="absolute top-4 left-4 bg-outline-variant text-on-surface-variant px-sm py-1 rounded-full font-label-sm text-label-sm flex items-center gap-1 backdrop-blur-md">
+<span class="w-2 h-2 rounded-full bg-on-surface-variant"></span> Occupied
+                    </div>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-xs">
+<h3 class="font-headline-sm text-headline-sm text-primary/60">Executive Suite 402</h3>
+<span class="font-label-md text-label-md text-on-surface-variant/60 flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">groups</span> 4
+                        </span>
+</div>
+<div class="bg-secondary-fixed/30 p-sm rounded-lg mb-md border border-secondary/10">
+<p class="font-label-md text-label-md text-secondary font-bold">Next available slot: 14:30 Today</p>
+</div>
+<div class="mt-auto">
+<p class="font-label-sm text-label-sm text-outline mb-2">Similar spaces nearby:</p>
+<div class="flex gap-2">
+<div class="w-10 h-10 rounded-lg bg-surface-container overflow-hidden border border-outline-variant/30 cursor-pointer hover:border-secondary transition-all">
+<img class="w-full h-full object-cover" data-alt="Thumbnail of a modern coworking meeting room with white furniture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7GgJovL8cdF7jT_Ooqe8Bu85kR_KgeSCZFgf6MR7Kri32ukfzVKckToNOhmjwARgPe7VVAj2NnvibQKh57z9EoR4AfJ0oe-l8RYIJa8U6VxvuScV_N557gIA5faOokkm6TnHkewWlJ5kv9tMsAtBRRwEkW3elpdXvOnW2Je4osxGNMiy2QR0xkBcudYjwkA1OIekVkr_dSQ5wwuwYwCOy4ZlIAXaLl_ZmMeKrasxp2YVmRPWUSepONWfV_Z0fwe-n5e9yr6vQP2Y"/>
+</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container overflow-hidden border border-outline-variant/30 cursor-pointer hover:border-secondary transition-all">
+<img class="w-full h-full object-cover" data-alt="Thumbnail of a bright office space with glass walls." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmv11K5bkNZkI1Q5T3wQb3zjRaUPHbZjKK4AIHa9kbu8z-V4OzU11OS1li2gzZ1JyZLFAgtEpsn4tWlnoc1tfJOUm0eagirhy_JLvIrC7Zlygr1WI-XMfZUeDD95dx5FqPRczUb75DuGGf55raFfAVFBMdNj0oJtsjTL5Cxx4Y5CTJ3fepysM5F45ltREo1h0ZPonHC1gDqrmOQuYCFz3OndSu-1t_szRrhDZU-lWqQBJfR2epk8d8DUxutvn95iYitx32zEEPAfw"/>
+</div>
+<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-secondary/10 text-secondary font-label-sm text-label-sm font-bold cursor-pointer hover:bg-secondary/20 transition-all">
+                                +2
+                            </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Space Card 3: Available -->
+<div class="group card-glass rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer border-2 border-transparent hover:border-secondary/20" onclick="selectSpace(this)">
+<div class="relative h-64 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A high-tech minimalist meeting room with a large rectangular white table, sleek black mesh chairs, and a wall-mounted digital screen displaying abstract data visualizations. The space is partitioned by soundproof glass, maintaining a professional B2B atmosphere with Bleu Cobalt and soft gray tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjKePP0RFtk518zP4pHmgUgw_F_haCUWXW9YtNhi_WU6lfV_rB8XI0NRvAJRhIXmtfLYBvYQASSTNHUSp90RqMj11rRAtOosXLgxWpZW0gv-kNww6RIzXDLFdghrxI4qmkN9AX0G3G2_eM063len-d3hIXetqDONzAZWaxkGyzyjiByf55SNwkdjf5JWBx878kw-cM1qdAkDzJJmGamG3cwIAmGc-6feszcbIG70YXpzNPGOzFc0ny78M1ftvr86Q_0dy3UxjRwhI"/>
+<div class="absolute top-4 left-4 bg-[#2FBE8F1A] text-[#2FBE8F] px-sm py-1 rounded-full font-label-sm text-label-sm flex items-center gap-1 backdrop-blur-md">
+<span class="w-2 h-2 rounded-full bg-[#2FBE8F]"></span> Available
+                    </div>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-xs">
+<h3 class="font-headline-sm text-headline-sm text-primary">Glass Studio B</h3>
+<span class="font-label-md text-label-md text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">groups</span> 8
+                        </span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-md">Soundproof glass enclosure with dedicated presentation screen and whiteboards.</p>
+<!-- Mini Calendar -->
+<div class="mt-auto">
+<p class="font-label-sm text-label-sm text-outline mb-2 uppercase tracking-wider">Availability today</p>
+<div class="flex gap-1 h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full w-2/3 bg-secondary"></div>
+<div class="h-full w-1/12 bg-outline-variant/30"></div>
+<div class="h-full w-1/4 bg-secondary"></div>
+</div>
+<div class="flex justify-between text-[10px] text-outline mt-1 font-medium">
+<span>09:00</span>
+<span>13:00</span>
+<span>18:00</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Space Card 4: Available -->
+<div class="group card-glass rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer border-2 border-transparent hover:border-secondary/20" onclick="selectSpace(this)">
+<div class="relative h-64 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A spacious and flexible event space within a modern architectural building. High ceilings with exposed industrial pipes, polished concrete floors, and movable modular seating. Large glass doors open to an outdoor terrace. The aesthetic is clean, minimalist, and energetic, featuring Cobalt Blue and Slate Grey color palettes." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSJVzK7XnA9ra3H1-2OCqzwqFDbdlHlclzsBry_n62C770PV-gttdTQMeRXxPhmEMc692WY8mQ018z9pNiXDphc3RTLQoS0TWrnAiSz7RnmlXIpp-0SJNvIOuNWuT2wNkkyofj1nQi74YLva7HVx8QjfBY8jJ5pr7u8k9QSSgOskeI-D5835GGLAHxv_bg6RC-JB9v2O5eucWhBl6UpjToxeDCMc_S76mza7VG8HRKKVSHF857tyG4rSTOv_zLRatOEQsPcb33qlA"/>
+<div class="absolute top-4 left-4 bg-[#2FBE8F1A] text-[#2FBE8F] px-sm py-1 rounded-full font-label-sm text-label-sm flex items-center gap-1 backdrop-blur-md">
+<span class="w-2 h-2 rounded-full bg-[#2FBE8F]"></span> Available
+                    </div>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-xs">
+<h3 class="font-headline-sm text-headline-sm text-primary">The Atrium Plaza</h3>
+<span class="font-label-md text-label-md text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">groups</span> 120
+                        </span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-md">Grand open-plan space for workshops, seminars, or community networking events.</p>
+<!-- Mini Calendar -->
+<div class="mt-auto">
+<p class="font-label-sm text-label-sm text-outline mb-2 uppercase tracking-wider">Availability today</p>
+<div class="flex gap-1 h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full w-full bg-secondary"></div>
+</div>
+<div class="flex justify-between text-[10px] text-outline mt-1 font-medium">
+<span>09:00</span>
+<span>13:00</span>
+<span>18:00</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Footer Action -->
+<div class="fixed bottom-0 left-0 w-full bg-surface/80 backdrop-blur-lg border-t border-outline-variant/10 py-md px-margin-desktop z-40">
+<div class="max-w-container-max mx-auto flex items-center justify-between">
+<div class="flex flex-col" id="selection-status">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Selected Space</span>
+<span class="text-body-md font-body-md text-primary font-bold" id="selected-name">None selected</span>
+</div>
+<div class="flex items-center gap-md">
+<button class="px-lg py-sm text-on-surface-variant font-label-md text-label-md hover:text-primary transition-all">Cancel</button>
+<button class="px-xl py-sm bg-surface-container text-outline-variant rounded-lg font-label-md text-label-md cursor-not-allowed transition-all shadow-md" disabled="" id="continue-btn">
+                        Continue to Step 2
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer (Shared Component) -->
+<footer class="w-full py-lg px-margin-desktop bg-surface-container flex flex-col md:flex-row justify-between items-center gap-md max-w-container-max mx-auto mt-xl border-t border-outline-variant/10">
+<div class="font-headline-sm text-headline-sm font-bold text-primary">Encre &amp; Cobalt</div>
+<div class="flex gap-md">
+<a class="text-body-sm font-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Support</a>
+<a class="text-body-sm font-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="text-body-sm font-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="text-body-sm font-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Contact Us</a>
+</div>
+<div class="text-label-sm font-label-sm text-on-surface">© 2024 Encre &amp; Cobalt Coworking. All rights reserved.</div>
+</footer>
+<script>
+        let selectedElement = null;
+
+        function selectSpace(element) {
+            // Remove previous selection
+            if (selectedElement) {
+                selectedElement.classList.remove('border-secondary');
+                selectedElement.classList.remove('ring-4');
+                selectedElement.classList.remove('ring-secondary/10');
+                selectedElement.classList.add('border-transparent');
+            }
+
+            // Apply new selection
+            selectedElement = element;
+            element.classList.remove('border-transparent');
+            element.classList.add('border-secondary');
+            element.classList.add('ring-4');
+            element.classList.add('ring-secondary/10');
+
+            // Update UI
+            const name = element.querySelector('h3').innerText;
+            document.getElementById('selected-name').innerText = name;
+            
+            const btn = document.getElementById('continue-btn');
+            btn.disabled = false;
+            btn.classList.remove('bg-surface-container', 'text-outline-variant', 'cursor-not-allowed');
+            btn.classList.add('bg-secondary', 'text-on-secondary', 'hover:bg-opacity-90', 'cursor-pointer');
+            
+            // Smooth scroll to bottom status if on mobile
+            if (window.innerWidth < 768) {
+                document.getElementById('selection-status').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Micro-interaction for filter chips
+        const filterBtns = document.querySelectorAll('.flex.flex-wrap.gap-xs button');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => {
+                    b.classList.remove('bg-primary', 'text-on-primary');
+                    b.classList.add('bg-surface-container', 'text-on-surface-variant');
+                });
+                btn.classList.add('bg-primary', 'text-on-primary');
+                btn.classList.remove('bg-surface-container', 'text-on-surface-variant');
+            });
+        });
+    </script>
+</body></html>

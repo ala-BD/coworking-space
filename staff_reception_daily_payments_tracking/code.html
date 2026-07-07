@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+
+<html class="light" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Encre &amp; Cobalt | Staff Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F4F6F9; /* Gris Perle as per brand guidelines */
+        }
+        .font-sora { font-family: 'Sora', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .card-shadow-sm { box-shadow: 0px 2px 4px rgba(16, 35, 63, 0.04); }
+        .card-shadow-md { box-shadow: 0px 8px 16px rgba(16, 35, 63, 0.08); }
+        
+        /* Custom scrollbar for transaction list */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c5c6ce; border-radius: 10px; }
+
+        /* Animation for status pulse */
+        @keyframes soft-pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pulse-active { animation: soft-pulse 2s infinite ease-in-out; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed": "#2c1700",
+                      "on-secondary-container": "#fefcff",
+                      "surface-bright": "#fbf9fb",
+                      "error": "#ba1a1a",
+                      "surface-container-highest": "#e4e2e5",
+                      "on-tertiary-fixed-variant": "#60401d",
+                      "inverse-primary": "#b5c7eb",
+                      "tertiary-fixed-dim": "#ecbe90",
+                      "primary-container": "#10233f",
+                      "on-secondary-fixed": "#001847",
+                      "outline-variant": "#c5c6ce",
+                      "on-tertiary": "#ffffff",
+                      "tertiary-fixed": "#ffdcbc",
+                      "tertiary": "#180a00",
+                      "secondary-fixed": "#dae2ff",
+                      "secondary-fixed-dim": "#b1c5ff",
+                      "outline": "#75777e",
+                      "inverse-surface": "#303033",
+                      "surface-dim": "#dbd9dc",
+                      "surface-container-high": "#e9e7ea",
+                      "on-secondary": "#ffffff",
+                      "tertiary-container": "#361d00",
+                      "on-error": "#ffffff",
+                      "on-tertiary-container": "#aa8259",
+                      "error-container": "#ffdad6",
+                      "on-secondary-fixed-variant": "#0040a0",
+                      "on-background": "#1b1b1e",
+                      "surface": "#fbf9fb",
+                      "background": "#fbf9fb",
+                      "on-surface": "#1b1b1e",
+                      "primary-fixed": "#d6e3ff",
+                      "on-primary": "#ffffff",
+                      "primary-fixed-dim": "#b5c7eb",
+                      "on-surface-variant": "#44474d",
+                      "surface-container-low": "#f5f3f6",
+                      "secondary": "#0054cb",
+                      "surface-variant": "#e4e2e5",
+                      "inverse-on-surface": "#f2f0f3",
+                      "secondary-container": "#2d6deb",
+                      "primary": "#000d23",
+                      "on-primary-fixed": "#071b37",
+                      "surface-tint": "#4d5f7e",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-container": "#efedf0",
+                      "on-primary-container": "#798bac",
+                      "on-error-container": "#93000a",
+                      "on-primary-fixed-variant": "#364765"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "16px",
+                      "xl": "24px",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xs": "8px",
+                      "sm": "16px",
+                      "base": "4px",
+                      "xl": "48px",
+                      "container-max": "1280px",
+                      "lg": "32px",
+                      "margin-desktop": "32px",
+                      "margin-mobile": "16px",
+                      "gutter": "24px",
+                      "md": "24px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Sora"],
+                      "body-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "headline-xl": ["Sora"],
+                      "headline-sm": ["Sora"],
+                      "headline-md": ["Sora"],
+                      "label-md": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                      "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "label-md": ["14px", {"lineHeight": "16px", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-surface-container-low min-h-screen text-on-surface">
+<!-- SIDEBAR -->
+<aside class="w-64 h-screen fixed left-0 top-0 bg-primary-container text-on-primary-container shadow-sm flex flex-col py-6 z-50">
+<div class="px-6 mb-8">
+<h1 class="font-headline-sm text-headline-sm font-bold text-white tracking-tight">Encre &amp; Cobalt</h1>
+<p class="text-on-primary-container/60 font-label-sm text-label-sm">Coworking Management</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 bg-secondary-container text-on-secondary-container rounded-lg mx-2 transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant hover:bg-on-primary/10 rounded-lg mx-2 transition-colors" href="#">
+<span class="material-symbols-outlined">meeting_room</span>
+<span class="font-label-md text-label-md">Spaces</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant hover:bg-on-primary/10 rounded-lg mx-2 transition-colors" href="#">
+<span class="material-symbols-outlined">settings_applications</span>
+<span class="font-label-md text-label-md">Operations</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant hover:bg-on-primary/10 rounded-lg mx-2 transition-colors" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="font-label-md text-label-md">Bookings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant hover:bg-on-primary/10 rounded-lg mx-2 transition-colors" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-md text-label-md">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant hover:bg-on-primary/10 rounded-lg mx-2 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full py-3 bg-secondary text-white rounded-lg font-label-md text-label-md hover:bg-opacity-90 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Booking
+            </button>
+</div>
+</aside>
+<!-- TOP BAR -->
+<header class="h-16 fixed top-0 right-0 w-[calc(100%-256px)] bg-white border-b border-outline-variant z-40 flex justify-between items-center px-8">
+<div class="flex items-center gap-4">
+<span class="font-headline-md text-headline-md font-extrabold text-primary">Check-in Hub</span>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-on-surface-variant hover:text-secondary transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="text-on-surface-variant hover:text-secondary transition-colors">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="flex items-center gap-3 pl-4 border-l border-outline-variant">
+<div class="text-right">
+<p class="font-label-md text-label-md text-primary">Lucie Martin</p>
+<p class="text-[10px] font-label-sm text-on-surface-variant">Reception Manager</p>
+</div>
+<div class="w-10 h-10 rounded-full bg-cover bg-center border-2 border-primary-fixed" data-alt="A professional headshot of a young female receptionist with a warm smile, wearing a professional blazer. She is in a high-end, minimalist coworking space with soft daylight and Bleu Cobalt brand accents in the background. The photography style is editorial, crisp, and high-quality." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCTYL_Tt1u2uQsrX79POEfeMXadY_z8mf-iCTbvOODjHstYSLmYWs4D6VURjTb1OZJ4KWCTFp5blvzXTBMVhv9BcPs0xNB3UmXVMiOdnghOSA9Vycxjx0IsMWbi2R4F_ljK7S5NaEMPqiDr_GNxElkrInSaWlUB6P405S2_Q5W_AFKSk2LkFyviLOlZhcW9YQvi-vflYPFlha2zrhBLptpTjiugaQsPWDtQHISyAdOH6N0U80QSL1B20DjSqxNhd4wpD1Qc4hicNio')"></div>
+</div>
+</div>
+</header>
+<!-- MAIN CONTENT -->
+<main class="ml-64 pt-24 px-8 pb-12 max-w-container-max mx-auto">
+<!-- TOP SECTION: CHECK-IN CENTER -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter mb-lg">
+<!-- Check-in Center Card -->
+<div class="lg:col-span-2 bg-white rounded-lg p-md card-shadow-md flex flex-col gap-6">
+<div class="flex justify-between items-center">
+<div>
+<h2 class="font-headline-sm text-headline-sm text-primary mb-1">Check-in Center</h2>
+<p class="text-on-surface-variant font-body-sm text-body-sm">Scan arrival or search for a member manually.</p>
+</div>
+<button class="flex items-center gap-2 bg-secondary text-white px-6 py-3 rounded-lg font-label-md hover:brightness-110 transition-all scale-100 active:scale-95">
+<span class="material-symbols-outlined">qr_code_scanner</span>
+                        Scan QR Code
+                    </button>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-12 pr-4 py-4 bg-surface-container-lowest border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md text-body-md" placeholder="Search by name, email or member ID..." type="text"/>
+</div>
+<!-- Fast Actions / Recent -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<button class="p-4 border border-outline-variant/20 rounded-lg hover:border-secondary transition-colors group text-center">
+<div class="w-12 h-12 rounded-full bg-primary-fixed/30 flex items-center justify-center mx-auto mb-2 group-hover:bg-secondary/10">
+<span class="material-symbols-outlined text-secondary">person_add</span>
+</div>
+<p class="font-label-sm text-label-sm">New Guest</p>
+</button>
+<button class="p-4 border border-outline-variant/20 rounded-lg hover:border-secondary transition-colors group text-center">
+<div class="w-12 h-12 rounded-full bg-primary-fixed/30 flex items-center justify-center mx-auto mb-2 group-hover:bg-secondary/10">
+<span class="material-symbols-outlined text-secondary">history</span>
+</div>
+<p class="font-label-sm text-label-sm">Recent</p>
+</button>
+<button class="p-4 border border-outline-variant/20 rounded-lg hover:border-secondary transition-colors group text-center">
+<div class="w-12 h-12 rounded-full bg-primary-fixed/30 flex items-center justify-center mx-auto mb-2 group-hover:bg-secondary/10">
+<span class="material-symbols-outlined text-secondary">info</span>
+</div>
+<p class="font-label-sm text-label-sm">Quick Logs</p>
+</button>
+<button class="p-4 border border-outline-variant/20 rounded-lg hover:border-secondary transition-colors group text-center">
+<div class="w-12 h-12 rounded-full bg-primary-fixed/30 flex items-center justify-center mx-auto mb-2 group-hover:bg-secondary/10">
+<span class="material-symbols-outlined text-secondary">badge</span>
+</div>
+<p class="font-label-sm text-label-sm">Lost Card</p>
+</button>
+</div>
+</div>
+<!-- Access Status Panel -->
+<div class="bg-white rounded-lg p-md card-shadow-md flex flex-col">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest mb-6">Access Status</h3>
+<div class="flex-1 flex flex-col items-center justify-center text-center gap-4" id="status-display">
+<!-- Dynamic state: Change this with JS if needed. Showing default state. -->
+<div class="w-24 h-24 rounded-full bg-green-500/10 flex items-center justify-center pulse-active">
+<span class="material-symbols-outlined text-[48px] text-green-600" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div>
+<p class="font-headline-sm text-headline-sm text-green-600">Accès autorisé</p>
+<p class="text-on-surface-variant font-body-sm mt-1">Membre: Julien Dupont</p>
+<p class="text-on-surface-variant font-body-sm">Espace: Bureau Privé 04</p>
+</div>
+</div>
+<div class="mt-8 space-y-2">
+<div class="flex items-center gap-3 p-2 rounded-lg bg-surface-container-low cursor-pointer hover:bg-surface-variant transition-colors">
+<span class="w-3 h-3 rounded-full bg-green-500"></span>
+<p class="text-label-sm font-label-sm">Autorisé (Standard)</p>
+</div>
+<div class="flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-surface-variant transition-colors opacity-60">
+<span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+<p class="text-label-sm font-label-sm">Membre sans réservation</p>
+</div>
+<div class="flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-surface-variant transition-colors opacity-60">
+<span class="w-3 h-3 rounded-full bg-error"></span>
+<p class="text-label-sm font-label-sm">Abonnement expiré</p>
+</div>
+</div>
+</div>
+</div>
+<!-- BOTTOM SECTION: DAILY REVENUE & TRANSACTIONS -->
+<div class="grid grid-cols-1 gap-gutter">
+<div class="bg-white rounded-lg card-shadow-md overflow-hidden">
+<div class="p-md border-b border-outline-variant/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+<div>
+<h2 class="font-headline-sm text-headline-sm text-primary">Daily Payments</h2>
+<p class="text-on-surface-variant font-body-sm">Real-time revenue overview for June 12, 2024</p>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Total Revenue</span>
+<span class="font-headline-md text-headline-md text-secondary">€2,845.50</span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x border-b border-outline-variant/30">
+<div class="p-6 flex items-center gap-4">
+<div class="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-green-600">credit_card</span>
+</div>
+<div>
+<p class="text-on-surface-variant font-label-sm">Card Payments</p>
+<p class="font-headline-sm text-headline-sm">€1,420.00</p>
+</div>
+</div>
+<div class="p-6 flex items-center gap-4">
+<div class="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-blue-600">payments</span>
+</div>
+<div>
+<p class="text-on-surface-variant font-label-sm">Cash Payments</p>
+<p class="font-headline-sm text-headline-sm">€345.50</p>
+</div>
+</div>
+<div class="p-6 flex items-center gap-4">
+<div class="w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-purple-600">language</span>
+</div>
+<div>
+<p class="text-on-surface-variant font-label-sm">Online Stripe</p>
+<p class="font-headline-sm text-headline-sm">€1,080.00</p>
+</div>
+</div>
+</div>
+<!-- Transactions List -->
+<div class="p-0 custom-scrollbar max-h-[400px] overflow-y-auto">
+<table class="w-full text-left">
+<thead class="bg-primary text-white font-label-sm text-label-sm uppercase sticky top-0 z-10">
+<tr>
+<th class="px-8 py-4 font-medium">Member</th>
+<th class="px-8 py-4 font-medium">Transaction ID</th>
+<th class="px-8 py-4 font-medium">Method</th>
+<th class="px-8 py-4 font-medium">Status</th>
+<th class="px-8 py-4 font-medium text-right">Amount</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/30">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low transition-all">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed flex items-center justify-center text-[10px] font-bold text-secondary">AM</div>
+<div>
+<p class="font-label-md text-label-md text-primary">Alice Morel</p>
+<p class="text-[11px] text-on-surface-variant">Premium Membership</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-5 font-label-sm text-on-surface-variant">#TX-8921-99</td>
+<td class="px-8 py-5">
+<span class="flex items-center gap-1 font-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">credit_card</span> Card
+                                    </span>
+</td>
+<td class="px-8 py-5">
+<span class="px-3 py-1 rounded-full bg-green-500/10 text-green-600 text-[11px] font-bold uppercase tracking-wider">Success</span>
+</td>
+<td class="px-8 py-5 text-right font-bold text-primary">€150.00</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-all">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-tertiary-fixed flex items-center justify-center text-[10px] font-bold text-tertiary">ML</div>
+<div>
+<p class="font-label-md text-label-md text-primary">Marc Laurent</p>
+<p class="text-[11px] text-on-surface-variant">Meeting Room B (2h)</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-5 font-label-sm text-on-surface-variant">#TX-9034-12</td>
+<td class="px-8 py-5">
+<span class="flex items-center gap-1 font-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">payments</span> Cash
+                                    </span>
+</td>
+<td class="px-8 py-5">
+<span class="px-3 py-1 rounded-full bg-green-500/10 text-green-600 text-[11px] font-bold uppercase tracking-wider">Success</span>
+</td>
+<td class="px-8 py-5 text-right font-bold text-primary">€45.00</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low transition-all">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-[10px] font-bold text-primary">SV</div>
+<div>
+<p class="font-label-md text-label-md text-primary">Sophie Vallet</p>
+<p class="text-[11px] text-on-surface-variant">Guest Pass Day</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-5 font-label-sm text-on-surface-variant">#TX-1123-55</td>
+<td class="px-8 py-5">
+<span class="flex items-center gap-1 font-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">language</span> Online
+                                    </span>
+</td>
+<td class="px-8 py-5">
+<span class="px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-600 text-[11px] font-bold uppercase tracking-wider">Pending</span>
+</td>
+<td class="px-8 py-5 text-right font-bold text-primary">€25.00</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low transition-all">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-error-container flex items-center justify-center text-[10px] font-bold text-error">RT</div>
+<div>
+<p class="font-label-md text-label-md text-primary">Ryan Taylor</p>
+<p class="text-[11px] text-on-surface-variant">Private Office Upgrade</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-5 font-label-sm text-on-surface-variant">#TX-2211-00</td>
+<td class="px-8 py-5">
+<span class="flex items-center gap-1 font-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">credit_card</span> Card
+                                    </span>
+</td>
+<td class="px-8 py-5">
+<span class="px-3 py-1 rounded-full bg-error/10 text-error text-[11px] font-bold uppercase tracking-wider">Failed</span>
+</td>
+<td class="px-8 py-5 text-right font-bold text-primary">€420.00</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-6 bg-surface-container-low/50 flex justify-center">
+<button class="text-secondary font-label-md text-label-md hover:underline">View all transactions</button>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Micro-interaction: Update access status display for demo purposes
+        function updateStatus(type) {
+            const display = document.getElementById('status-display');
+            let content = '';
+
+            switch(type) {
+                case 'authorized':
+                    content = `
+                        <div class="w-24 h-24 rounded-full bg-green-500/10 flex items-center justify-center pulse-active">
+                            <span class="material-symbols-outlined text-[48px] text-green-600" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        </div>
+                        <div>
+                            <p class="font-headline-sm text-headline-sm text-green-600">Accès autorisé</p>
+                            <p class="text-on-surface-variant font-body-sm mt-1">Membre: Julien Dupont</p>
+                        </div>`;
+                    break;
+                case 'no-booking':
+                    content = `
+                        <div class="w-24 h-24 rounded-full bg-yellow-500/10 flex items-center justify-center pulse-active">
+                            <span class="material-symbols-outlined text-[48px] text-yellow-600" style="font-variation-settings: 'FILL' 1;">warning</span>
+                        </div>
+                        <div>
+                            <p class="font-headline-sm text-headline-sm text-yellow-600">Membre actif sans réservation</p>
+                            <p class="text-on-surface-variant font-body-sm mt-1">Membre: Léa Bernard</p>
+                        </div>`;
+                    break;
+                case 'expired':
+                    content = `
+                        <div class="w-24 h-24 rounded-full bg-error/10 flex items-center justify-center pulse-active">
+                            <span class="material-symbols-outlined text-[48px] text-error" style="font-variation-settings: 'FILL' 1;">error</span>
+                        </div>
+                        <div>
+                            <p class="font-headline-sm text-headline-sm text-error">Abonnement expiré</p>
+                            <p class="text-on-surface-variant font-body-sm mt-1">Membre: Thomas Wagner</p>
+                        </div>`;
+                    break;
+            }
+            display.innerHTML = content;
+        }
+
+        // Simulating some dynamic feel
+        const statusItems = document.querySelectorAll('#status-display + div > div');
+        statusItems[0].addEventListener('click', () => updateStatus('authorized'));
+        statusItems[1].addEventListener('click', () => updateStatus('no-booking'));
+        statusItems[2].addEventListener('click', () => updateStatus('expired'));
+    </script>
+</body></html>

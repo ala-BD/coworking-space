@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+
+<html class="light" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NexusDesk | Encre &amp; Cobalt Coworking</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed": "#2c1700",
+                    "on-error-container": "#93000a",
+                    "error": "#ba1a1a",
+                    "primary-fixed": "#d6e3ff",
+                    "inverse-surface": "#303033",
+                    "on-primary-fixed": "#071b37",
+                    "tertiary-container": "#361d00",
+                    "surface-container-low": "#f5f3f6",
+                    "outline": "#75777e",
+                    "on-secondary-container": "#fefcff",
+                    "secondary-fixed": "#dae2ff",
+                    "error-container": "#ffdad6",
+                    "surface-tint": "#4d5f7e",
+                    "on-surface-variant": "#44474d",
+                    "primary-fixed-dim": "#b5c7eb",
+                    "on-secondary-fixed": "#001847",
+                    "on-primary-container": "#798bac",
+                    "surface-bright": "#fbf9fb",
+                    "surface-container-high": "#e9e7ea",
+                    "secondary-container": "#2d6deb",
+                    "secondary-fixed-dim": "#b1c5ff",
+                    "secondary": "#0054cb",
+                    "surface-dim": "#dbd9dc",
+                    "surface-variant": "#e4e2e5",
+                    "on-secondary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "outline-variant": "#c5c6ce",
+                    "surface-container": "#efedf0",
+                    "on-secondary-fixed-variant": "#0040a0",
+                    "on-tertiary-fixed-variant": "#60401d",
+                    "primary-container": "#10233f",
+                    "tertiary": "#180a00",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#e4e2e5",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed": "#ffdcbc",
+                    "surface": "#fbf9fb",
+                    "primary": "#000d23",
+                    "on-surface": "#1b1b1e",
+                    "on-background": "#1b1b1e",
+                    "on-primary-fixed-variant": "#364765",
+                    "background": "#fbf9fb",
+                    "on-tertiary-container": "#aa8259",
+                    "on-tertiary": "#ffffff",
+                    "inverse-primary": "#b5c7eb",
+                    "tertiary-fixed-dim": "#ecbe90",
+                    "inverse-on-surface": "#f2f0f3"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-max": "1280px",
+                    "xs": "8px",
+                    "sm": "16px",
+                    "md": "24px",
+                    "lg": "32px",
+                    "xl": "48px",
+                    "base": "4px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "gutter": "24px"
+            },
+            "fontFamily": {
+                    "headline-sm": ["Sora"],
+                    "body-lg": ["Inter"],
+                    "headline-lg-mobile": ["Sora"],
+                    "body-sm": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg": ["Sora"],
+                    "label-sm": ["Inter"],
+                    "headline-md": ["Sora"],
+                    "headline-xl": ["Sora"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #F4F6F9; /* Gris Perle as per guide */
+            color: #1C1F26;
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(16, 35, 63, 0.05);
+        }
+        .nav-shadow {
+            box-shadow: 0 2px 10px rgba(16, 35, 63, 0.05);
+        }
+        /* Custom smooth scroll */
+        html { scroll-behavior: smooth; }
+    </style>
+</head>
+<body class="bg-background text-on-background selection:bg-secondary-fixed selection:text-on-secondary-fixed">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-surface-container-lowest dark:bg-primary shadow-sm">
+<div class="flex justify-between items-center px-margin-desktop py-sm max-w-container-max mx-auto">
+<div class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">
+                NexusDesk
+            </div>
+<div class="hidden md:flex gap-lg items-center">
+<a class="font-body-md text-body-md text-secondary border-b-2 border-secondary pb-1 transition-colors duration-200" href="#">Spaces</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors duration-200" href="#">Workshops</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors duration-200" href="#">Pricing</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors duration-200" href="#">Contact</a>
+</div>
+<div class="flex gap-sm items-center">
+<button class="hidden md:block font-label-md text-label-md text-primary px-sm py-xs hover:bg-surface-container-high transition-colors rounded-lg">Sign In</button>
+<button class="bg-secondary text-on-secondary px-md py-sm rounded-lg font-label-md text-label-md active:scale-95 transition-transform">Book Now</button>
+</div>
+</div>
+</nav>
+<main class="pt-24">
+<!-- Hero Section -->
+<section class="relative overflow-hidden px-margin-desktop py-xl lg:py-32 max-w-container-max mx-auto">
+<div class="grid lg:grid-cols-2 gap-xl items-center relative z-10">
+<div class="max-w-xl">
+<span class="inline-block bg-secondary-fixed text-on-secondary-fixed px-sm py-xs rounded-full font-label-sm text-label-sm mb-md uppercase tracking-wider">
+                        Premium Coworking Network
+                    </span>
+<h1 class="font-headline-xl text-headline-xl text-primary mb-md leading-tight">
+                        Reserve your ideal workspace in <span class="text-secondary">3 clicks</span>
+</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-xl leading-relaxed">
+                        Encre &amp; Cobalt offers precision-engineered workspaces for focused high-performers. Join the nexus of technology and comfort.
+                    </p>
+<div class="flex flex-wrap gap-sm">
+<button class="bg-secondary text-on-secondary px-lg py-md rounded-xl font-label-md text-label-md hover:shadow-lg transition-all active:scale-95">
+                            Réserver sans compte
+                        </button>
+<button class="border-2 border-primary-container text-primary-container px-lg py-md rounded-xl font-label-md text-label-md hover:bg-primary-container hover:text-white transition-all active:scale-95">
+                            Devenir membre
+                        </button>
+</div>
+</div>
+<div class="relative">
+<div class="aspect-video rounded-3xl overflow-hidden shadow-2xl transform rotate-1 hover:rotate-0 transition-transform duration-500">
+<img class="w-full h-full object-cover" data-alt="A high-end modern coworking space with floor-to-ceiling windows showing a cityscape. The interior features premium furniture including navy blue velvet chairs and dark oak desks. Minimalist lighting and architectural plants create a serene atmosphere. The style is professional and sophisticated B2B SaaS aesthetic with crisp lighting and soft shadows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCVxReLMTSMnl6dGnhZC8U2cLeyd7FtFsetmMaUKMaoAceHh7a0kXW5dNxnZeMDJTD0ZC7EU0xtx3pylkcAPy228LQE7bNxpOgM7o7sglIcWvOrD4dca-cPLOkMKvWJc1Ce1j7YaS05HV7qQaimKxnHRqFXnbPbh_1y7ZBZsbltE2xFSrnXrBROVuMdwtQro7QM3Xm0iqu7sCNpt1zft2wOC61tQP8-JVp8GuSj1IhhcBsWfdILcYdrB0L7VzyRgtZKELpt8iCR7Y"/>
+</div>
+<div class="absolute -bottom-8 -left-8 glass-card p-md rounded-2xl shadow-xl hidden md:flex items-center gap-sm max-w-xs animate-bounce-slow">
+<div class="bg-secondary-container p-sm rounded-full text-white">
+<span class="material-symbols-outlined">bolt</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-primary">Live Availability</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">3 spots left at Flagship</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Background Decorative Element -->
+<div class="absolute top-0 right-0 -mr-32 -mt-32 w-96 h-96 bg-primary-fixed opacity-10 rounded-full blur-3xl -z-10"></div>
+</section>
+<!-- Brand Trust Bar -->
+<section class="py-xl bg-surface-container-low">
+<div class="max-w-container-max mx-auto px-margin-desktop">
+<p class="text-center font-label-sm text-label-sm uppercase tracking-[0.2em] text-on-surface-variant mb-lg">Trusted by high-growth engineering teams</p>
+<div class="flex flex-wrap justify-center items-center gap-xl opacity-60 grayscale hover:grayscale-0 transition-all">
+<!-- Brand Placeholders with data-alt descriptions as requested for logo logic -->
+<div class="h-10 w-32 flex items-center justify-center font-bold text-headline-sm text-primary">Stripe</div>
+<div class="h-10 w-32 flex items-center justify-center font-bold text-headline-sm text-primary">Notion</div>
+<div class="h-10 w-32 flex items-center justify-center font-bold text-headline-sm text-primary">Linear</div>
+<div class="h-10 w-32 flex items-center justify-center font-bold text-headline-sm text-primary">Figma</div>
+</div>
+</div>
+</section>
+<!-- Advantages Section -->
+<section class="py-xl px-margin-desktop max-w-container-max mx-auto">
+<div class="flex flex-col md:flex-row justify-between items-end mb-xl gap-md">
+<div class="max-w-xl">
+<h2 class="font-headline-lg text-headline-lg text-primary mb-sm">The Encre &amp; Cobalt Standard</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">We've removed every friction point between you and your deepest work. Explore our premium facilities designed for focus.</p>
+</div>
+<button class="text-secondary font-label-md text-label-md flex items-center gap-xs hover:gap-sm transition-all">
+                    See all amenities <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+<div class="grid md:grid-cols-3 gap-gutter">
+<!-- Advantage 1 -->
+<div class="bg-surface-container-lowest p-lg rounded-3xl shadow-[0px_2px_4px_rgba(16,35,63,0.04)] border border-outline-variant/10 group hover:shadow-[0px_8px_16px_rgba(16,35,63,0.08)] transition-all">
+<div class="w-12 h-12 bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center rounded-2xl mb-md group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">wifi_tethering</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-primary mb-xs">High-speed Wi-Fi</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">Dedicated symmetric gigabit fiber with enterprise-grade security and zero dead zones across all spaces.</p>
+</div>
+<!-- Advantage 2 -->
+<div class="bg-surface-container-lowest p-lg rounded-3xl shadow-[0px_2px_4px_rgba(16,35,63,0.04)] border border-outline-variant/10 group hover:shadow-[0px_8px_16px_rgba(16,35,63,0.08)] transition-all">
+<div class="w-12 h-12 bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center rounded-2xl mb-md group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">lock_open</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-primary mb-xs">24/7 Access</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">Your workflow doesn't stop at 5 PM. Members enjoy seamless biometric access around the clock.</p>
+</div>
+<!-- Advantage 3 -->
+<div class="bg-surface-container-lowest p-lg rounded-3xl shadow-[0px_2px_4px_rgba(16,35,63,0.04)] border border-outline-variant/10 group hover:shadow-[0px_8px_16px_rgba(16,35,63,0.08)] transition-all">
+<div class="w-12 h-12 bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center rounded-2xl mb-md group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">concierge</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-primary mb-xs">Concierge</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">On-site support team to manage your deliveries, guests, and administrative needs with precision.</p>
+</div>
+</div>
+</section>
+<!-- Signature Spaces Showcase (Bento Style) -->
+<section class="py-xl bg-primary text-on-primary">
+<div class="max-w-container-max mx-auto px-margin-desktop">
+<div class="text-center mb-xl">
+<h2 class="font-headline-lg text-headline-lg text-white mb-sm">Signature Spaces</h2>
+<p class="font-body-md text-body-md text-on-primary-container max-w-2xl mx-auto">Environment shapes outcome. Choose the architectural setup that matches your mental state.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter h-auto md:h-[600px]">
+<!-- Large Card: Flagship -->
+<div class="md:col-span-8 relative group overflow-hidden rounded-3xl h-[400px] md:h-full">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="A sprawling flagship coworking hall with high ceilings and industrial-chic design. Large cobalt-colored pillars anchor the space, with long walnut communal tables illuminated by sleek pendant lighting. Expansive glass walls reveal a lush terrace garden. The atmosphere is vibrant yet professional, reflecting a high-end SaaS corporate identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAK2IhBFMr9iRfeyjL932e_-BDpfhpsjbHAAmsMYP8pWVUompUswy9nLWNu1o8igTnSVoUootv062bdc-CNDkBhYvX5tqM-ZT1TMTsxQz5FA-wV0IsV--_0Afumhh2_F_bka0hjVsfjkBC7XcOLsDbe0X7D7h9iue35kjtQUhym4ZTkcdwd0mXRfSGGGz60KN0i1CsPjLxlHF0BB0FlK0zXQZ52J80iS80hZcdIbC7jVomseVARgyWZdgRPZXCWgfq5XvQrgH61lzg"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-transparent to-transparent"></div>
+<div class="absolute bottom-0 left-0 p-lg">
+<span class="bg-secondary text-white px-sm py-xs rounded-lg font-label-sm text-label-sm mb-sm inline-block">Flagship Location</span>
+<h3 class="font-headline-md text-headline-md mb-xs">L'Atrium Central</h3>
+<p class="font-body-sm text-body-sm text-on-primary-container max-w-sm">Our crown jewel featuring grand architecture and the highest density of networking opportunities.</p>
+</div>
+</div>
+<!-- Right Column Bento -->
+<div class="md:col-span-4 flex flex-col gap-gutter">
+<!-- Tech Lounges -->
+<div class="relative group overflow-hidden rounded-3xl flex-1 min-h-[250px]">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="A futuristic tech lounge featuring ergonomic workstations equipped with curved ultra-wide monitors and adjustable standing desks. The room uses a palette of slate greys and cobalt blues, with ambient neon accent lighting along the floor. Minimalist design and acoustic panels ensure a quiet workspace for software developers and designers." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAh3ZCgUrYvYQe_u32LptrkK0S4KXhXRjfpjtzctnEaG_PU6SJ7n1APuqbz9AvKarYYX8pG0MeW7kIUtWoZee34oTbSioQxnSF8yFYxVVBFz65gjXxP07ZobPhQtzzbG4SLqpf4Ji6ONLKl4wyCu2vf2daiaRIvURuOZs46Pe7C_mtZfGsS4jwkJNpF0rrlARiQIQSGbuk9FtMfOFh9DMmp4pTGnm_ZGs-dlOLo11qYLVVlobPee-oy94DUNgyOa8CLkSlqJugo8Q"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-transparent to-transparent"></div>
+<div class="absolute bottom-0 left-0 p-md">
+<h4 class="font-headline-sm text-headline-sm mb-xs">Tech Lounges</h4>
+<p class="font-body-sm text-body-sm text-on-primary-container">Dual-monitor setups and ergonomic kits.</p>
+</div>
+</div>
+<!-- Focus Pods -->
+<div class="relative group overflow-hidden rounded-3xl flex-1 min-h-[250px]">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="Private focus pods made of light-colored sustainable wood and frosted glass for total acoustic isolation. Inside, a small comfortable desk with soft adjustable lighting and an ergonomic office chair. The space is calm, quiet, and designed for deep concentration and solo focus work. Modern minimal B2B aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJrwAgC1-jOW-IV6zwN0Kp0DWkRiWOFEgSE-5UnOoUr_eG8dQXY0mqsXlSOK_0VCbhDb9x4OAyJb2GqMsy8MShSgjz4jk5D01_gx6Ry8cimT_Xoxmo2dvGIcW5u6cWW45pGBBY0xXZ51jcCguVlZWE2l_QV-SubTyIKtN56jmKlq03jEN3ULOpg3BeXA4EyYyCT0dzzPzGbDrZrRfmRM7HY1cx10WXX43WWEySbJkwZyjHMn_14iPlmVHRdnI8Y2o6pUg24YxqcfI"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-transparent to-transparent"></div>
+<div class="absolute bottom-0 left-0 p-md">
+<h4 class="font-headline-sm text-headline-sm mb-xs">Focus Pods</h4>
+<p class="font-body-sm text-body-sm text-on-primary-container">Acoustically treated capsules for deep work.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA Section -->
+<section class="py-xl px-margin-desktop max-w-container-max mx-auto text-center">
+<div class="bg-surface-container-lowest rounded-[40px] py-xl px-lg border border-outline-variant/20 shadow-xl overflow-hidden relative">
+<!-- Abstract Pattern Background -->
+<div class="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
+<div class="absolute w-full h-full bg-[radial-gradient(circle_at_2px_2px,rgba(16,35,63,1)_1px,transparent_0)] bg-[size:40px_40px]"></div>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-primary mb-md relative z-10">Ready to do your best work?</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-xl max-w-xl mx-auto relative z-10">Experience the Encre &amp; Cobalt difference today with a day pass or full membership. No hidden fees, just pure productivity.</p>
+<div class="flex flex-col sm:flex-row justify-center gap-sm relative z-10">
+<button class="bg-secondary text-on-secondary px-lg py-md rounded-xl font-label-md text-label-md hover:shadow-lg transition-all active:scale-95 flex items-center justify-center gap-sm">
+<span class="material-symbols-outlined">event_available</span>
+                        Book a Day Pass
+                    </button>
+<button class="bg-primary text-white px-lg py-md rounded-xl font-label-md text-label-md hover:bg-primary/90 transition-all active:scale-95 flex items-center justify-center gap-sm">
+<span class="material-symbols-outlined">person_add</span>
+                        Join as Member
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-xl mt-xl bg-primary dark:bg-surface-container-lowest">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter px-margin-desktop max-w-container-max mx-auto">
+<div class="md:col-span-1">
+<div class="font-headline-sm text-headline-sm font-bold text-on-primary dark:text-primary mb-sm">
+                    NexusDesk
+                </div>
+<p class="font-body-sm text-body-sm text-on-primary-container dark:text-on-surface-variant mb-md">
+                    Premium workspace solutions for the modern innovator. Operating across 12 European hubs.
+                </p>
+<div class="flex gap-sm">
+<a class="w-8 h-8 rounded-full bg-on-primary-container/20 flex items-center justify-center text-on-primary hover:bg-secondary transition-colors" href="#">
+<span class="material-symbols-outlined !text-[18px]">public</span>
+</a>
+<a class="w-8 h-8 rounded-full bg-on-primary-container/20 flex items-center justify-center text-on-primary hover:bg-secondary transition-colors" href="#">
+<span class="material-symbols-outlined !text-[18px]">alternate_email</span>
+</a>
+</div>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-on-primary mb-md">Explore</h4>
+<ul class="space-y-sm">
+<li><a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Find a Space</a></li>
+<li><a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Meetings &amp; Events</a></li>
+<li><a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Membership Plans</a></li>
+<li><a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Corporate Solutions</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-on-primary mb-md">Company</h4>
+<ul class="space-y-sm">
+<li><a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">About Us</a></li>
+<li><a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Careers</a></li>
+<li><a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Blog</a></li>
+<li><a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Partner Network</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-on-primary mb-md">Legal</h4>
+<ul class="space-y-sm">
+<li><a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Privacy Policy</a></li>
+<li><a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Terms of Service</a></li>
+<li><a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Cookie Policy</a></li>
+<li><a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Sitemap</a></li>
+</ul>
+</div>
+</div>
+<div class="max-w-container-max mx-auto px-margin-desktop mt-xl pt-lg border-t border-on-primary/10">
+<p class="font-body-sm text-body-sm text-on-primary-container text-center">
+                © 2024 NexusDesk Coworking Management. All rights reserved.
+            </p>
+</div>
+</footer>
+<script>
+        // Micro-interactions and effects
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('mouseenter', () => {
+                button.classList.add('transition-all');
+            });
+        });
+
+        // Simple scroll observer for header
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 20) {
+                nav.classList.add('nav-shadow');
+            } else {
+                nav.classList.remove('nav-shadow');
+            }
+        });
+    </script>
+</body></html>

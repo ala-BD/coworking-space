@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NexusDesk | Membership &amp; Pricing</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed": "#2c1700",
+                    "on-error-container": "#93000a",
+                    "error": "#ba1a1a",
+                    "primary-fixed": "#d6e3ff",
+                    "inverse-surface": "#303033",
+                    "on-primary-fixed": "#071b37",
+                    "tertiary-container": "#361d00",
+                    "surface-container-low": "#f5f3f6",
+                    "outline": "#75777e",
+                    "on-secondary-container": "#fefcff",
+                    "secondary-fixed": "#dae2ff",
+                    "error-container": "#ffdad6",
+                    "surface-tint": "#4d5f7e",
+                    "on-surface-variant": "#44474d",
+                    "primary-fixed-dim": "#b5c7eb",
+                    "on-secondary-fixed": "#001847",
+                    "on-primary-container": "#798bac",
+                    "surface-bright": "#fbf9fb",
+                    "surface-container-high": "#e9e7ea",
+                    "secondary-container": "#2d6deb",
+                    "secondary-fixed-dim": "#b1c5ff",
+                    "secondary": "#0054cb",
+                    "surface-dim": "#dbd9dc",
+                    "surface-variant": "#e4e2e5",
+                    "on-secondary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "outline-variant": "#c5c6ce",
+                    "surface-container": "#efedf0",
+                    "on-secondary-fixed-variant": "#0040a0",
+                    "on-tertiary-fixed-variant": "#60401d",
+                    "primary-container": "#10233f",
+                    "tertiary": "#180a00",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#e4e2e5",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed": "#ffdcbc",
+                    "surface": "#fbf9fb",
+                    "primary": "#000d23",
+                    "on-surface": "#1b1b1e",
+                    "on-background": "#1b1b1e",
+                    "on-primary-fixed-variant": "#364765",
+                    "background": "#fbf9fb",
+                    "on-tertiary-container": "#aa8259",
+                    "on-tertiary": "#ffffff",
+                    "inverse-primary": "#b5c7eb",
+                    "tertiary-fixed-dim": "#ecbe90",
+                    "inverse-on-surface": "#f2f0f3"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "16px",
+                    "xl": "24px",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-max": "1280px",
+                    "xs": "8px",
+                    "sm": "16px",
+                    "md": "24px",
+                    "lg": "32px",
+                    "xl": "48px",
+                    "base": "4px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "gutter": "24px"
+            },
+            "fontFamily": {
+                    "headline-sm": ["Sora"],
+                    "body-lg": ["Inter"],
+                    "headline-lg-mobile": ["Sora"],
+                    "body-sm": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg": ["Sora"],
+                    "label-sm": ["Inter"],
+                    "headline-md": ["Sora"],
+                    "headline-xl": ["Sora"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: 280px repeat(6, 1fr);
+        }
+        .premium-blur {
+            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.8);
+        }
+        .tabular-nums {
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased overflow-x-hidden">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-surface-container-lowest shadow-sm">
+<div class="flex justify-between items-center px-margin-desktop py-sm max-w-container-max mx-auto">
+<div class="font-headline-md text-headline-md font-bold text-primary">NexusDesk</div>
+<div class="hidden md:flex gap-lg items-center">
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors duration-200" href="#">Spaces</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors duration-200" href="#">Workshops</a>
+<a class="font-body-md text-body-md text-secondary border-b-2 border-secondary pb-1" href="#">Pricing</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors duration-200" href="#">Contact</a>
+</div>
+<div class="flex gap-sm">
+<button class="px-md py-xs font-label-md text-label-md text-primary hover:opacity-80 transition-opacity">Sign In</button>
+<button class="px-md py-xs font-label-md text-label-md bg-secondary text-on-secondary rounded-lg active:scale-95 transition-transform">Book Now</button>
+</div>
+</div>
+</nav>
+<main class="pt-[120px] pb-xl px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+<!-- Hero Section -->
+<header class="text-center mb-xl">
+<h1 class="font-headline-xl text-headline-xl text-primary mb-sm">Flexible Workspace for Every Ambition</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">Choose a plan that fits your workflow. From spontaneous day passes to dedicated headquarters, we provide the environment for your best work.</p>
+</header>
+<!-- Pricing Bento Grid (Cards for Mobile) -->
+<div class="grid grid-cols-1 md:hidden gap-md mb-xl">
+<!-- Mobile View Simple Cards -->
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-sm border border-outline-variant/10">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-xs">Day Pass</h3>
+<p class="text-secondary font-headline-md text-headline-md mb-md">€35<span class="text-body-sm font-normal text-on-surface-variant">/day</span></p>
+<ul class="space-y-xs mb-md">
+<li class="flex items-center gap-xs font-body-sm"><span class="material-symbols-outlined text-secondary text-[20px]">check_circle</span> Desk access (1 day)</li>
+<li class="flex items-center gap-xs font-body-sm"><span class="material-symbols-outlined text-secondary text-[20px]">check_circle</span> High-speed Wi-Fi</li>
+</ul>
+<button class="w-full py-sm bg-primary text-on-primary rounded-lg font-label-md">Get Started</button>
+</div>
+<!-- Highlighted Mensuel Mobile -->
+<div class="bg-primary-container p-md rounded-xl shadow-md border-2 border-secondary relative overflow-hidden">
+<div class="absolute top-0 right-0 bg-secondary text-on-secondary px-sm py-1 font-label-sm rounded-bl-lg uppercase tracking-wider">Most Popular</div>
+<h3 class="font-headline-sm text-headline-sm text-on-primary mb-xs">Mensuel</h3>
+<p class="text-secondary-fixed-dim font-headline-md text-headline-md mb-md">€390<span class="text-primary-fixed font-normal text-body-sm">/month</span></p>
+<ul class="space-y-xs mb-md text-primary-fixed">
+<li class="flex items-center gap-xs font-body-sm"><span class="material-symbols-outlined text-secondary-fixed-dim text-[20px]">check_circle</span> Desk access (30 days)</li>
+<li class="flex items-center gap-xs font-body-sm"><span class="material-symbols-outlined text-secondary-fixed-dim text-[20px]">check_circle</span> 10 Meeting room credits</li>
+</ul>
+<button class="w-full py-sm bg-secondary text-on-secondary rounded-lg font-label-md">Join Now</button>
+</div>
+</div>
+<!-- Detailed Pricing Table (Desktop Only) -->
+<div class="hidden md:block overflow-x-auto mb-xl">
+<div class="min-w-[1100px]">
+<!-- Header -->
+<div class="pricing-grid bg-primary text-on-primary rounded-t-xl py-lg px-md items-end">
+<div class="font-headline-sm text-headline-sm pr-md">Plans &amp; Features</div>
+<div class="text-center px-xs">
+<div class="font-label-md mb-xs opacity-70">Day Pass</div>
+<div class="font-headline-md text-headline-md tabular-nums">€35</div>
+</div>
+<div class="text-center px-xs">
+<div class="font-label-md mb-xs opacity-70">Week Pass</div>
+<div class="font-headline-md text-headline-md tabular-nums">€150</div>
+</div>
+<div class="text-center px-xs bg-secondary-container/20 rounded-t-lg pb-lg -mb-lg pt-md ring-1 ring-secondary/30">
+<div class="bg-secondary text-on-secondary text-[10px] uppercase font-bold py-1 px-2 rounded-full inline-block mb-xs">Most Popular</div>
+<div class="font-label-md mb-xs opacity-70">Mensuel</div>
+<div class="font-headline-md text-headline-md tabular-nums">€390</div>
+</div>
+<div class="text-center px-xs">
+<div class="font-label-md mb-xs opacity-70">Trimestriel</div>
+<div class="font-headline-md text-headline-md tabular-nums">€1,050</div>
+</div>
+<div class="text-center px-xs">
+<div class="font-label-md mb-xs opacity-70">Annuel</div>
+<div class="font-headline-md text-headline-md tabular-nums">€3,800</div>
+</div>
+<div class="text-center px-xs">
+<div class="font-label-md mb-xs opacity-70">Private Office</div>
+<div class="font-headline-sm text-headline-sm">Custom</div>
+</div>
+</div>
+<!-- Comparison Rows -->
+<div class="bg-surface-container-lowest rounded-b-xl border border-outline-variant/30 shadow-sm">
+<!-- Desk Access -->
+<div class="pricing-grid border-b border-outline-variant/10 py-md px-md items-center">
+<div class="font-label-md text-primary">Desk Access</div>
+<div class="text-center text-on-surface-variant font-body-sm">1 Day</div>
+<div class="text-center text-on-surface-variant font-body-sm">7 Days</div>
+<div class="text-center text-on-surface-variant font-body-sm">30 Days</div>
+<div class="text-center text-on-surface-variant font-body-sm">90 Days</div>
+<div class="text-center text-on-surface-variant font-body-sm">365 Days</div>
+<div class="text-center text-on-surface-variant font-body-sm">Private Suite</div>
+</div>
+<!-- Wi-Fi -->
+<div class="pricing-grid border-b border-outline-variant/10 py-md px-md items-center bg-surface-container-low/50">
+<div class="font-label-md text-primary">High-speed Wi-Fi</div>
+<div class="text-center"><span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1">check_circle</span></div>
+<div class="text-center"><span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1">check_circle</span></div>
+<div class="text-center"><span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1">check_circle</span></div>
+<div class="text-center"><span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1">check_circle</span></div>
+<div class="text-center"><span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1">check_circle</span></div>
+<div class="text-center font-body-sm text-secondary font-bold">Dedicated Fiber</div>
+</div>
+<!-- Coffee/Tea -->
+<div class="pricing-grid border-b border-outline-variant/10 py-md px-md items-center">
+<div class="font-label-md text-primary">Unlimited Coffee &amp; Tea</div>
+<div class="text-center"><span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1">check_circle</span></div>
+<div class="text-center"><span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1">check_circle</span></div>
+<div class="text-center"><span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1">check_circle</span></div>
+<div class="text-center"><span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1">check_circle</span></div>
+<div class="text-center"><span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1">check_circle</span></div>
+<div class="text-center"><span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1">check_circle</span></div>
+</div>
+<!-- Meeting Rooms -->
+<div class="pricing-grid border-b border-outline-variant/10 py-md px-md items-center bg-surface-container-low/50">
+<div class="font-label-md text-primary">Meeting Room Credits</div>
+<div class="text-center text-on-surface-variant font-body-sm">—</div>
+<div class="text-center text-on-surface-variant font-body-sm">2 Credits</div>
+<div class="text-center text-on-surface-variant font-body-sm">10 Credits</div>
+<div class="text-center text-on-surface-variant font-body-sm">40 Credits</div>
+<div class="text-center text-on-surface-variant font-body-sm">150 Credits</div>
+<div class="text-center text-on-surface-variant font-body-sm">Unlimited</div>
+</div>
+<!-- Actions -->
+<div class="pricing-grid py-xl px-md items-center">
+<div></div>
+<div class="text-center"><button class="px-md py-sm bg-primary text-on-primary rounded-lg font-label-sm hover:opacity-90 active:scale-95 transition-all">Buy Pass</button></div>
+<div class="text-center"><button class="px-md py-sm bg-primary text-on-primary rounded-lg font-label-sm hover:opacity-90 active:scale-95 transition-all">Buy Pass</button></div>
+<div class="text-center"><button class="px-md py-sm bg-secondary text-on-secondary rounded-lg font-label-sm hover:shadow-lg active:scale-95 transition-all">Join Nexus</button></div>
+<div class="text-center"><button class="px-md py-sm bg-primary text-on-primary rounded-lg font-label-sm hover:opacity-90 active:scale-95 transition-all">Save Now</button></div>
+<div class="text-center"><button class="px-md py-sm bg-primary text-on-primary rounded-lg font-label-sm hover:opacity-90 active:scale-95 transition-all">Best Value</button></div>
+<div class="text-center"><button class="px-md py-sm border-2 border-primary text-primary rounded-lg font-label-sm hover:bg-primary hover:text-on-primary transition-all">Inquire</button></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Featured Section -->
+<section class="mt-xl grid grid-cols-1 md:grid-cols-2 gap-lg items-center">
+<div class="rounded-xl overflow-hidden shadow-lg h-[400px]">
+<img class="w-full h-full object-cover" data-alt="A professional high-end coworking space interior with large floor-to-ceiling windows overlooking a modern city skyline at dusk. The interior features minimalist furniture including ergonomic Bleu Cobalt chairs and light wood desks. Soft, ambient lighting creates a warm yet productive atmosphere. The style is premium B2B SaaS editorial with deep navy and clean white accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3Bs42Ss1eU0Dyl3qdsroFsDqOiqbdX6ZHTl2Yu6jLGga_8RG5sN4RqAPEtbUucVFdTKGMQ4LdDXdqPU4SQVpEsYUvlySBWIE8fUufTCE_qlnu-mjeI0ctPuwfVm-4ULDa5II41lcMb94OEZuVt_jsJEX0u0MtUE1voBshl1X89-wqh3V8xi3dDpFL4CRBe9CvHLk4nqYpkycTUPq1PgzA4qVAYsxt1QTbg9JGWTlkY0TFY0OQlqhKHSMe0annlCC6-yl2sesSrlE"/>
+</div>
+<div class="space-y-md p-md">
+<span class="inline-block py-1 px-3 bg-secondary/10 text-secondary font-label-sm rounded-full">Premium Experience</span>
+<h2 class="font-headline-lg text-headline-lg text-primary">Beyond Just a Desk</h2>
+<p class="font-body-md text-on-surface-variant">Every membership includes access to our global network of NexusDesk lounges, invitation-only networking events, and our proprietary concierge service.</p>
+<div class="grid grid-cols-2 gap-sm">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-secondary">verified_user</span>
+<span class="font-label-md">Secure Access</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-secondary">print</span>
+<span class="font-label-md">Smart Printing</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-secondary">local_post_office</span>
+<span class="font-label-md">Mail Handling</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-secondary">groups</span>
+<span class="font-label-md">Community Events</span>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ Micro-interaction Area -->
+<section class="mt-xl max-w-3xl mx-auto">
+<h2 class="font-headline-md text-headline-md text-center mb-lg">Common Questions</h2>
+<div class="space-y-sm">
+<details class="group bg-surface-container-lowest p-md rounded-xl border border-outline-variant/20 cursor-pointer">
+<summary class="flex justify-between items-center font-headline-sm text-headline-sm list-none">
+                        Can I upgrade my plan later?
+                        <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<p class="mt-md font-body-md text-on-surface-variant">Yes, you can upgrade your membership at any time through the NexusDesk app. The difference in price will be pro-rated for the current billing cycle.</p>
+</details>
+<details class="group bg-surface-container-lowest p-md rounded-xl border border-outline-variant/20 cursor-pointer">
+<summary class="flex justify-between items-center font-headline-sm text-headline-sm list-none">
+                        What are meeting room credits?
+                        <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<p class="mt-md font-body-md text-on-surface-variant">1 credit is equal to 1 hour of use for a small meeting room (up to 4 people). Larger rooms may require 2 or 3 credits per hour. Credits reset monthly.</p>
+</details>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-xl mt-xl bg-primary text-on-primary">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter px-margin-desktop max-w-container-max mx-auto">
+<div class="md:col-span-1">
+<div class="font-headline-sm text-headline-sm font-bold text-on-primary mb-md">NexusDesk</div>
+<p class="font-body-sm text-on-primary-container">Modern management for the next generation of hybrid work environments.</p>
+</div>
+<div>
+<h4 class="font-label-md mb-md text-secondary-fixed">Product</h4>
+<ul class="space-y-xs font-body-sm text-on-primary-container">
+<li><a class="hover:text-secondary-fixed-dim transition-colors" href="#">Spaces</a></li>
+<li><a class="hover:text-secondary-fixed-dim transition-colors" href="#">Technology</a></li>
+<li><a class="hover:text-secondary-fixed-dim transition-colors" href="#">Pricing</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-label-md mb-md text-secondary-fixed">Company</h4>
+<ul class="space-y-xs font-body-sm text-on-primary-container">
+<li><a class="hover:text-secondary-fixed-dim transition-colors" href="#">About Us</a></li>
+<li><a class="hover:text-secondary-fixed-dim transition-colors" href="#">Careers</a></li>
+<li><a class="hover:text-secondary-fixed-dim transition-colors" href="#">Press</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-label-md mb-md text-secondary-fixed">Newsletter</h4>
+<form class="flex gap-2">
+<input class="bg-primary-container border-outline-variant/20 rounded-lg text-on-primary text-sm focus:ring-secondary focus:border-secondary w-full" placeholder="Your email" type="email"/>
+<button class="bg-secondary p-2 rounded-lg text-on-secondary"><span class="material-symbols-outlined">arrow_forward</span></button>
+</form>
+</div>
+</div>
+<div class="max-w-container-max mx-auto px-margin-desktop mt-xl pt-lg border-t border-on-primary-container/20 flex flex-col md:flex-row justify-between items-center gap-md">
+<p class="font-body-sm text-on-primary-container">© 2024 NexusDesk Coworking Management. All rights reserved.</p>
+<div class="flex gap-lg font-body-sm text-on-primary-container">
+<a class="hover:text-secondary-fixed-dim" href="#">Privacy Policy</a>
+<a class="hover:text-secondary-fixed-dim" href="#">Terms of Service</a>
+<a class="hover:text-secondary-fixed-dim" href="#">Cookie Policy</a>
+<a class="hover:text-secondary-fixed-dim" href="#">Sitemap</a>
+</div>
+</div>
+</footer>
+<script>
+        // Simple micro-interaction for price hover highlighting
+        const pricingCols = document.querySelectorAll('.pricing-grid > div:not(:first-child)');
+        pricingCols.forEach(col => {
+            col.addEventListener('mouseenter', () => {
+                // Potential for adding subtle hover effects via JS if needed
+            });
+        });
+
+        // Add scroll effect for header
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 20) {
+                nav.classList.add('shadow-md');
+            } else {
+                nav.classList.remove('shadow-md');
+            }
+        });
+    </script>
+</body></html>

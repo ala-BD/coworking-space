@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Payment &amp; Confirmation | Encre &amp; Cobalt</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Sora:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .step-active { @apply text-secondary border-secondary; }
+        .payment-card-active { @apply border-secondary bg-secondary/5 ring-1 ring-secondary; }
+        
+        /* Subtle animation for success checkmark */
+        @keyframes scaleIn {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-success { animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-container": "#361d00",
+                      "on-secondary": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "on-tertiary-container": "#aa8259",
+                      "on-error": "#ffffff",
+                      "on-surface": "#1b1b1e",
+                      "surface": "#fbf9fb",
+                      "background": "#fbf9fb",
+                      "on-background": "#1b1b1e",
+                      "on-secondary-fixed-variant": "#0040a0",
+                      "surface-container-low": "#f5f3f6",
+                      "primary-fixed-dim": "#b5c7eb",
+                      "on-surface-variant": "#44474d",
+                      "primary-fixed": "#d6e3ff",
+                      "on-primary": "#ffffff",
+                      "secondary-container": "#2d6deb",
+                      "primary": "#000d23",
+                      "on-primary-fixed": "#071b37",
+                      "inverse-on-surface": "#f2f0f3",
+                      "surface-variant": "#e4e2e5",
+                      "secondary": "#0054cb",
+                      "surface-tint": "#4d5f7e",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-container": "#efedf0",
+                      "on-primary-container": "#798bac",
+                      "on-primary-fixed-variant": "#364765",
+                      "on-error-container": "#93000a",
+                      "on-tertiary-fixed": "#2c1700",
+                      "surface-bright": "#fbf9fb",
+                      "error": "#ba1a1a",
+                      "on-secondary-container": "#fefcff",
+                      "tertiary-fixed-dim": "#ecbe90",
+                      "surface-container-highest": "#e4e2e5",
+                      "on-tertiary-fixed-variant": "#60401d",
+                      "inverse-primary": "#b5c7eb",
+                      "on-secondary-fixed": "#001847",
+                      "primary-container": "#10233f",
+                      "tertiary-fixed": "#ffdcbc",
+                      "tertiary": "#180a00",
+                      "secondary-fixed": "#dae2ff",
+                      "on-tertiary": "#ffffff",
+                      "outline-variant": "#c5c6ce",
+                      "outline": "#75777e",
+                      "secondary-fixed-dim": "#b1c5ff",
+                      "inverse-surface": "#303033",
+                      "surface-container-high": "#e9e7ea",
+                      "surface-dim": "#dbd9dc"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "16px",
+                      "xl": "24px",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin-mobile": "16px",
+                      "margin-desktop": "32px",
+                      "md": "24px",
+                      "gutter": "24px",
+                      "xs": "8px",
+                      "sm": "16px",
+                      "base": "4px",
+                      "xl": "48px",
+                      "container-max": "1280px",
+                      "lg": "32px"
+              },
+              "fontFamily": {
+                      "body-lg": ["Inter"],
+                      "headline-lg": ["Sora"],
+                      "label-md": ["Inter"],
+                      "headline-xl": ["Sora"],
+                      "headline-sm": ["Sora"],
+                      "headline-md": ["Sora"],
+                      "label-sm": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "body-md": ["Inter"]
+              },
+              "fontSize": {
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "label-md": ["14px", {"lineHeight": "16px", "fontWeight": "600"}],
+                      "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+              }
+            }
+          }
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body-md overflow-x-hidden">
+<!-- Header (Shared Component) -->
+<nav class="bg-surface shadow-sm sticky top-0 z-50 h-20">
+<div class="flex justify-between items-center w-full px-margin-desktop max-w-container-max mx-auto h-full">
+<div class="text-headline-md font-headline-md font-bold text-primary">Encre &amp; Cobalt</div>
+<div class="hidden md:flex gap-lg items-center">
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-label-md text-label-md" href="#">Workspaces</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-label-md text-label-md" href="#">Memberships</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-label-md text-label-md" href="#">Events</a>
+<button class="px-sm py-xs border border-outline-variant text-on-surface font-label-md text-label-md rounded-lg hover:bg-surface-variant transition-all">Log In</button>
+<button class="px-sm py-xs bg-secondary text-on-secondary font-label-md text-label-md rounded-lg hover:brightness-110 transition-all">Book Now</button>
+</div>
+<button class="md:hidden material-symbols-outlined text-on-surface">menu</button>
+</div>
+</nav>
+<main class="max-w-container-max mx-auto px-margin-desktop py-xl">
+<!-- Booking Stepper -->
+<div class="flex items-center justify-center mb-xl w-full max-w-3xl mx-auto">
+<div class="flex flex-col items-center flex-1">
+<div class="w-10 h-10 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-bold mb-base">
+<span class="material-symbols-outlined text-[20px]">check</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Details</span>
+</div>
+<div class="h-[2px] bg-secondary-fixed flex-1 mb-6"></div>
+<div class="flex flex-col items-center flex-1">
+<div class="w-10 h-10 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-bold mb-base">
+<span class="material-symbols-outlined text-[20px]">check</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Add-ons</span>
+</div>
+<div class="h-[2px] bg-secondary-fixed flex-1 mb-6"></div>
+<div class="flex flex-col items-center flex-1">
+<div class="w-10 h-10 rounded-full border-2 border-secondary text-secondary flex items-center justify-center font-bold mb-base bg-white shadow-md">
+                    3
+                </div>
+<span class="font-label-sm text-label-sm text-secondary font-bold">Payment</span>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter" id="booking-container">
+<!-- Left Side: Payment Methods -->
+<div class="lg:col-span-8 space-y-lg">
+<section class="bg-white rounded-xl p-lg shadow-sm border border-outline-variant/10">
+<h2 class="font-headline-md text-headline-md text-primary mb-md">Payment Method</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-sm" id="payment-options">
+<!-- Online Payment -->
+<div class="payment-option relative flex items-center gap-sm p-md border border-outline-variant rounded-xl cursor-pointer hover:border-secondary transition-all group" onclick="selectPayment(this)">
+<div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg bg-surface-container">
+<span class="material-symbols-outlined text-secondary text-3xl">payments</span>
+</div>
+<div>
+<h3 class="font-label-md text-label-md text-on-surface">Online Payment</h3>
+<p class="text-label-sm text-on-surface-variant">Flouci / Sobflous</p>
+</div>
+<div class="ml-auto w-5 h-5 rounded-full border-2 border-outline-variant group-[.payment-card-active]:border-secondary group-[.payment-card-active]:bg-secondary flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-white opacity-0 group-[.payment-card-active]:opacity-100"></div>
+</div>
+</div>
+<!-- Bank Transfer -->
+<div class="payment-option relative flex items-center gap-sm p-md border border-outline-variant rounded-xl cursor-pointer hover:border-secondary transition-all group" onclick="selectPayment(this)">
+<div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg bg-surface-container">
+<span class="material-symbols-outlined text-on-surface-variant text-3xl">account_balance</span>
+</div>
+<div>
+<h3 class="font-label-md text-label-md text-on-surface">Bank Transfer</h3>
+<p class="text-label-sm text-on-surface-variant">Local Banks Only</p>
+</div>
+<div class="ml-auto w-5 h-5 rounded-full border-2 border-outline-variant group-[.payment-card-active]:border-secondary group-[.payment-card-active]:bg-secondary flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-white opacity-0 group-[.payment-card-active]:opacity-100"></div>
+</div>
+</div>
+<!-- Cash -->
+<div class="payment-option relative flex items-center gap-sm p-md border border-outline-variant rounded-xl cursor-pointer hover:border-secondary transition-all group" onclick="selectPayment(this)">
+<div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg bg-surface-container">
+<span class="material-symbols-outlined text-on-surface-variant text-3xl">money</span>
+</div>
+<div>
+<h3 class="font-label-md text-label-md text-on-surface">Cash</h3>
+<p class="text-label-sm text-on-surface-variant">At the Reception</p>
+</div>
+<div class="ml-auto w-5 h-5 rounded-full border-2 border-outline-variant group-[.payment-card-active]:border-secondary group-[.payment-card-active]:bg-secondary flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-white opacity-0 group-[.payment-card-active]:opacity-100"></div>
+</div>
+</div>
+<!-- Check -->
+<div class="payment-option relative flex items-center gap-sm p-md border border-outline-variant rounded-xl cursor-pointer hover:border-secondary transition-all group" onclick="selectPayment(this)">
+<div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg bg-surface-container">
+<span class="material-symbols-outlined text-on-surface-variant text-3xl">contract_edit</span>
+</div>
+<div>
+<h3 class="font-label-md text-label-md text-on-surface">Check</h3>
+<p class="text-label-sm text-on-surface-variant">Corporate Clients</p>
+</div>
+<div class="ml-auto w-5 h-5 rounded-full border-2 border-outline-variant group-[.payment-card-active]:border-secondary group-[.payment-card-active]:bg-secondary flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-white opacity-0 group-[.payment-card-active]:opacity-100"></div>
+</div>
+</div>
+</div>
+</section>
+<div class="p-md bg-surface-container-low rounded-xl flex items-start gap-sm border border-outline-variant/10">
+<span class="material-symbols-outlined text-secondary">info</span>
+<p class="text-body-sm text-on-surface-variant">By proceeding, you agree to our Terms of Service and Cancellation Policy. Payments via Bank Transfer require manual verification within 24 hours.</p>
+</div>
+</div>
+<!-- Right Side: Summary Card -->
+<div class="lg:col-span-4">
+<div class="bg-white rounded-xl p-lg shadow-md border border-outline-variant/10 sticky top-24">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-md">Summary</h3>
+<div class="space-y-sm pb-md border-b border-outline-variant/20">
+<div class="flex justify-between items-center">
+<span class="text-body-sm text-on-surface-variant">Private Office (1 Month)</span>
+<span class="font-label-md text-on-surface">1,200.00 TND</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-body-sm text-on-surface-variant">Conference Access Add-on</span>
+<span class="font-label-md text-on-surface">150.00 TND</span>
+</div>
+</div>
+<div class="space-y-sm py-md border-b border-outline-variant/20">
+<div class="flex justify-between items-center">
+<span class="text-body-sm text-on-surface-variant">Subtotal</span>
+<span class="font-label-md text-on-surface">1,350.00 TND</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-body-sm text-on-surface-variant">VAT (19%)</span>
+<span class="font-label-md text-on-surface">256.50 TND</span>
+</div>
+</div>
+<div class="flex justify-between items-center py-lg">
+<span class="font-headline-sm text-headline-sm text-primary">Total</span>
+<span class="font-headline-sm text-headline-sm text-secondary">1,606.50 TND</span>
+</div>
+<button class="w-full py-md bg-secondary text-on-secondary font-headline-sm rounded-xl hover:brightness-110 shadow-lg shadow-secondary/20 transition-all flex items-center justify-center gap-xs" id="pay-button" onclick="processPayment()">
+                        Confirm &amp; Pay
+                        <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<div class="mt-md flex items-center justify-center gap-xs text-on-surface-variant opacity-60">
+<span class="material-symbols-outlined text-[16px]">lock</span>
+<span class="text-label-sm">Secure Encrypted Payment</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Success Modal Overlay (Hidden by default) -->
+<div class="hidden fixed inset-0 z-[60] flex items-center justify-center p-margin-mobile" id="success-overlay">
+<div class="absolute inset-0 bg-primary/40 backdrop-blur-sm"></div>
+<div class="relative bg-white w-full max-w-xl rounded-xl p-xl shadow-2xl animate-success text-center">
+<div class="w-20 h-20 bg-[#2FBE8F]/10 text-[#2FBE8F] rounded-full flex items-center justify-center mx-auto mb-lg">
+<span class="material-symbols-outlined text-5xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-primary mb-xs">Reservation Confirmed!</h2>
+<p class="text-on-surface-variant font-label-md mb-md">Reservation number: <span class="text-secondary font-bold">EC-BK-2024-8842</span></p>
+<div class="p-md bg-surface-container-low rounded-lg mb-xl">
+<p class="text-body-md text-on-surface-variant">A confirmation has been sent to your email and via SMS. We're looking forward to hosting you at Encre &amp; Cobalt.</p>
+</div>
+<div class="flex flex-col sm:flex-row gap-sm">
+<button class="flex-1 py-sm border border-outline-variant text-on-surface font-label-md rounded-lg hover:bg-surface-variant transition-all flex items-center justify-center gap-xs" onclick="window.location.reload()">
+<span class="material-symbols-outlined">download</span>
+                        Download PDF Receipt
+                    </button>
+<button class="flex-1 py-sm bg-secondary text-on-secondary font-label-md rounded-lg hover:brightness-110 shadow-md transition-all flex items-center justify-center gap-xs" onclick="window.location.reload()">
+                        Go to Dashboard
+                        <span class="material-symbols-outlined">dashboard</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer (Shared Component) -->
+<footer class="bg-surface-container dark:bg-surface-container-highest border-t border-outline-variant/10 mt-xl">
+<div class="w-full py-lg px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-md max-w-container-max mx-auto">
+<div class="font-headline-sm text-headline-sm font-bold text-primary">Encre &amp; Cobalt</div>
+<div class="flex flex-wrap justify-center gap-md">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Support</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Contact Us</a>
+</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">© 2024 Encre &amp; Cobalt Coworking. All rights reserved.</div>
+</div>
+</footer>
+<script>
+        function selectPayment(element) {
+            // Remove active class from all options
+            document.querySelectorAll('.payment-option').forEach(opt => {
+                opt.classList.remove('payment-card-active');
+                // Reset icon color
+                opt.querySelector('.material-symbols-outlined').classList.replace('text-secondary', 'text-on-surface-variant');
+            });
+            
+            // Add active class to selected
+            element.classList.add('payment-card-active');
+            element.querySelector('.material-symbols-outlined').classList.replace('text-on-surface-variant', 'text-secondary');
+        }
+
+        function processPayment() {
+            const btn = document.getElementById('pay-button');
+            const originalContent = btn.innerHTML;
+            
+            // UI Feedback
+            btn.disabled = true;
+            btn.innerHTML = '<span class="animate-spin material-symbols-outlined">progress_activity</span> Processing...';
+            
+            setTimeout(() => {
+                document.getElementById('success-overlay').classList.remove('hidden');
+                document.body.style.overflow = 'hidden'; // Prevent scroll
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }, 1200);
+        }
+
+        // Default selection
+        document.addEventListener('DOMContentLoaded', () => {
+            const defaultOption = document.querySelector('.payment-option');
+            if (defaultOption) selectPayment(defaultOption);
+        });
+    </script>
+</body></html>

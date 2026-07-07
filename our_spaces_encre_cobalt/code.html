@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NexusDesk | Spaces Catalog</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Sora:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed": "#2c1700",
+                    "on-error-container": "#93000a",
+                    "error": "#ba1a1a",
+                    "primary-fixed": "#d6e3ff",
+                    "inverse-surface": "#303033",
+                    "on-primary-fixed": "#071b37",
+                    "tertiary-container": "#361d00",
+                    "surface-container-low": "#f5f3f6",
+                    "outline": "#75777e",
+                    "on-secondary-container": "#fefcff",
+                    "secondary-fixed": "#dae2ff",
+                    "error-container": "#ffdad6",
+                    "surface-tint": "#4d5f7e",
+                    "on-surface-variant": "#44474d",
+                    "primary-fixed-dim": "#b5c7eb",
+                    "on-secondary-fixed": "#001847",
+                    "on-primary-container": "#798bac",
+                    "surface-bright": "#fbf9fb",
+                    "surface-container-high": "#e9e7ea",
+                    "secondary-container": "#2d6deb",
+                    "secondary-fixed-dim": "#b1c5ff",
+                    "secondary": "#0054cb",
+                    "surface-dim": "#dbd9dc",
+                    "surface-variant": "#e4e2e5",
+                    "on-secondary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "outline-variant": "#c5c6ce",
+                    "surface-container": "#efedf0",
+                    "on-secondary-fixed-variant": "#0040a0",
+                    "on-tertiary-fixed-variant": "#60401d",
+                    "primary-container": "#10233f",
+                    "tertiary": "#180a00",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#e4e2e5",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed": "#ffdcbc",
+                    "surface": "#fbf9fb",
+                    "primary": "#000d23",
+                    "on-surface": "#1b1b1e",
+                    "on-background": "#1b1b1e",
+                    "on-primary-fixed-variant": "#364765",
+                    "background": "#fbf9fb",
+                    "on-tertiary-container": "#aa8259",
+                    "on-tertiary": "#ffffff",
+                    "inverse-primary": "#b5c7eb",
+                    "tertiary-fixed-dim": "#ecbe90",
+                    "inverse-on-surface": "#f2f0f3"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-max": "1280px",
+                    "xs": "8px",
+                    "sm": "16px",
+                    "md": "24px",
+                    "lg": "32px",
+                    "xl": "48px",
+                    "base": "4px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "gutter": "24px"
+            },
+            "fontFamily": {
+                    "headline-sm": ["Sora"],
+                    "body-lg": ["Inter"],
+                    "headline-lg-mobile": ["Sora"],
+                    "body-sm": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg": ["Sora"],
+                    "label-sm": ["Inter"],
+                    "headline-md": ["Sora"],
+                    "headline-xl": ["Sora"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0px 8px 16px rgba(16, 35, 63, 0.08);
+        }
+        .glass-header {
+            backdrop-filter: blur(8px);
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 glass-header shadow-sm bg-surface-container-lowest">
+<div class="flex justify-between items-center px-margin-desktop py-sm max-w-container-max mx-auto">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-secondary" style="font-size: 32px;">hub</span>
+<span class="font-headline-md text-headline-md font-bold text-primary">NexusDesk</span>
+</div>
+<nav class="hidden md:flex gap-lg items-center">
+<a class="font-body-md text-body-md text-secondary border-b-2 border-secondary pb-1 transition-colors duration-200" href="#">Spaces</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors duration-200" href="#">Workshops</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors duration-200" href="#">Pricing</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors duration-200" href="#">Contact</a>
+</nav>
+<div class="flex items-center gap-sm">
+<button class="font-label-md text-label-md text-on-surface-variant px-md py-xs rounded-lg hover:bg-surface-container-high transition-colors active:scale-95">Sign In</button>
+<button class="font-label-md text-label-md bg-secondary text-on-secondary px-md py-xs rounded-lg shadow-sm hover:opacity-90 transition-transform active:scale-95">Book Now</button>
+</div>
+</div>
+</header>
+<main class="pt-[100px] pb-xl px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+<!-- Hero Section -->
+<section class="mb-xl text-center md:text-left">
+<div class="inline-flex items-center gap-xs px-sm py-xs bg-secondary-container bg-opacity-10 text-secondary rounded-full mb-sm">
+<span class="material-symbols-outlined text-sm">rocket_launch</span>
+<span class="font-label-sm text-label-sm">ELEVATE YOUR WORKFLOW</span>
+</div>
+<h1 class="font-headline-xl text-headline-xl text-primary mb-xs">Find Your Perfect <span class="text-secondary">Space</span></h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">Discover flexible coworking solutions tailored for high-performance teams and creative independent professionals.</p>
+</section>
+<!-- Filter Bar -->
+<div class="flex flex-wrap items-center gap-sm mb-lg">
+<button class="bg-primary text-on-primary px-md py-xs rounded-full font-label-md">All Spaces</button>
+<button class="bg-surface-container-highest text-on-surface-variant px-md py-xs rounded-full font-label-md hover:bg-surface-container-high">Individual</button>
+<button class="bg-surface-container-highest text-on-surface-variant px-md py-xs rounded-full font-label-md hover:bg-surface-container-high">Teams</button>
+<button class="bg-surface-container-highest text-on-surface-variant px-md py-xs rounded-full font-label-md hover:bg-surface-container-high">Meetings</button>
+<div class="ml-auto flex items-center gap-xs text-on-surface-variant font-label-sm">
+<span class="material-symbols-outlined">filter_list</span>
+<span>Filters</span>
+</div>
+</div>
+<!-- Catalog Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Space Type 1: Open Space -->
+<article class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm card-hover flex flex-col border border-outline border-opacity-10">
+<div class="relative h-64 overflow-hidden">
+<div class="absolute top-sm left-sm z-10">
+<span class="bg-[#2FBE8F] bg-opacity-10 text-[#2FBE8F] px-sm py-1 rounded-full font-label-sm flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-[#2FBE8F] animate-pulse"></span>
+                            8 Slots Available
+                        </span>
+</div>
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 hover:scale-110" data-alt="A bright, airy open-plan coworking space with large industrial windows, featuring ergonomic wooden desks and lush green indoor plants. The lighting is natural and crisp, creating a productive and modern atmosphere. The color palette consists of soft grays, whites, and deep cobalt blue accents in the furniture." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDWmAMxKE9G11cINB2OhYi6Wchx5DecSyKxafaMVg9kNeSPAzBePY6cEjTE1QC84TAiTkLiHu14sSzp5NSSsBgtm0kDOaSswddJqWkZl5MMzxAIxEcAB9GQoN_Hox0ItwFLRnVfo22BGhuXpsQK33XpyPz2FBppIq8gl0leQ3X5_Tkka6HL0OZ33ezUwQImGA1W1hFgqDkyqc8FyhfiHHK7szV0l_fgP8Omy9BWYdkvLDOXvCy5RhDpwws9SXsCu3O3lLLEwIiBJZo')"></div>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-xs">
+<h2 class="font-headline-sm text-headline-sm text-primary">Open Space</h2>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-secondary">favorite</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-md flex-grow">Flexible seating in our vibrant community area. Perfect for digital nomads and individual focused work with high-speed fiber connectivity.</p>
+<div class="flex items-center gap-sm mb-md text-on-surface-variant">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">wifi</span>
+<span class="font-label-sm">Gigabit Wifi</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">coffee</span>
+<span class="font-label-sm">Unlimited Coffee</span>
+</div>
+</div>
+<div class="mt-auto pt-md border-t border-outline border-opacity-10 flex items-center justify-between">
+<div>
+<span class="font-label-sm text-on-surface-variant uppercase block">Starting from</span>
+<span class="font-headline-sm text-headline-sm text-secondary">$25<span class="font-body-sm text-on-surface-variant">/day</span></span>
+</div>
+<button class="bg-primary text-on-primary px-md py-xs rounded-lg font-label-md active:scale-95 transition-transform">Book Slot</button>
+</div>
+</div>
+</article>
+<!-- Space Type 2: Private Office -->
+<article class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm card-hover flex flex-col border border-outline border-opacity-10">
+<div class="relative h-64 overflow-hidden">
+<div class="absolute top-sm left-sm z-10">
+<span class="bg-[#2FBE8F] bg-opacity-10 text-[#2FBE8F] px-sm py-1 rounded-full font-label-sm flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-[#2FBE8F]"></span>
+                            2 Suites Ready
+                        </span>
+</div>
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 hover:scale-110" data-alt="A sleek, professional private office suite with glass walls and minimalist black furniture. The room features high-end acoustic panels and a dedicated executive desk. The lighting is sophisticated and indirect, highlighting a palette of Encre Marine and polished chrome. Large floor-to-ceiling windows offer a view of a modern cityscape." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB-ZbQawvQwnniayI5cWXV1TAajj7XHEjRmvv9_aq4HBGZb90TBX3uB9zPL078q2uO0rCBbWMjdYk7hJqNga5hAtM1439Kn2hlmImC8ViGmxKFXh6tAMgRXnucOsNcJJOUO83TEGHYr8503i7PXWTEQvmoq1lcUncd7vX-1L1y-qgfYfawrjh6NzlQMn6cvwSvMjLF2aMRLmCHniVSlmgJ_-fErKcrRiCEk2YtTZhKELnDSt4UYv9oxL2TdTAiqoMTTd4UnmCL0c9E')"></div>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-xs">
+<h2 class="font-headline-sm text-headline-sm text-primary">Private Office</h2>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-secondary">favorite</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-md flex-grow">Fully furnished, soundproofed offices for teams of 2-10. Includes 24/7 access, mailing address, and private VLAN.</p>
+<div class="flex items-center gap-sm mb-md text-on-surface-variant">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">lock</span>
+<span class="font-label-sm">Secure Entry</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">print</span>
+<span class="font-label-sm">Print Credit</span>
+</div>
+</div>
+<div class="mt-auto pt-md border-t border-outline border-opacity-10 flex items-center justify-between">
+<div>
+<span class="font-label-sm text-on-surface-variant uppercase block">Starting from</span>
+<span class="font-headline-sm text-headline-sm text-secondary">$850<span class="font-body-sm text-on-surface-variant">/mo</span></span>
+</div>
+<button class="bg-primary text-on-primary px-md py-xs rounded-lg font-label-md active:scale-95 transition-transform">Inquire</button>
+</div>
+</div>
+</article>
+<!-- Space Type 3: Meeting Room -->
+<article class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm card-hover flex flex-col border border-outline border-opacity-10">
+<div class="relative h-64 overflow-hidden">
+<div class="absolute top-sm left-sm z-10">
+<span class="bg-[#2FBE8F] bg-opacity-10 text-[#2FBE8F] px-sm py-1 rounded-full font-label-sm flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-[#2FBE8F] animate-pulse"></span>
+                            Available Now
+                        </span>
+</div>
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 hover:scale-110" data-alt="A modern tech-forward meeting room equipped with a large high-definition display, a sleek conference table with integrated power outlets, and ergonomic mesh chairs. The aesthetic is professional and high-tech, using a monochrome palette with Bleu Cobalt accents on the walls. The lighting is bright and perfectly balanced for video conferencing." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBKqurFE5nluVzrOLMF8fWzp3vDCn3QDAa-eIzPSJfazHFpNd_cT__EKazYVIgOWSZKND4VeSDxmg7Wsr5SWNCaIQCWwvsSmncwF3i1RCpjE3Xk8ZnFXUt7plfwrDV0fQIjBn4vDRv1Wuwiia86BhyhkAQrdpqG0TSzVCpSFRiR1qNQW49uDUwy9WK3qS2s2b7n4Tge2zgEp6AZsSTdxFrJfC7KqsQk68y-L1klSw0zK0Y2nv6WKGz-xFshyDYDIorWpwOi70XHUWs')"></div>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-xs">
+<h2 class="font-headline-sm text-headline-sm text-primary">Meeting Room</h2>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-secondary">favorite</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-md flex-grow">State-of-the-art tech including 4K displays and video conferencing. Ideal for client pitches or team huddles.</p>
+<div class="flex items-center gap-sm mb-md text-on-surface-variant">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">videocam</span>
+<span class="font-label-sm">4K System</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">draw</span>
+<span class="font-label-sm">Whiteboard</span>
+</div>
+</div>
+<div class="mt-auto pt-md border-t border-outline border-opacity-10 flex items-center justify-between">
+<div>
+<span class="font-label-sm text-on-surface-variant uppercase block">Starting from</span>
+<span class="font-headline-sm text-headline-sm text-secondary">$45<span class="font-body-sm text-on-surface-variant">/hr</span></span>
+</div>
+<button class="bg-primary text-on-primary px-md py-xs rounded-lg font-label-md active:scale-95 transition-transform">Book Now</button>
+</div>
+</div>
+</article>
+<!-- Space Type 4: Training Room -->
+<article class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm card-hover flex flex-col border border-outline border-opacity-10">
+<div class="relative h-64 overflow-hidden">
+<div class="absolute top-sm left-sm z-10">
+<span class="bg-[#2FBE8F] bg-opacity-10 text-[#2FBE8F] px-sm py-1 rounded-full font-label-sm flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-[#2FBE8F]"></span>
+                            Limited Dates
+                        </span>
+</div>
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 hover:scale-110" data-alt="A spacious training room or classroom setup with flexible modular desks and ergonomic seating for twenty people. The room features a large projection wall and multiple power strips. The design is clean and instructional, with a light-mode aesthetic of Gris Perle and white, accented by energetic Bleu Cobalt details. Natural light pours in from skylights." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBme1p2rWjLlEiWCUuP9kvOT4ZptJ-wgrh3NgTP3IEzsLu8A4AhfZ5jWEjtKzT1qrrzoTbwlLJZr6N9yLF8H0Ie8egzOVp5_mBdC5VP5ts0gnFk_7RYt9N-ct-5X9yOLg1wetjlHVIIYThXJFsGCfWbpVIOAnqPzOxJAVyWu41wFwRStwNUNZHsPcrxOUMPEQ28dEavFVlocm5ze91Nfk-VJnTXZqQ-FxCKfztuXen8M84w5NIhB6TV6aqfifoYtlJIGBGLPokLRMA')"></div>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-xs">
+<h2 class="font-headline-sm text-headline-sm text-primary">Training Room</h2>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-secondary">favorite</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-md flex-grow">Modular layout for workshops, seminars, or certifications. Equipped with projectors and flexible furniture configurations.</p>
+<div class="flex items-center gap-sm mb-md text-on-surface-variant">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">tv</span>
+<span class="font-label-sm">Dual Projector</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">group</span>
+<span class="font-label-sm">Up to 25 pax</span>
+</div>
+</div>
+<div class="mt-auto pt-md border-t border-outline border-opacity-10 flex items-center justify-between">
+<div>
+<span class="font-label-sm text-on-surface-variant uppercase block">Starting from</span>
+<span class="font-headline-sm text-headline-sm text-secondary">$320<span class="font-body-sm text-on-surface-variant">/day</span></span>
+</div>
+<button class="bg-primary text-on-primary px-md py-xs rounded-lg font-label-md active:scale-95 transition-transform">Reserve</button>
+</div>
+</div>
+</article>
+<!-- Space Type 5: Event Space -->
+<article class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm card-hover flex flex-col border border-outline border-opacity-10 lg:col-span-2">
+<div class="flex flex-col md:flex-row h-full">
+<div class="relative md:w-1/2 h-64 md:h-full overflow-hidden">
+<div class="absolute top-sm left-sm z-10">
+<span class="bg-secondary bg-opacity-10 text-secondary px-sm py-1 rounded-full font-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">stars</span>
+                                Premium Venue
+                            </span>
+</div>
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 hover:scale-110" data-alt="A grand, high-ceilinged industrial-chic event space with exposed brick walls, polished concrete floors, and hanging Edison bulb lighting. The space is set up for a cocktail reception with high-top tables and a sleek modern bar area. The mood is sophisticated and celebratory, using a palette of deep Marine and warm metallic accents." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuArXux_QyJ7WVOPuJQMH427fhJAnVYOoHrdq4WpYF9gzMHrkkD1SY1yD0yiPimRTX2nJOxhzond8zYvvGN_dnTk0GO9lRwAMheLi9EPrUt9DniebqHAZjicEI5JjQt2V5tgEdhpc5ObO_IOQavx5xKWxZ3mRetPzVTR0wIeOSNdNG3LUaLl3iyVGgGTG2L84efLmr4Veaby6RuKiK-OFZDttbpPbuGklHSZpFH0dCxAFvu001mvzpcaDZ5-THWi6BHLzGyfRPqMWPM')"></div>
+</div>
+<div class="p-md md:p-xl md:w-1/2 flex flex-col">
+<div class="flex justify-between items-start mb-xs">
+<h2 class="font-headline-md text-headline-md text-primary">Event Space</h2>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-secondary">favorite</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-md">Our signature grand hall for product launches, networking events, or corporate parties. Includes stage, professional audio-visual setup, and catering kitchen access.</p>
+<div class="grid grid-cols-2 gap-sm mb-lg text-on-surface-variant">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">speaker</span>
+<span class="font-label-sm">PA System</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">groups</span>
+<span class="font-label-sm">100+ Capacity</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">restaurant</span>
+<span class="font-label-sm">Catering Ready</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">light_mode</span>
+<span class="font-label-sm">Stage Lighting</span>
+</div>
+</div>
+<div class="mt-auto pt-md border-t border-outline border-opacity-10 flex items-center justify-between">
+<div>
+<span class="font-label-sm text-on-surface-variant uppercase block">Pricing</span>
+<span class="font-headline-sm text-headline-sm text-secondary">Custom Quote</span>
+</div>
+<button class="bg-secondary text-on-secondary px-lg py-sm rounded-lg font-label-md active:scale-95 transition-transform">Get Proposal</button>
+</div>
+</div>
+</div>
+</article>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full py-xl mt-xl bg-primary">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter px-margin-desktop max-w-container-max mx-auto">
+<div class="flex flex-col gap-sm">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-secondary-fixed" style="font-size: 28px;">hub</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-primary">NexusDesk</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-primary-container">Modern workspace solutions for the next generation of business leaders.</p>
+</div>
+<div class="flex flex-col gap-xs">
+<h3 class="font-label-md text-on-primary mb-xs">Product</h3>
+<a class="font-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Find a Space</a>
+<a class="font-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Amenities</a>
+<a class="font-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Locations</a>
+<a class="font-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Mobile App</a>
+</div>
+<div class="flex flex-col gap-xs">
+<h3 class="font-label-md text-on-primary mb-xs">Company</h3>
+<a class="font-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">About Us</a>
+<a class="font-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Careers</a>
+<a class="font-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Partner with Us</a>
+<a class="font-body-sm text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">Blog</a>
+</div>
+<div class="flex flex-col gap-xs">
+<h3 class="font-label-md text-on-primary mb-xs">Contact</h3>
+<div class="flex items-center gap-xs text-on-primary-container font-body-sm">
+<span class="material-symbols-outlined text-sm">mail</span>
+<span>hello@nexusdesk.co</span>
+</div>
+<div class="flex items-center gap-xs text-on-primary-container font-body-sm">
+<span class="material-symbols-outlined text-sm">call</span>
+<span>+1 (555) 000-Nexus</span>
+</div>
+<div class="flex gap-sm mt-sm">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary hover:bg-secondary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-lg">public</span>
+</div>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary hover:bg-secondary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-lg">alternate_email</span>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-xl pt-lg border-t border-on-primary-container border-opacity-20 px-margin-desktop max-w-container-max mx-auto flex flex-col md:flex-row justify-between items-center gap-md">
+<span class="font-body-sm text-body-sm text-on-primary-container">© 2024 NexusDesk Coworking Management. All rights reserved.</span>
+<div class="flex gap-md">
+<a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed" href="#">Privacy Policy</a>
+<a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed" href="#">Terms of Service</a>
+<a class="font-body-sm text-body-sm text-on-primary-container hover:text-secondary-fixed" href="#">Cookie Policy</a>
+</div>
+</div>
+</footer>
+<script>
+        // Micro-interaction for smooth scrolling and hover effects
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Simple Intersection Observer for scroll animations
+        const observerOptions = {
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('opacity-100', 'translate-y-0');
+                    entry.target.classList.remove('opacity-0', 'translate-y-8');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('article').forEach(card => {
+            card.classList.add('opacity-0', 'translate-y-8', 'transition-all', 'duration-700');
+            observer.observe(card);
+        });
+    </script>
+</body></html>

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>My Bookings | Encre &amp; Cobalt</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#c5c6ce",
+                        "tertiary-fixed": "#ffdcbc",
+                        "tertiary": "#180a00",
+                        "secondary-fixed": "#dae2ff",
+                        "outline": "#75777e",
+                        "secondary-fixed-dim": "#b1c5ff",
+                        "inverse-surface": "#303033",
+                        "surface-dim": "#dbd9dc",
+                        "surface-container-high": "#e9e7ea",
+                        "on-tertiary-fixed": "#2c1700",
+                        "surface-bright": "#fbf9fb",
+                        "error": "#ba1a1a",
+                        "on-secondary-container": "#fefcff",
+                        "surface-container-highest": "#e4e2e5",
+                        "on-tertiary-fixed-variant": "#60401d",
+                        "inverse-primary": "#b5c7eb",
+                        "tertiary-fixed-dim": "#ecbe90",
+                        "on-secondary-fixed": "#001847",
+                        "primary-container": "#10233f",
+                        "surface-variant": "#e4e2e5",
+                        "secondary": "#0054cb",
+                        "secondary-container": "#2d6deb",
+                        "primary": "#000d23",
+                        "on-primary-fixed": "#071b37",
+                        "inverse-on-surface": "#f2f0f3",
+                        "surface-tint": "#4d5f7e",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container": "#efedf0",
+                        "on-primary-container": "#798bac",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed-variant": "#364765",
+                        "tertiary-container": "#361d00",
+                        "on-secondary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-container": "#aa8259",
+                        "on-background": "#1b1b1e",
+                        "on-secondary-fixed-variant": "#0040a0",
+                        "on-surface": "#1b1b1e",
+                        "surface": "#fbf9fb",
+                        "background": "#fbf9fb",
+                        "primary-fixed": "#d6e3ff",
+                        "on-primary": "#ffffff",
+                        "surface-container-low": "#f5f3f6",
+                        "primary-fixed-dim": "#b5c7eb",
+                        "on-surface-variant": "#44474d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "16px",
+                        "xl": "24px",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "8px",
+                        "sm": "16px",
+                        "base": "4px",
+                        "xl": "48px",
+                        "container-max": "1280px",
+                        "lg": "32px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px",
+                        "md": "24px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-xl": ["Sora"],
+                        "headline-sm": ["Sora"],
+                        "headline-md": ["Sora"],
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Sora"],
+                        "body-lg": ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #F4F6F9; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e4e2e5; border-radius: 10px; }
+        .tooltip-trigger:hover .tooltip-content { opacity: 1; visibility: visible; transform: translateY(0); }
+        .glass-header { backdrop-filter: blur(12px); background-color: rgba(251, 249, 251, 0.8); }
+    </style>
+</head>
+<body class="font-body-md text-on-surface">
+<!-- TopNavBar (Shared Component Identity) -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop py-4 glass-header shadow-sm">
+<div class="flex items-center gap-4">
+<span class="md:hidden material-symbols-outlined cursor-pointer text-primary" onclick="toggleSidebar()">menu</span>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">Encre &amp; Cobalt</h1>
+</div>
+<div class="hidden md:flex gap-lg items-center">
+<nav class="flex gap-md">
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-body-md text-body-md" href="#">Workspaces</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-body-md text-body-md" href="#">Amenities</a>
+<a class="text-secondary border-b-2 border-secondary font-semibold pb-1 font-body-md text-body-md" href="#">Bookings</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-body-md text-body-md" href="#">Pricing</a>
+</nav>
+<div class="h-8 w-px bg-outline-variant mx-2"></div>
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold">JD</div>
+</div>
+</div>
+<div class="md:hidden">
+<span class="material-symbols-outlined text-primary">account_circle</span>
+</div>
+</header>
+<div class="flex min-h-screen pt-[72px]">
+<!-- SideNav (Internal Platform Navigation) -->
+<aside class="fixed inset-y-0 left-0 z-40 w-64 bg-primary text-on-primary transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out pt-[72px] md:pt-0 md:relative" id="sidebar">
+<div class="flex flex-col h-full p-md">
+<div class="space-y-xs">
+<p class="text-[10px] uppercase tracking-widest text-on-primary-container px-sm mb-base font-bold">Main</p>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-on-primary-fixed-variant transition-colors group" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-sm p-sm rounded-lg bg-secondary text-white shadow-md transition-colors group" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-label-md text-label-md">My Bookings</span>
+</a>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-on-primary-fixed-variant transition-colors group" href="#">
+<span class="material-symbols-outlined">meeting_room</span>
+<span class="font-label-md text-label-md">Workspaces</span>
+</a>
+</div>
+<div class="mt-xl space-y-xs">
+<p class="text-[10px] uppercase tracking-widest text-on-primary-container px-sm mb-base font-bold">Settings</p>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-on-primary-fixed-variant transition-colors group" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-md text-label-md">Billing</span>
+</a>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-on-primary-fixed-variant transition-colors group" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</div>
+<div class="mt-auto p-sm bg-primary-container rounded-xl">
+<div class="flex items-center gap-sm mb-sm">
+<div class="p-xs bg-secondary-container rounded-lg">
+<span class="material-symbols-outlined text-white">workspace_premium</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-white">Elite Member</p>
+<p class="font-body-sm text-body-sm text-on-primary-container">Expires Dec 2024</p>
+</div>
+</div>
+<button class="w-full py-xs px-sm bg-white text-primary font-label-md text-label-md rounded-lg hover:opacity-90 transition-opacity">Upgrade</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 p-margin-mobile md:p-margin-desktop max-w-container-max mx-auto w-full overflow-hidden">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-md mb-xl">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-primary mb-xs">Reservation History</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">Manage your upcoming workspace bookings and review past professional sessions. All bookings are subject to our flexible cancellation policy.</p>
+</div>
+<button class="flex items-center justify-center gap-xs px-lg py-sm bg-secondary text-on-secondary rounded-lg font-label-md text-label-md shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined">add</span>
+                    New Booking
+                </button>
+</div>
+<!-- Dashboard Stats (Light Bento Style) -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter mb-xl">
+<div class="bg-white p-md rounded-xl shadow-sm border border-outline-variant/10">
+<p class="text-on-surface-variant font-label-sm text-label-sm mb-base uppercase">Total Bookings</p>
+<div class="flex items-center justify-between">
+<span class="font-headline-md text-headline-md text-primary">24</span>
+<span class="text-[Vert Sève] text-xs font-bold bg-[#2FBE8F1A] px-2 py-1 rounded-full">+12%</span>
+</div>
+</div>
+<div class="bg-white p-md rounded-xl shadow-sm border border-outline-variant/10">
+<p class="text-on-surface-variant font-label-sm text-label-sm mb-base uppercase">Confirmed</p>
+<div class="flex items-center justify-between">
+<span class="font-headline-md text-headline-md text-primary">3</span>
+<span class="material-symbols-outlined text-secondary">verified</span>
+</div>
+</div>
+<div class="bg-white p-md rounded-xl shadow-sm border border-outline-variant/10">
+<p class="text-on-surface-variant font-label-sm text-label-sm mb-base uppercase">Hours Spent</p>
+<div class="flex items-center justify-between">
+<span class="font-headline-md text-headline-md text-primary">142</span>
+<span class="material-symbols-outlined text-on-surface-variant">schedule</span>
+</div>
+</div>
+<div class="bg-white p-md rounded-xl shadow-sm border border-outline-variant/10">
+<p class="text-on-surface-variant font-label-sm text-label-sm mb-base uppercase">Credits Remaining</p>
+<div class="flex items-center justify-between">
+<span class="font-headline-md text-headline-md text-primary">12.5</span>
+<span class="material-symbols-outlined text-on-tertiary-container">token</span>
+</div>
+</div>
+</div>
+<!-- Main Table Container -->
+<div class="bg-white rounded-xl shadow-md border border-outline-variant/20 overflow-hidden">
+<div class="p-md border-b border-outline-variant/10 flex flex-col md:flex-row justify-between items-center gap-md bg-surface-bright/50">
+<div class="relative w-full md:w-96">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full pl-xl pr-md py-xs rounded-lg border border-outline-variant/30 focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none font-body-sm text-body-sm" placeholder="Search resources or dates..." type="text"/>
+</div>
+<div class="flex gap-sm">
+<button class="flex items-center gap-xs px-sm py-xs border border-outline-variant/30 rounded-lg font-label-md text-label-md hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-sm">filter_list</span> Filter
+                        </button>
+<button class="flex items-center gap-xs px-sm py-xs border border-outline-variant/30 rounded-lg font-label-md text-label-md hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-sm">download</span> Export
+                        </button>
+</div>
+</div>
+<div class="overflow-x-auto custom-scrollbar">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-primary-container text-white">
+<th class="px-md py-sm font-label-sm text-label-sm font-semibold uppercase tracking-wider">Workspace Resource</th>
+<th class="px-md py-sm font-label-sm text-label-sm font-semibold uppercase tracking-wider">Date &amp; Time</th>
+<th class="px-md py-sm font-label-sm text-label-sm font-semibold uppercase tracking-wider">Status</th>
+<th class="px-md py-sm font-label-sm text-label-sm font-semibold uppercase tracking-wider">Amount</th>
+<th class="px-md py-sm font-label-sm text-label-sm font-semibold uppercase tracking-wider text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<!-- Confirmed Row (Far Future) -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-md py-md">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-lg bg-cover bg-center flex-shrink-0" data-alt="A premium executive office suite with high-end oak furniture and a large glass window overlooking a futuristic city skyline. The interior lighting is soft and warm, highlighting a professional Bleu Cobalt accent wall. Modern B2B SaaS office aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDkkmFT_mX6pNpUxdq8N7NlLTJh9yiw__YeakztlCe97y6hC8jF0YpqhI9rhefqT3pjtvStMXSxC-Yd1cGWtEQTX9O1F56IQt5WWp70Dn0nB_THPkrppVzBi1QM1vH8ofYceDI_it3umUzQ0KqNliRHRuaKXkvF0dyDN8-FDAkurTe0erDoHeZFtF6afnOu8YDtaJlrTacKxuB83IrYnI-pv5qE4D69HCpA9JTjJ4nU-mt_1mbSA8Wt6N78gz4_dP7cB8lf4Epk1ok')"></div>
+<div>
+<p class="font-label-md text-label-md text-primary">Executive Suite 402</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">4-Person Team Room</p>
+</div>
+</div>
+</td>
+<td class="px-md py-md">
+<p class="font-label-md text-label-md text-primary">Oct 12, 2024</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">09:00 AM - 05:00 PM</p>
+</td>
+<td class="px-md py-md">
+<span class="px-sm py-base rounded-full bg-[#2FBE8F1A] text-[#2FBE8F] font-label-sm text-label-sm font-bold inline-flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#2FBE8F]"></span>
+                                        Confirmed
+                                    </span>
+</td>
+<td class="px-md py-md font-label-md text-label-md text-primary">$240.00</td>
+<td class="px-md py-md text-right">
+<div class="relative inline-block text-left tooltip-trigger">
+<button class="text-error border border-error/20 px-sm py-xs rounded-lg font-label-sm text-label-sm hover:bg-error/5 transition-colors">
+                                            Cancel
+                                        </button>
+<div class="tooltip-content invisible opacity-0 absolute right-0 bottom-full mb-2 w-56 p-sm bg-primary text-white text-xs rounded-xl shadow-xl transition-all duration-200 transform translate-y-2 z-50">
+<p class="font-bold mb-1">Cancellation Penalty</p>
+<p class="text-on-primary-container leading-relaxed">Free cancellation available until Oct 11, 09:00 AM (&gt;24h notice).</p>
+<div class="absolute w-3 h-3 bg-primary rotate-45 -bottom-1.5 right-6"></div>
+</div>
+</div>
+</td>
+</tr>
+<!-- Pending Row (15h Future) -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-md py-md">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-lg bg-cover bg-center flex-shrink-0" data-alt="A cozy podcast studio with acoustic paneling, professional microphones, and warm ambient lighting. The atmosphere is energetic yet focused, featuring Encre Marine and Corail accents in the decor. High-end technology workspace design." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB5wFSP7YNU1jebhvvzPt7INqzY_eMaFIAe520AKAohSVIoXD_sWPig5f1IXqaJU_-q1izsVcyMgLPu2YuR1cDeav87YVfkBTe99d-oWcuDK5nLMXYTrAVkyAIl6Bj-JW5obVu6SeEybM4nw5ZHHBE5JTolWbab1sTL5Spe5K2x2lvC4WCreeF0POK7BTZw7ABlq58jjDjVX3pRxnRisykMJ2uhlkINkXXDeMSp0krxOfouIqjaDFM286AHwk_rQECZtzeZQmVwK0Y')"></div>
+<div>
+<p class="font-label-md text-label-md text-primary">Podcast Studio A</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Equipped with 4K Gear</p>
+</div>
+</div>
+</td>
+<td class="px-md py-md">
+<p class="font-label-md text-label-md text-primary" id="date-15h">Loading...</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">02:00 PM - 04:00 PM</p>
+</td>
+<td class="px-md py-md">
+<span class="px-sm py-base rounded-full bg-secondary-fixed text-secondary font-label-sm text-label-sm font-bold inline-flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+                                        Pending
+                                    </span>
+</td>
+<td class="px-md py-md font-label-md text-label-md text-primary">$80.00</td>
+<td class="px-md py-md text-right">
+<div class="relative inline-block text-left tooltip-trigger">
+<button class="text-error border border-error/20 px-sm py-xs rounded-lg font-label-sm text-label-sm hover:bg-error/5 transition-colors">
+                                            Cancel
+                                        </button>
+<div class="tooltip-content invisible opacity-0 absolute right-0 bottom-full mb-2 w-56 p-sm bg-primary text-white text-xs rounded-xl shadow-xl transition-all duration-200 transform translate-y-2 z-50">
+<p class="font-bold mb-1">Cancellation Penalty</p>
+<p class="text-on-primary-container leading-relaxed">50% fee applies. Cancellation requested within 12-24h window.</p>
+<div class="absolute w-3 h-3 bg-primary rotate-45 -bottom-1.5 right-6"></div>
+</div>
+</div>
+</td>
+</tr>
+<!-- Cancelled Row -->
+<tr class="bg-surface-container-low/30 hover:bg-surface-container-low transition-colors group opacity-70">
+<td class="px-md py-md">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-lg bg-cover bg-center flex-shrink-0" data-alt="A minimalist quiet work zone with sleek desks and ergonomic chairs. Soft daylight filters through sheer curtains in a bright, modern light-mode office setting. High-key lighting and professional atmosphere." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAY5ALwmWxL5x2VWw4k6dll9WHAlMQtVl9CvmCvHa7W8K9w8jFLpjtxB7dF-SWw7jRAjtV2YvbULOzntJmbaPhmheuoP2bfT8M4nQLlfkcKOaKlRk-3hR7Cgb1gDeq5Bai8bqbbreH7SESvZxad8tL1SWipji9KNiRvHvPbFUzNWJIwtYe3EFlDNbjWR3ZjxOyhfUJNT5XID3t5-BC1Szqs6laHi793VyfizepXnTo7_lYX5DvZLR5u9X1SwiLW96Stix9Q4TBYVlI')"></div>
+<div>
+<p class="font-label-md text-label-md text-primary">Quiet Zone - Desk 12</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Daily Flex Pass</p>
+</div>
+</div>
+</td>
+<td class="px-md py-md">
+<p class="font-label-md text-label-md text-primary">Sep 28, 2024</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Full Day</p>
+</td>
+<td class="px-md py-md">
+<span class="px-sm py-base rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-bold inline-flex items-center gap-1">
+                                        Cancelled
+                                    </span>
+</td>
+<td class="px-md py-md font-label-md text-label-md text-primary">$0.00</td>
+<td class="px-md py-md text-right">
+<button class="text-on-surface-variant border border-outline-variant/30 px-sm py-xs rounded-lg font-label-sm text-label-sm bg-white cursor-default">
+                                        Details
+                                    </button>
+</td>
+</tr>
+<!-- Completed Row -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-md py-md">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-lg bg-cover bg-center flex-shrink-0" data-alt="A modern boardroom with a large sleek conference table and high-tech video conferencing displays. The style is clean minimalism with a palette of deep blues and whites, looking professional and technologically advanced." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBOV5knsEKHkRZIHTFNgsiJ0zqM2a_RAvP5cDAiwXPLY7pujE67JZ68BgYX0wTAUofjwKGp7BzNYCaSfhj2GXTx9TYSYTkp9JUcBflqwLIdmjpy-F8xKYEc8SeRcLlk2e4Yz4ZBI7i9kj1KVw1dS5YRICZ-148xIf91_U8Yyzy9xKAlHDoEH-udu8DoojnYaChAW_HGsqay4dQrQb8gU2PCKjWbhi3ZVP5ah-UWZLpCBz_wAuEhgm1UFXu2fSxI9zfa4shyCuFh6WA')"></div>
+<div>
+<p class="font-label-md text-label-md text-primary">Boardroom Alpha</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Workshop Session</p>
+</div>
+</div>
+</td>
+<td class="px-md py-md">
+<p class="font-label-md text-label-md text-primary">Sep 24, 2024</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">01:00 PM - 03:00 PM</p>
+</td>
+<td class="px-md py-md">
+<span class="px-sm py-base rounded-full bg-surface-variant text-on-surface-variant font-label-sm text-label-sm font-bold inline-flex items-center gap-1">
+                                        Completed
+                                    </span>
+</td>
+<td class="px-md py-md font-label-md text-label-md text-primary">$120.00</td>
+<td class="px-md py-md text-right">
+<button class="text-secondary border border-secondary/20 px-sm py-xs rounded-lg font-label-sm text-label-sm hover:bg-secondary/5 transition-colors">
+                                        Rebook
+                                    </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="px-md py-sm bg-surface-bright border-t border-outline-variant/10 flex flex-col md:flex-row justify-between items-center gap-sm">
+<p class="font-body-sm text-body-sm text-on-surface-variant">Showing 1 to 4 of 24 results</p>
+<div class="flex gap-xs">
+<button class="p-xs rounded-lg border border-outline-variant/30 hover:bg-white transition-colors disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="px-sm py-xs rounded-lg bg-primary text-white font-label-md text-label-md">1</button>
+<button class="px-sm py-xs rounded-lg border border-outline-variant/30 hover:bg-white transition-colors font-label-md text-label-md">2</button>
+<button class="px-sm py-xs rounded-lg border border-outline-variant/30 hover:bg-white transition-colors font-label-md text-label-md">3</button>
+<button class="p-xs rounded-lg border border-outline-variant/30 hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Promotion / Help Card -->
+<div class="mt-xl grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<div class="bg-primary-container p-lg rounded-xl flex items-center gap-lg">
+<div class="hidden sm:block p-md bg-secondary-container rounded-2xl shadow-lg">
+<span class="material-symbols-outlined text-white text-4xl">support_agent</span>
+</div>
+<div>
+<h4 class="text-white font-headline-sm text-headline-sm mb-xs">Need to change?</h4>
+<p class="text-on-primary-container font-body-sm text-body-sm mb-md">Our concierge team is available 24/7 for custom rescheduling or specialized resource needs.</p>
+<button class="px-lg py-xs bg-white text-primary font-label-md text-label-md rounded-lg hover:opacity-90 transition-opacity">Contact Concierge</button>
+</div>
+</div>
+<div class="bg-white p-lg rounded-xl border border-outline-variant/10 shadow-sm flex items-center gap-lg">
+<div class="hidden sm:block p-md bg-tertiary-fixed rounded-2xl">
+<span class="material-symbols-outlined text-on-tertiary-fixed-variant text-4xl">auto_awesome</span>
+</div>
+<div>
+<h4 class="text-primary font-headline-sm text-headline-sm mb-xs">Smart Recurring</h4>
+<p class="text-on-surface-variant font-body-sm text-body-sm mb-md">Never lose your favorite desk. Set up recurring bookings and save 15% on daily rates.</p>
+<button class="px-lg py-xs border border-secondary text-secondary font-label-md text-label-md rounded-lg hover:bg-secondary/5 transition-colors">View Plans</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Footer (Shared Component) -->
+<footer class="w-full py-lg px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-md bg-primary">
+<h2 class="font-headline-sm text-headline-sm font-bold text-on-primary">Encre &amp; Cobalt</h2>
+<div class="flex flex-wrap justify-center gap-md">
+<a class="font-body-sm text-body-sm text-on-primary-container hover:text-on-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-body-sm text-body-sm text-on-primary-container hover:text-on-primary transition-colors" href="#">Terms of Service</a>
+<a class="font-body-sm text-body-sm text-on-primary-container hover:text-on-primary transition-colors" href="#">Help Center</a>
+<a class="font-body-sm text-body-sm text-on-primary-container hover:text-on-primary transition-colors" href="#">Cookies</a>
+</div>
+<p class="font-body-sm text-body-sm text-on-primary-container">© 2024 Encre &amp; Cobalt. Premium Coworking Management.</p>
+</footer>
+<script>
+        // Dynamic Date for Demo (15h from now)
+        function updateDemoDates() {
+            const date15h = new Date();
+            date15h.setHours(date15h.getHours() + 15);
+            const options = { month: 'short', day: 'numeric', year: 'numeric' };
+            document.getElementById('date-15h').innerText = date15h.toLocaleDateString('en-US', options);
+        }
+
+        // Toggle Sidebar on Mobile
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        // Micro-interactions
+        document.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('click', (e) => {
+                if(e.target.tagName !== 'BUTTON') {
+                    // Visual feedback for row selection
+                    row.classList.toggle('ring-1');
+                    row.classList.toggle('ring-secondary/30');
+                    row.classList.toggle('bg-secondary/5');
+                }
+            });
+        });
+
+        // Initialize
+        updateDemoDates();
+    </script>
+</body></html>

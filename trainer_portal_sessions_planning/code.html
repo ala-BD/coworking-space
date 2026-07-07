@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+
+<html class="light" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ProWork Manager | Trainer Portal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Sora:wght@600;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=Sora:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-container": "#798bac",
+                    "inverse-on-surface": "#f2f0f3",
+                    "inverse-surface": "#303033",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "on-surface-variant": "#44474d",
+                    "on-tertiary-fixed-variant": "#60401d",
+                    "tertiary-fixed": "#ffdcbc",
+                    "error-container": "#ffdad6",
+                    "background": "#fbf9fb",
+                    "surface-bright": "#fbf9fb",
+                    "primary-fixed": "#d6e3ff",
+                    "primary": "#000d23",
+                    "on-primary": "#ffffff",
+                    "on-surface": "#1b1b1e",
+                    "secondary-container": "#2d6deb",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed-dim": "#b1c5ff",
+                    "secondary": "#0054cb",
+                    "surface-container": "#efedf0",
+                    "on-secondary-container": "#fefcff",
+                    "surface-tint": "#4d5f7e",
+                    "on-tertiary-container": "#aa8259",
+                    "on-secondary-fixed-variant": "#0040a0",
+                    "error": "#ba1a1a",
+                    "secondary-fixed": "#dae2ff",
+                    "outline-variant": "#c5c6ce",
+                    "on-error": "#ffffff",
+                    "on-secondary-fixed": "#001847",
+                    "tertiary-container": "#361d00",
+                    "outline": "#75777e",
+                    "on-background": "#1b1b1e",
+                    "tertiary-fixed-dim": "#ecbe90",
+                    "surface-container-highest": "#e4e2e5",
+                    "surface-container-high": "#e9e7ea",
+                    "surface-variant": "#e4e2e5",
+                    "surface-container-low": "#f5f3f6"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "24px",
+                    "sm": "16px",
+                    "lg": "32px",
+                    "md": "24px",
+                    "xl": "48px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "container-max": "1280px",
+                    "base": "4px",
+                    "xs": "8px"
+            },
+            "fontFamily": {
+                    "label-sm": ["Inter"],
+                    "headline-lg": ["Sora"],
+                    "body-sm": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-xl": ["Sora"],
+                    "body-md": ["Inter"],
+                    "headline-sm": ["Sora"],
+                    "headline-md": ["Sora"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-nav-link {
+            border-right: 4px solid #0054cb;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body-md text-on-surface overflow-x-hidden">
+<!-- Side Navigation Bar -->
+<aside class="w-64 h-full fixed left-0 top-0 bg-surface dark:bg-surface-container-low flex flex-col p-md shadow-[0px_2px_4px_rgba(16,35,63,0.04)] z-50">
+<div class="mb-lg px-2">
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary">ProWork Manager</h1>
+<p class="text-label-sm text-on-surface-variant">Super Admin Portal</p>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Active Tab: Sessions (Based on "Upcoming training sessions" requirement) -->
+<a class="flex items-center gap-3 px-4 py-3 text-secondary font-bold border-r-4 border-secondary hover:bg-surface-container-high transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="event_seat">event_seat</span>
+<span class="font-body-md">Sessions</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-secondary hover:bg-surface-container-high transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-secondary hover:bg-surface-container-high transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-body-md">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-secondary hover:bg-surface-container-high transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="domain">domain</span>
+<span class="font-body-md">Multi-tenant</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-secondary hover:bg-surface-container-high transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span class="font-body-md">Members</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-secondary hover:bg-surface-container-high transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md">Settings</span>
+</a>
+</nav>
+<div class="mt-auto p-4 bg-primary-container rounded-xl">
+<button class="w-full text-left font-label-md text-on-secondary-container flex items-center gap-2 group">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+                New Management Session
+            </button>
+</div>
+</aside>
+<!-- Top App Bar -->
+<header class="h-16 w-full fixed top-0 z-40 bg-white dark:bg-surface shadow-sm flex items-center justify-between px-md ml-64" style="width: calc(100% - 16rem);">
+<div class="flex items-center gap-lg">
+<h2 class="font-headline-md text-headline-md font-bold text-primary">ProWork</h2>
+<div class="hidden md:flex gap-md items-center">
+<a class="font-label-md text-on-surface-variant hover:text-primary" href="#">Overview</a>
+<a class="font-label-md text-on-surface-variant hover:text-primary" href="#">Reports</a>
+<a class="font-label-md text-secondary font-semibold border-b-2 border-secondary pb-1" href="#">Live Feed</a>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-full text-label-md w-64 focus:ring-2 focus:ring-secondary" placeholder="Search sessions..." type="text"/>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-2 rounded-full hover:bg-surface-container-high transition-colors active:opacity-80">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-high transition-colors active:opacity-80">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+</div>
+<div class="flex items-center gap-3 pl-4 border-l border-outline-variant">
+<div class="text-right hidden sm:block">
+<p class="font-label-md text-on-surface">Alex Mercer</p>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-wider">Expert Trainer</p>
+</div>
+<div class="w-10 h-10 rounded-full bg-cover bg-center border-2 border-secondary-fixed shadow-sm" data-alt="A professional headshot of a confident male instructor in a modern office setting. He is wearing a dark navy blazer over a crisp white shirt, representing a premium B2B SaaS professional aesthetic. The background is softly blurred with hints of glass and light-filled architectural spaces. The lighting is bright and airy, typical of a high-end corporate environment." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB__QTgePSsHjn10zaV9oat84gjVskra1k3yDKVZft8o5Lg4vN7VrH8qpiUJ1iUEDbNOtoTix5J_1jUauMA3C1AIiWuzYaAOd5qkggYzlsSF-vJhhsSaPFxj8MZairuD5RT9e8WT4Jw003tIxuGVc7IDqJpQ7RsPa5W3UdVwVDDITMWbUNua4_dwBOZlMeBL-uDgFT4V0eQbACeIncmqPK-sMH206to6Xmix3u1J8ozWBTlRShUSIS7qXn5lVKp7RWR_jmSlhy5ODU')"></div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-64 mt-16 p-lg min-h-screen">
+<div class="max-w-container-max mx-auto space-y-lg">
+<!-- Page Header Actions -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-md">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-primary">Trainer Workspace</h2>
+<p class="text-body-md text-on-surface-variant">Manage your curriculum and monitor participant engagement.</p>
+</div>
+<div class="flex gap-sm">
+<button class="px-6 py-3 bg-secondary text-on-secondary rounded-xl font-label-md flex items-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-95">
+<span class="material-symbols-outlined" data-icon="picture_as_pdf">picture_as_pdf</span>
+                        Générer feuille d'émargement PDF
+                    </button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-lg">
+<!-- Financial Tracking Widget -->
+<div class="lg:col-span-4 space-y-lg">
+<section class="bg-white p-lg rounded-xl shadow-[0px_2px_4px_rgba(16,35,63,0.04)] border border-outline-variant/10">
+<div class="flex items-center justify-between mb-md">
+<h3 class="font-headline-sm text-headline-sm">Remuneration</h3>
+<span class="material-symbols-outlined text-secondary" data-icon="payments">payments</span>
+</div>
+<div class="space-y-4">
+<div class="p-md rounded-lg bg-surface-container-low border-l-4 border-secondary">
+<p class="text-label-sm text-on-surface-variant uppercase tracking-tighter">Total Pending</p>
+<p class="text-headline-md font-bold text-primary">€4,250.00</p>
+<div class="mt-2 flex items-center gap-2">
+<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[10px] font-bold">UNPAID</span>
+<span class="text-[12px] text-on-surface-variant">Next payout: Oct 15</span>
+</div>
+</div>
+<div class="p-md rounded-lg bg-surface-container-low border-l-4 border-vert-seve" style="border-color: #2FBE8F;">
+<p class="text-label-sm text-on-surface-variant uppercase tracking-tighter">Total Paid (YTD)</p>
+<p class="text-headline-md font-bold text-primary">€12,800.00</p>
+<div class="mt-2 flex items-center gap-2">
+<span class="px-2 py-0.5 rounded-full bg-[#2FBE8F1A] text-[#2FBE8F] text-[10px] font-bold">PROCESSED</span>
+<span class="text-[12px] text-on-surface-variant">Last payout: Sep 30</span>
+</div>
+</div>
+</div>
+</section>
+<section class="bg-primary-container p-lg rounded-xl shadow-lg text-on-primary-container">
+<div class="flex items-center gap-2 mb-sm">
+<span class="material-symbols-outlined" data-icon="verified">verified</span>
+<h4 class="font-label-md">Instructor Analytics</h4>
+</div>
+<p class="text-body-sm mb-4">Your participant satisfaction rating has increased by 12% this month.</p>
+<div class="h-32 w-full relative overflow-hidden rounded-lg">
+
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="text-headline-lg text-white font-bold">4.9/5</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Upcoming Sessions View -->
+<div class="lg:col-span-8 space-y-lg">
+<section class="bg-white p-lg rounded-xl shadow-[0px_2px_4px_rgba(16,35,63,0.04)] border border-outline-variant/10">
+<div class="flex items-center justify-between mb-lg">
+<h3 class="font-headline-sm text-headline-sm">Upcoming Training Sessions</h3>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg hover:bg-surface-container-high border border-outline-variant/30 transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="p-2 rounded-lg hover:bg-surface-container-high border border-outline-variant/30 transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+<div class="space-y-4">
+<!-- Session Item 1 -->
+<div class="group flex flex-col md:flex-row md:items-center gap-md p-md rounded-xl bg-white border border-outline-variant/10 hover:shadow-lg transition-all cursor-pointer">
+<div class="flex-shrink-0 w-16 h-16 rounded-xl bg-secondary-fixed flex flex-col items-center justify-center text-secondary">
+<span class="text-[12px] font-bold">OCT</span>
+<span class="text-headline-md leading-none">12</span>
+</div>
+<div class="flex-1">
+<h4 class="font-label-md text-primary group-hover:text-secondary transition-colors">Advanced Cloud Architecture Masterclass</h4>
+<p class="text-body-sm text-on-surface-variant">09:00 - 17:00 • Paris Headquarters (Room 402)</p>
+</div>
+<div class="flex items-center gap-lg">
+<div class="text-right">
+<p class="font-label-sm text-on-surface-variant">Participants</p>
+<p class="font-label-md text-primary">18 / 20</p>
+</div>
+<div class="flex -space-x-3">
+<div class="w-8 h-8 rounded-full border-2 border-white bg-cover bg-center" data-alt="Close up face of a diverse professional woman in tech." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCDDGmMbYZZmKDa8foGpKlu8cEI7kC_gx1rRU9NGIen0rK0xPtHYhvEkTLTNp232_rveq7ITfSLDPndXOb2HDCCP7TlVNqQnX-GJ6O1zTr_uD5l45trRhAW2H6uj4buiVp4mfLpndx3ppCsmRtN8nKx9CbYJAvFWQNjSlYjyZz2O2RC_BC3a3Nsn9tXjqgW7O3odQ0uHhWMmxClx_CdFokC3MhTioViIh_3xQO_0Uq94kOh8WdqJng9ieL8kn8EAVeIRC1Sx0_GG60')"></div>
+<div class="w-8 h-8 rounded-full border-2 border-white bg-cover bg-center" data-alt="Close up face of a young male software developer." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCUSrE439T7tGVpCStEor1C9Tt0ROb1EYHUG7-uxYIGlhmh-VK7bIXOd1Twn1qEv4lVgSnQEfexXpGuukg2bSVhY0hr_3nJLZrY3gjcCHXjC5VavXhJP07zt3Y_7P8ivheg3SiHlRFsDm-bW-sSRwprk27V8wU0Ry1QpOwP7B2TiTU_3CZV98jpQd8L9qFpxrIluqZckSH2UNnAIsuIIK1SyyNGDcziq29HY7aZ6XModzSD_6jLpPOBI4s6k0sm2LxlRTBcqoJavbM')"></div>
+<div class="w-8 h-8 rounded-full border-2 border-white bg-cover bg-center" data-alt="Close up face of an Asian female executive." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDKXY5qjhfsBv3m77P-ndu27YbQdEDkMv2YvWcHUTsnwK4Xt6lCFm4zpMXm4UTJqkD4Z367hiNUpuya6_seq7Jx4Ml4Uj3nR7K1BK8LtvWXcTkhROH0bXj7VjDxzKByCzAkLZRkxYahwFv8l0IpxUC4Xu3--RmxB7xmLRWJMGNZlAEf_XwGsbMJM7LX4g6x6llKKs9EnigUZAi8vSr-KReoFZiIGvB8oAWNtccwgYhfsSCvos9lwsfzQgHKZsQWsDYP5UvlB_gYnjA')"></div>
+<div class="w-8 h-8 rounded-full border-2 border-white bg-surface-container-high flex items-center justify-center text-[10px] font-bold">+15</div>
+</div>
+</div>
+</div>
+<!-- Session Item 2 -->
+<div class="group flex flex-col md:flex-row md:items-center gap-md p-md rounded-xl bg-white border border-outline-variant/10 hover:shadow-lg transition-all cursor-pointer">
+<div class="flex-shrink-0 w-16 h-16 rounded-xl bg-surface-container-high flex flex-col items-center justify-center text-on-surface-variant">
+<span class="text-[12px] font-bold">OCT</span>
+<span class="text-headline-md leading-none">14</span>
+</div>
+<div class="flex-1">
+<h4 class="font-label-md text-primary group-hover:text-secondary transition-colors">B2B Sales Psychology &amp; Closure Techniques</h4>
+<p class="text-body-sm text-on-surface-variant">13:30 - 16:30 • Virtual Session (Zoom Link Attached)</p>
+</div>
+<div class="flex items-center gap-lg">
+<div class="text-right">
+<p class="font-label-sm text-on-surface-variant">Participants</p>
+<p class="font-label-md text-primary">12 / 15</p>
+</div>
+<div class="flex -space-x-3">
+<div class="w-8 h-8 rounded-full border-2 border-white bg-cover bg-center" data-alt="Professional man wearing glasses in a creative office." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC8t7BJSpMwhbMUBFRXg8-_cpYOm1_w2Jn0aJDu9_2vNQOojhGwdplq6f_e7VHFu0aI9UZC38ozPMSUkvJuZodmJ6LF8iiSb2JQTVAoh0BmI3_RjHdswk7PY2O9hH3t3LPEh4EsYNZs288Tym0AYQEHHr8rysOU3sWB7q2ixHmtp1jjSYnt3eZj96tr2WFBioUV1nUoOd6N1jBOMBw3PbetF4PO1VIWSZNbT_FQyneSP51WajkRYPDzpD-iymT6AxCv2pVj_rrJDeA')"></div>
+<div class="w-8 h-8 rounded-full border-2 border-white bg-cover bg-center" data-alt="Hispanic professional woman smiling at camera." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCfEUO36tfejtM64l5ax8wfLRnBSoWos1ZVsieqOEO_vWkMAMwqW1bHyY5jp596ItN_87doLd7JLyIi6Js22_liDvQBB_7lOIWMBaXGJn65KW3olT3FXoqCmbupQk2QaM-_fl_v1wo6Qo5ta8ZRoo1IynKaVDXrb7ombr4nkIyyK_UzAM8vQzfbtnPxf59vd8mm1acuNoS9IDDh3bnUswBTMMHLfZj4gp1-KjgvzYZCPDhv4ipyRzx9JTqkpHtf5zN5kVxQ9sFZZko')"></div>
+<div class="w-8 h-8 rounded-full border-2 border-white bg-surface-container-high flex items-center justify-center text-[10px] font-bold">+10</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+<!-- Participant List Detailed View -->
+<section class="bg-white rounded-xl shadow-[0px_2px_4px_rgba(16,35,63,0.04)] overflow-hidden">
+<div class="px-lg py-md border-b border-outline-variant/10 flex flex-col md:flex-row md:items-center justify-between gap-md">
+<h3 class="font-headline-sm text-headline-sm">Current Session: Advanced Cloud Architecture</h3>
+<div class="flex items-center gap-sm">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]" data-icon="filter_list">filter_list</span>
+<select class="pl-10 pr-8 py-2 bg-surface-container-low border-none rounded-lg text-label-sm focus:ring-secondary appearance-none cursor-pointer">
+<option>All Participants</option>
+<option>Paid Only</option>
+<option>Pending Payment</option>
+</select>
+</div>
+<button class="px-4 py-2 bg-surface-container-high text-primary rounded-lg font-label-sm hover:bg-surface-container-highest transition-colors active:scale-95">
+                            Export CSV
+                        </button>
+</div>
+</div>
+<div class="overflow-x-auto scrollbar-hide">
+<table class="w-full text-left border-collapse">
+<thead class="bg-primary text-white font-label-sm">
+<tr>
+<th class="px-lg py-4">Participant Name</th>
+<th class="px-lg py-4">Contact Info</th>
+<th class="px-lg py-4">Company</th>
+<th class="px-lg py-4">Payment Status</th>
+<th class="px-lg py-4 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<!-- Participant 1 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-lg py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-cover bg-center" data-alt="Portrait of a female developer with dark hair, focused and professional. High-end lighting, minimal studio background. Blue and marine color tones integrated." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBfCRJ03aXSTi5tjl54O-DonMbwP4p9L_IGtc-clHGfbDTKM_kJp5EO0C6dRlHqkTo26_JMnq3b_A7Qepsx2aoWr2Va1qI3_uy6nodNriY-utSbPTM5rAZG6V9-C3gO78LHZIkU9YYBRSbrwcJCJZNKX3SB9McFYsBLFQVRoneo22M1bbZxkPEmBqw5i45xsXZ4whP3VYCvlZ5qmEn5kAiZG0lwT5cZTyEv45jcl2UV8Lxj9vLVDjNSEJwkwGDtFVcIezB2v6gUt5c')"></div>
+<div>
+<p class="font-label-md text-primary">Sarah Jenkins</p>
+<p class="text-[12px] text-on-surface-variant">Senior DevOps</p>
+</div>
+</div>
+</td>
+<td class="px-lg py-4 font-body-sm text-on-surface-variant">
+                                    s.jenkins@techorbit.io<br/>+33 6 12 34 56 78
+                                </td>
+<td class="px-lg py-4 font-body-sm text-on-surface">TechOrbit Inc.</td>
+<td class="px-lg py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#2FBE8F1A] text-[#2FBE8F] text-[12px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#2FBE8F]"></span>
+                                        Paid
+                                    </span>
+</td>
+<td class="px-lg py-4 text-right">
+<button class="p-2 rounded-lg text-on-surface-variant hover:bg-secondary/10 hover:text-secondary transition-all">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Participant 2 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-lg py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-cover bg-center" data-alt="A portrait of a male professional with a friendly expression. He is wearing a grey sweater in a modern co-working space. Soft natural light, clean B2B aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDt8rfZqKENyKr4W-YyaNFwM8ROkPBkqHUhk3y_hbvVUOIfDrqTqNklkyJE9fJVGiKWebVKJdK87LdXGtgc-JSNxFXotV4OFlxLy-c3I493Lj-pS69ACK-TI3ndhRaWQL-AJavWKroqHzIElX5Is6ZuC56CGfphx_p3cRgJNT-VwzTAncquitWZz5kBhbuFp932mUSBkkMExFa8pratTvdMfhYRcTvj-lf5JSef_F9budPDvBNpKYCT1SJ8q0pQqOWHWDnge7zb6iQ')"></div>
+<div>
+<p class="font-label-md text-primary">Marc-Antoine Durand</p>
+<p class="text-[12px] text-on-surface-variant">IT Manager</p>
+</div>
+</div>
+</td>
+<td class="px-lg py-4 font-body-sm text-on-surface-variant">
+                                    ma.durand@globalfin.fr<br/>+33 7 89 01 23 45
+                                </td>
+<td class="px-lg py-4 font-body-sm text-on-surface">Global Finance</td>
+<td class="px-lg py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FF6F591A] text-[#FF6F59] text-[12px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#FF6F59]"></span>
+                                        Pending
+                                    </span>
+</td>
+<td class="px-lg py-4 text-right">
+<button class="p-2 rounded-lg text-on-surface-variant hover:bg-secondary/10 hover:text-secondary transition-all">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Participant 3 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-lg py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-cover bg-center" data-alt="Portrait of a professional Black woman executive with a modern hairstyle. Wearing a stylish cobalt blue top in a high-tech conference room setting. Premium lighting, sophisticated look." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD6kjB9lbOgCinbJ3V9ksCKV3aE1nIjiadKA6464WNT1BN3yUkC7-lgPJZVw8Z8zx4gMT7QjxVDbmLP4KZA0fFqJ1ZEkY5_5MHp6X9DEpB84UKopCfrDoVsWlYjJJs42rUWrdieMh6XvuCrNIaJuoSW4ok41cKiG-S46zYJmipXOBoVtm5BcoeUB4ImIhut0EuVJrsOQeoBawIMGK2vYEr56uB6prLhi2144SVIeOG4VE5Sb5jGb2TlyemdMuttUDZHZ8ChKcGwcHU')"></div>
+<div>
+<p class="font-label-md text-primary">Elisa N'Goran</p>
+<p class="text-[12px] text-on-surface-variant">Cloud Architect</p>
+</div>
+</div>
+</td>
+<td class="px-lg py-4 font-body-sm text-on-surface-variant">
+                                    elisa.ng@cloudways.com<br/>+33 6 45 67 89 01
+                                </td>
+<td class="px-lg py-4 font-body-sm text-on-surface">CloudWays</td>
+<td class="px-lg py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#2FBE8F1A] text-[#2FBE8F] text-[12px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#2FBE8F]"></span>
+                                        Paid
+                                    </span>
+</td>
+<td class="px-lg py-4 text-right">
+<button class="p-2 rounded-lg text-on-surface-variant hover:bg-secondary/10 hover:text-secondary transition-all">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-lg py-md bg-surface-container-low flex justify-between items-center">
+<p class="text-label-sm text-on-surface-variant">Showing 3 of 18 participants</p>
+<div class="flex gap-2">
+<button class="px-3 py-1 border border-outline-variant/30 rounded-md text-label-sm hover:bg-white transition-colors">Previous</button>
+<button class="px-3 py-1 bg-primary text-white rounded-md text-label-sm">1</button>
+<button class="px-3 py-1 border border-outline-variant/30 rounded-md text-label-sm hover:bg-white transition-colors">2</button>
+<button class="px-3 py-1 border border-outline-variant/30 rounded-md text-label-sm hover:bg-white transition-colors">Next</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Bottom Nav Bar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full bg-surface dark:bg-surface-container-low rounded-t-xl z-50 flex justify-around items-center px-4 py-2 shadow-[0px_-4px_12px_rgba(16,35,63,0.08)]">
+<a class="flex flex-col items-center justify-center text-on-surface-variant py-2" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="text-[10px] font-label-sm">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant py-2" href="#">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+<span class="text-[10px] font-label-sm">Book</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-xl p-xs" href="#">
+<span class="material-symbols-outlined" data-icon="fitness_center">fitness_center</span>
+<span class="text-[10px] font-label-sm">Sessions</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant py-2" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="text-[10px] font-label-sm">Profile</span>
+</a>
+</nav>
+<!-- Micro-interactions Script -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Ripple effect or interaction demo
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(btn => {
+                btn.addEventListener('mousedown', () => {
+                    btn.classList.add('scale-95');
+                });
+                btn.addEventListener('mouseup', () => {
+                    btn.classList.remove('scale-95');
+                });
+            });
+
+            // Tab highlighting mock logic
+            const tableRows = document.querySelectorAll('tbody tr');
+            tableRows.forEach(row => {
+                row.addEventListener('click', () => {
+                    tableRows.forEach(r => r.classList.remove('bg-secondary/5'));
+                    row.classList.add('bg-secondary/5');
+                });
+            });
+        });
+    </script>
+</body></html>

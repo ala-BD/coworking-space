@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+
+<html class="light" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Encre &amp; Cobalt — Messages</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Sora:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline": "#75777e",
+                        "secondary-fixed-dim": "#b1c5ff",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#c5c6ce",
+                        "tertiary-fixed": "#ffdcbc",
+                        "tertiary": "#180a00",
+                        "secondary-fixed": "#dae2ff",
+                        "surface-dim": "#dbd9dc",
+                        "surface-container-high": "#e9e7ea",
+                        "inverse-surface": "#303033",
+                        "surface-bright": "#fbf9fb",
+                        "error": "#ba1a1a",
+                        "on-secondary-container": "#fefcff",
+                        "on-tertiary-fixed": "#2c1700",
+                        "on-secondary-fixed": "#001847",
+                        "primary-container": "#10233f",
+                        "surface-container-highest": "#e4e2e5",
+                        "on-tertiary-fixed-variant": "#60401d",
+                        "inverse-primary": "#b5c7eb",
+                        "tertiary-fixed-dim": "#ecbe90",
+                        "surface-tint": "#4d5f7e",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container": "#efedf0",
+                        "on-primary-container": "#798bac",
+                        "surface-variant": "#e4e2e5",
+                        "secondary": "#0054cb",
+                        "secondary-container": "#2d6deb",
+                        "primary": "#000d23",
+                        "on-primary-fixed": "#071b37",
+                        "inverse-on-surface": "#f2f0f3",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed-variant": "#364765",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-container": "#aa8259",
+                        "tertiary-container": "#361d00",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed": "#d6e3ff",
+                        "on-primary": "#ffffff",
+                        "surface-container-low": "#f5f3f6",
+                        "primary-fixed-dim": "#b5c7eb",
+                        "on-surface-variant": "#44474d",
+                        "on-background": "#1b1b1e",
+                        "on-secondary-fixed-variant": "#0040a0",
+                        "on-surface": "#1b1b1e",
+                        "surface": "#fbf9fb",
+                        "background": "#fbf9fb"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px",
+                        "md": "24px",
+                        "gutter": "24px",
+                        "xs": "8px",
+                        "sm": "16px",
+                        "base": "4px",
+                        "xl": "48px",
+                        "container-max": "1280px",
+                        "lg": "32px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Sora"],
+                        "label-sm": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-xl": ["Sora"],
+                        "headline-sm": ["Sora"],
+                        "headline-md": ["Sora"],
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Sora"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "label-md": ["14px", {"lineHeight": "16px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #F4F6F9; /* Gris Perle as per guide */
+        }
+        .chat-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .chat-scroll::-webkit-scrollbar-thumb {
+            background: #c5c6ce;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-background antialiased overflow-hidden">
+<!-- SIDEBAR ANCHOR -->
+<aside class="w-[256px] h-screen fixed left-0 top-0 bg-surface-container-lowest flex flex-col py-lg px-sm shadow-[0px_2px_4px_rgba(16,35,63,0.04)] z-50">
+<div class="mb-xl px-sm">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A premium minimalist logo for Encre &amp; Cobalt, featuring an abstract ink drop and a geometric cobalt structure, set against a deep marine navy background with subtle metallic accents. High-end SaaS corporate branding style with crisp edges and sophisticated professional aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpQ2DoONykF3OYfXFyv0ZmiENZnbHG2cn3vmZR4UbsOD8gDL8vToaCFxsIlPcxR0C_Wru5R1bIwgsP88C4e21pYSna1C8cVEFXLEJvHT_TAg4nyO4nE5NoOeO4YvujfW5UbdUGoLt8gGxDyBNus0XLRcqSA0aW_PaNHNvPXl8eDaDa4UFOyVo5gWolRO9Ck0fPjEh71ZsgqctxQ38O5TmUCHizYdT5FdBVffXDEFb2yA9TgDZxMR9Sg7o7Py1H54el4Yk__yeA"/>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary">Encre &amp; Cobalt</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Premium Coworking</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-base">
+<a class="flex items-center gap-sm px-sm py-md rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95 transition-transform font-body-md" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-md rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95 transition-transform font-body-md" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<span>Bookings</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-md rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95 transition-transform font-body-md" href="#">
+<span class="material-symbols-outlined">event_seat</span>
+<span>Workshops</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-md rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95 transition-transform font-body-md" href="#">
+<span class="material-symbols-outlined">vpn_key</span>
+<span>My Access</span>
+</a>
+<!-- Active Navigation State for Messages -->
+<a class="flex items-center gap-sm px-sm py-md rounded-lg bg-surface-container-low text-secondary font-bold border-r-4 border-secondary active:scale-95 transition-transform font-body-md" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">mail</span>
+<span>Messages</span>
+</a>
+</nav>
+<div class="mt-auto px-sm pt-lg border-t border-outline-variant/10">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close up portrait of a young professional man with a friendly smile, clean studio lighting, wearing a minimalist navy blazer. Background is a soft out-of-focus high-end coworking space with warm lighting and wooden textures. Premium corporate photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuByP8dZ5HgeQhiEtoAl06yKFU-RtHMPje3sesVwhPzpdXxqsCUx1NGTFJE92wHuXZn29_FXGp_n_x0YLkgbaQE4ZaLnyWKARhxiwGwsCXcjlOMOp5fzZsLP9EOu1t7ohx98nMMfo0rajJhfMZ0NbX28hKTxh7F90NOY-Yq9vPRJWojhWag4D8TicVqZDVqc8EJAgPmYFvzUecLFYmW_NLb1y-c3cF6By3bXRvjJ6-lds1L-Za4MlIdkS2jMRcW1TjRxgCvRLlc4"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-label-md font-label-md truncate">Alexandre V.</p>
+<p class="text-[10px] text-on-surface-variant">Membre Platinum</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- TOPBAR ANCHOR -->
+<header class="ml-[256px] h-16 bg-surface flex justify-between items-center px-margin-desktop sticky top-0 z-40">
+<div class="flex items-center flex-1">
+<div class="relative w-full max-w-md group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-body-md group-focus-within:text-secondary transition-colors">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-full py-2 pl-10 pr-4 text-body-sm focus:ring-2 focus:ring-secondary/20 focus:bg-white transition-all outline-none" placeholder="Rechercher un message, un contact..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-lg">
+<button class="relative p-2 text-on-surface-variant hover:text-secondary transition-colors active:opacity-80">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-secondary transition-colors active:opacity-80">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</header>
+<!-- MAIN CONTENT CANVAS -->
+<main class="ml-[256px] h-[calc(100vh-64px)] p-gutter overflow-hidden flex">
+<div class="w-full h-full bg-white rounded-xl shadow-[0px_2px_4px_rgba(16,35,63,0.04)] flex overflow-hidden">
+<!-- LEFT COLUMN: CONVERSATION LIST (1/3) -->
+<section class="w-1/3 border-r border-outline-variant/20 flex flex-col">
+<div class="p-md border-b border-outline-variant/10">
+<h2 class="font-headline-sm text-headline-sm text-primary mb-1">Conversations</h2>
+<p class="text-label-sm text-on-surface-variant">2 messages non-lus</p>
+</div>
+<div class="flex-1 overflow-y-auto chat-scroll">
+<!-- ACTIVE THREAD: SUPPORT 33S -->
+<div class="p-md bg-secondary-container/5 border-l-4 border-secondary cursor-pointer hover:bg-secondary-container/10 transition-colors">
+<div class="flex gap-sm">
+<div class="w-12 h-12 rounded-lg bg-primary-container flex-shrink-0 flex items-center justify-center relative">
+<img class="w-full h-full object-cover" data-alt="Abstract minimalist brand logo for a luxury coworking space named '33S'. The logo uses a gold geometric '33S' typography on a deep charcoal matte background. Architectural influence, high-end hospitality aesthetic, clean and sharp execution." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdjp9aPfkgmowih70k_S1Orca1qbQ5hcN-JIpqlR4_wF2n1vVpLgU4EL1i7FtmRNCLEPlJf44tSCnaQGJXpaibdSnmkXjm1usOcGRQbGS7-TQxwwdyCiRFLLDJkhQNSEo4uDh5UYwYQSc2LAtOL5Ba1n6Yg2n7pu6vQ7MqyzLW7yj8aE1KRrz-nedYgJksfJO3wj7qZgMHgNOwcF3Zb9ijWXKdVVtKdD7J5EGsAx5E_LG-u0HDyRG7cg3MIzSL6F_TNYUuuHCG"/>
+<span class="absolute -bottom-1 -right-1 w-3 h-3 bg-[#2FBE8F] border-2 border-white rounded-full"></span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-center mb-1">
+<span class="font-label-md text-primary">Support 33S</span>
+<span class="text-[10px] text-on-surface-variant">Il y a 10 min</span>
+</div>
+<p class="text-body-sm text-primary font-medium truncate">Votre réservation pour demain est confirmée.</p>
+<div class="mt-2 flex justify-end">
+<span class="w-2 h-2 bg-secondary rounded-full"></span>
+</div>
+</div>
+</div>
+</div>
+<!-- OTHER THREADS -->
+<div class="p-md border-b border-outline-variant/10 cursor-pointer hover:bg-surface-container-low transition-colors">
+<div class="flex gap-sm">
+<div class="w-12 h-12 rounded-lg bg-surface-container flex-shrink-0 flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">groups</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-center mb-1">
+<span class="font-label-md text-on-surface">Cercle des Fondateurs</span>
+<span class="text-[10px] text-on-surface-variant">14:20</span>
+</div>
+<p class="text-body-sm text-on-surface-variant truncate">Julien : Quelqu'un pour le café demain ?</p>
+</div>
+</div>
+</div>
+<div class="p-md border-b border-outline-variant/10 cursor-pointer hover:bg-surface-container-low transition-colors">
+<div class="flex gap-sm">
+<div class="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Portrait of a sophisticated professional woman in her 40s, minimalist high-fashion corporate attire, neutral studio background. Soft, diffused lighting typical of executive headshots. High quality photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWscmPqJlr4a-kFpKRvCcw_FgqUcSO8jJuETm1GBymY4Ir3fq5MX9PcBKx_VwCT_HhZv7yc9fJZdZBbM_IOae6QdjI9I0IoYcm5qzLsNUJ0oUuygSacF9KY1-FnAXxU1Euue7TN-n9y-EWQZ6a3aC8fnjq-h3wlzDHKWLNC9IWeWl04XheAKbMX2iX5oL_INw-DP635Pqoy2rSZqoYvt9RYs25TR5ITj3WFiqsdruujjmkogtEY_wJu7YEFubCQretPPIGvT-o"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-center mb-1">
+<span class="font-label-md text-on-surface">Marie-Laure (Conciergerie)</span>
+<span class="text-[10px] text-on-surface-variant">Hier</span>
+</div>
+<p class="text-body-sm text-on-surface-variant truncate">Vos colis ont été réceptionnés à l'accueil.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- RIGHT COLUMN: CHAT INTERFACE (2/3) -->
+<section class="flex-1 flex flex-col bg-surface-container-lowest">
+<!-- CHAT HEADER -->
+<header class="p-md border-b border-outline-variant/10 flex items-center justify-between">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-lg bg-primary-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Sleek, architectural logo design for a workspace brand. Deep blue and charcoal color palette with subtle gold highlights. 3D perspective effect on geometric lines." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGBnjhzvFacPycwB2VtKAUh6Og_ctDhnjJKtz9NgWh4t3jsM2DfBDp_YMjk6C8A8hykzCtfGMrlea4hJXUpGA83DAiKMNGICT9b9E1m9sALs0yd3eQPTUWa3fSMGtGf6XRz_veQJWPQbCSJ6tHvX6oDBUH1o4_eXpGGuq-R7iLaKeVuUZR-gL0z-0lTwGXuIjhBvf_hnnvvWD5P2pKsYobpiQ41ev6TEoce4-S8_8COjkp_P2dQ2k7dGm31ALKkgKcAM9tq8Yu"/>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-primary leading-none">Support 33S</h3>
+<div class="flex items-center gap-1 mt-1">
+<span class="w-2 h-2 bg-[#2FBE8F] rounded-full"></span>
+<span class="text-[10px] text-[#2FBE8F] font-bold uppercase tracking-wider">En ligne</span>
+</div>
+</div>
+</div>
+<div class="flex gap-sm">
+<button class="w-10 h-10 rounded-lg border border-outline-variant/20 flex items-center justify-center hover:bg-surface-container-low transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">call</span>
+</button>
+<button class="w-10 h-10 rounded-lg border border-outline-variant/20 flex items-center justify-center hover:bg-surface-container-low transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</header>
+<!-- INFO BANNER -->
+<div class="bg-primary/5 px-md py-sm border-b border-primary/10 flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">info</span>
+<p class="text-body-sm text-primary font-medium">Notre équipe répond généralement sous 24h ouvrées</p>
+</div>
+<!-- MESSAGE AREA -->
+<div class="flex-1 p-md overflow-y-auto chat-scroll flex flex-col gap-lg bg-[#FDFDFD]">
+<!-- Timestamp Divider -->
+<div class="flex items-center gap-md py-sm">
+<div class="flex-1 h-px bg-outline-variant/20"></div>
+<span class="text-label-sm text-on-surface-variant bg-surface-container-lowest px-2">Aujourd'hui</span>
+<div class="flex-1 h-px bg-outline-variant/20"></div>
+</div>
+<!-- Staff Message -->
+<div class="flex flex-col items-start max-w-[80%]">
+<div class="flex items-center gap-sm mb-2">
+<span class="text-label-sm font-bold text-primary">L'équipe 33S</span>
+<span class="px-2 py-0.5 bg-primary-container text-white text-[10px] rounded-full uppercase font-bold tracking-tighter">Staff</span>
+</div>
+<div class="bg-[#F0F2F5] text-on-surface p-md rounded-tr-xl rounded-br-xl rounded-bl-xl shadow-sm">
+<p class="text-body-md">Bonjour Alex, comment puis-je vous aider aujourd'hui ?</p>
+</div>
+<span class="mt-1 text-[10px] text-on-surface-variant">09:12</span>
+</div>
+<!-- Member Message -->
+<div class="flex flex-col items-end self-end max-w-[80%]">
+<div class="bg-secondary text-white p-md rounded-tl-xl rounded-br-xl rounded-bl-xl shadow-md">
+<p class="text-body-md">Bonjour, je voudrais savoir si je peux inviter un invité demain pour ma session de 14h ?</p>
+</div>
+<div class="flex items-center gap-1 mt-1">
+<span class="text-[10px] text-on-surface-variant">09:45</span>
+<span class="material-symbols-outlined text-[14px] text-secondary">done_all</span>
+</div>
+</div>
+<!-- Staff Message Response -->
+<div class="flex flex-col items-start max-w-[80%]">
+<div class="flex items-center gap-sm mb-2">
+<span class="text-label-sm font-bold text-primary">L'équipe 33S</span>
+<span class="px-2 py-0.5 bg-primary-container text-white text-[10px] rounded-full uppercase font-bold tracking-tighter">Staff</span>
+</div>
+<div class="bg-[#F0F2F5] text-on-surface p-md rounded-tr-xl rounded-br-xl rounded-bl-xl shadow-sm">
+<p class="text-body-md">Bien sûr ! Vous avez droit à 1 invité par session. Je vous ai envoyé le lien pour l'enregistrer.</p>
+</div>
+<span class="mt-1 text-[10px] text-on-surface-variant">09:50</span>
+</div>
+<!-- Most Recent Message (Active Thread context) -->
+<div class="flex flex-col items-start max-w-[80%]">
+<div class="flex items-center gap-sm mb-2">
+<span class="text-label-sm font-bold text-primary">L'équipe 33S</span>
+<span class="px-2 py-0.5 bg-primary-container text-white text-[10px] rounded-full uppercase font-bold tracking-tighter">Staff</span>
+</div>
+<div class="bg-[#F0F2F5] text-on-surface p-md rounded-tr-xl rounded-br-xl rounded-bl-xl shadow-sm border border-secondary/10">
+<p class="text-body-md">Votre réservation pour demain est confirmée. Nous avons hâte de vous accueillir !</p>
+</div>
+<span class="mt-1 text-[10px] text-on-surface-variant font-bold text-secondary">À l'instant</span>
+</div>
+</div>
+<!-- BOTTOM INPUT AREA -->
+<footer class="p-md bg-white border-t border-outline-variant/20">
+<div class="flex items-end gap-sm bg-surface-container-low rounded-xl p-2 border border-outline-variant/10 focus-within:border-secondary transition-colors">
+<button class="p-2 text-on-surface-variant hover:text-secondary transition-colors">
+<span class="material-symbols-outlined">attach_file</span>
+</button>
+<textarea class="flex-1 bg-transparent border-none focus:ring-0 text-body-md resize-none py-2 placeholder:text-outline-variant" placeholder="Écrivez votre message..." rows="1"></textarea>
+<button class="bg-secondary hover:bg-secondary-container text-white h-10 px-md rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 group">
+<span class="font-label-md">Envoyer</span>
+<span class="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">send</span>
+</button>
+</div>
+<p class="mt-2 text-[10px] text-on-surface-variant text-center">Appuyez sur Entrée pour envoyer</p>
+</footer>
+</section>
+</div>
+</main>
+<script>
+        // Simple micro-interaction for input expansion
+        const textarea = document.querySelector('textarea');
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if (this.scrollHeight > 150) {
+                this.style.overflowY = 'scroll';
+                this.style.height = '150px';
+            } else {
+                this.style.overflowY = 'hidden';
+            }
+        });
+
+        // Focus interaction
+        const inputContainer = textarea.parentElement;
+        textarea.addEventListener('focus', () => {
+            inputContainer.classList.add('shadow-md');
+        });
+        textarea.addEventListener('blur', () => {
+            inputContainer.classList.remove('shadow-md');
+        });
+    </script>
+</body></html>

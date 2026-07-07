@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Member Dashboard | Encre &amp; Cobalt</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Sora:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary": "#ffffff",
+                    "outline-variant": "#c5c6ce",
+                    "tertiary-fixed": "#ffdcbc",
+                    "tertiary": "#180a00",
+                    "secondary-fixed": "#dae2ff",
+                    "outline": "#75777e",
+                    "secondary-fixed-dim": "#b1c5ff",
+                    "inverse-surface": "#303033",
+                    "surface-dim": "#dbd9dc",
+                    "surface-container-high": "#e9e7ea",
+                    "on-tertiary-fixed": "#2c1700",
+                    "surface-bright": "#fbf9fb",
+                    "error": "#ba1a1a",
+                    "on-secondary-container": "#fefcff",
+                    "surface-container-highest": "#e4e2e5",
+                    "on-tertiary-fixed-variant": "#60401d",
+                    "inverse-primary": "#b5c7eb",
+                    "tertiary-fixed-dim": "#ecbe90",
+                    "on-secondary-fixed": "#001847",
+                    "primary-container": "#10233f",
+                    "surface-variant": "#e4e2e5",
+                    "secondary": "#0054cb",
+                    "secondary-container": "#2d6deb",
+                    "primary": "#000d23",
+                    "on-primary-fixed": "#071b37",
+                    "inverse-on-surface": "#f2f0f3",
+                    "surface-tint": "#4d5f7e",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#efedf0",
+                    "on-primary-container": "#798bac",
+                    "on-error-container": "#93000a",
+                    "on-primary-fixed-variant": "#364765",
+                    "tertiary-container": "#361d00",
+                    "on-secondary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-container": "#aa8259",
+                    "on-background": "#1b1b1e",
+                    "on-secondary-fixed-variant": "#0040a0",
+                    "on-surface": "#1b1b1e",
+                    "surface": "#fbf9fb",
+                    "background": "#fbf9fb",
+                    "primary-fixed": "#d6e3ff",
+                    "on-primary": "#ffffff",
+                    "surface-container-low": "#f5f3f6",
+                    "primary-fixed-dim": "#b5c7eb",
+                    "on-surface-variant": "#44474d"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "16px",
+                    "xl": "24px",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xs": "8px",
+                    "sm": "16px",
+                    "base": "4px",
+                    "xl": "48px",
+                    "container-max": "1280px",
+                    "lg": "32px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "md": "24px",
+                    "gutter": "24px"
+            },
+            "fontFamily": {
+                    "label-sm": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "headline-xl": ["Sora"],
+                    "headline-sm": ["Sora"],
+                    "headline-md": ["Sora"],
+                    "label-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-lg-mobile": ["Sora"],
+                    "headline-lg": ["Sora"],
+                    "body-lg": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(16, 35, 63, 0.05);
+        }
+        .custom-shadow {
+            box-shadow: 0px 8px 16px rgba(16, 35, 63, 0.04);
+        }
+    </style>
+</head>
+<body class="bg-[#F4F6F9] text-on-surface font-body-md">
+<!-- TopNavBar (Shared Component Identity) -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop py-4 bg-surface/80 backdrop-blur-md shadow-sm">
+<div class="flex items-center gap-4">
+<span class="font-headline-md text-headline-md font-bold text-primary">Encre &amp; Cobalt</span>
+</div>
+<div class="flex items-center gap-sm">
+<div class="hidden md:flex items-center gap-lg mr-lg">
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-body-md" href="#">Workspaces</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-body-md" href="#">Amenities</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-body-md" href="#">Pricing</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors font-body-md" href="#">Contact</a>
+</div>
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-all">notifications</button>
+<div class="h-10 w-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold overflow-hidden border-2 border-white shadow-sm">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a young creative professional with a friendly smile, photographed in a high-end coworking environment with soft architectural lighting. The style is clean and editorial, using a palette of soft greys and navy blues to maintain the Encre Marine brand aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-WP-_ogNhonq_WqGUwtDmWE6l2w0BS3ktPnx20OkWuX8uBksBRVCwk4ymgWsO6t0t6NzBNmfkTF4SW0x-f8gpdAvbRhU3Mx6xWT4GT4SxKE4mDHIsK9BK5zUtI-pYMtSyqZf7sidxkzIJaXuGOUv7X7Xm_jFG163Iw9vEWLuqnpoyov_mJrzjje4zUlq6ssj7ituDCMGwOH-k0Zn6_mOHQZhPKVhOpuB_ef5aMrezo0vTsgctJv3GeeFnX6BlQkHMrI09RCh9tlM"/>
+</div>
+</div>
+</header>
+<div class="flex pt-20 h-screen overflow-hidden">
+<!-- SideNav (Internal Dashboard Navigation) -->
+<aside class="hidden md:flex flex-col w-64 bg-surface-container-lowest border-r border-outline-variant/30 p-lg gap-sm h-full">
+<nav class="flex flex-col gap-xs flex-grow">
+<a class="flex items-center gap-sm px-4 py-3 bg-primary-container text-on-primary-container rounded-lg font-semibold" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-sm px-4 py-3 text-on-surface-variant hover:bg-surface-container rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-label-md text-label-md">Bookings</span>
+</a>
+<a class="flex items-center gap-sm px-4 py-3 text-on-surface-variant hover:bg-surface-container rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-md text-label-md">Membership</span>
+</a>
+<a class="flex items-center gap-sm px-4 py-3 text-on-surface-variant hover:bg-surface-container rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">forum</span>
+<span class="font-label-md text-label-md">Community</span>
+</a>
+</nav>
+<div class="pt-lg border-t border-outline-variant/30">
+<a class="flex items-center gap-sm px-4 py-3 text-on-surface-variant hover:bg-surface-container rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-grow overflow-y-auto bg-[#F4F6F9] px-margin-mobile md:px-margin-desktop py-lg">
+<div class="max-w-[1280px] mx-auto space-y-lg">
+<!-- Welcome Section -->
+<header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary">Good Morning, Alexander.</h1>
+<p class="text-on-surface-variant font-body-md mt-1">Ready for your deep-work session in the Library?</p>
+</div>
+<button class="px-6 py-3 bg-secondary text-white rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-md">
+<span class="material-symbols-outlined">add</span>
+                        New Booking
+                    </button>
+</header>
+<!-- Bento Grid Dashboard Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-md">
+<!-- TOP ROW: Live Session & Subscription -->
+<div class="md:col-span-8">
+<!-- Live Session Component -->
+<div class="bg-white rounded-xl p-lg custom-shadow flex flex-col md:flex-row items-center gap-lg border border-outline-variant/10">
+<div class="relative w-40 h-40">
+<svg class="w-full h-full" viewbox="0 0 100 100">
+<circle class="text-surface-container" cx="50" cy="50" fill="transparent" r="42" stroke="currentColor" stroke-width="8"></circle>
+<circle class="progress-ring__circle transition-all duration-1000" cx="50" cy="50" fill="transparent" id="timer-circle" r="42" stroke="#2FBE8F" stroke-linecap="round" stroke-width="8" style="stroke-dasharray: 263.89; stroke-dashoffset: 65.97;"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-headline-md text-headline-md text-primary" id="timer-text">14:52</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Remaining</span>
+</div>
+</div>
+<div class="flex-grow space-y-md text-center md:text-left">
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-center md:justify-start gap-2">
+<span class="w-2 h-2 rounded-full bg-[#2FBE8F] animate-pulse"></span>
+<span class="font-label-sm text-label-sm text-[#2FBE8F] uppercase tracking-wider font-bold">Live Session</span>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-primary">Private Office Suite 4B</h2>
+<p class="text-on-surface-variant font-body-md">Started at 09:00 AM • Scheduled until 11:00 AM</p>
+</div>
+<div class="flex flex-wrap gap-sm justify-center md:justify-start">
+<button class="px-sm py-2 rounded-lg border border-outline text-on-surface-variant font-label-md hover:bg-surface-container transition-all">Extend Time</button>
+<button class="px-sm py-2 rounded-lg bg-surface-container-highest text-primary font-label-md hover:opacity-80 transition-all">End Session</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Side Card: Active Subscription -->
+<div class="md:col-span-4">
+<div class="bg-primary text-white rounded-xl p-lg custom-shadow h-full relative overflow-hidden flex flex-col justify-between">
+<div class="absolute top-[-20px] right-[-20px] w-40 h-40 bg-secondary/10 rounded-full blur-3xl"></div>
+<div class="relative z-10">
+<div class="flex justify-between items-start mb-md">
+<div class="bg-secondary px-3 py-1 rounded-full">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-white">Pro Member</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant">workspace_premium</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm mb-xs">Active Subscription</h3>
+<p class="text-on-primary-container font-body-sm">Renews on Oct 12, 2024</p>
+</div>
+<div class="relative z-10 space-y-md mt-xl">
+<div class="flex items-end justify-between">
+<div>
+<span class="font-headline-md text-headline-md block">128</span>
+<span class="font-label-sm text-label-sm text-on-primary-container">Credit Balance</span>
+</div>
+<button class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-label-md transition-all">Add Credits</button>
+</div>
+<div class="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+<div class="bg-secondary-fixed-dim h-full w-[70%]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- SECOND ROW: Bookings & QR Code -->
+<div class="md:col-span-8">
+<div class="bg-white rounded-xl p-lg custom-shadow border border-outline-variant/10 h-full">
+<div class="flex justify-between items-center mb-lg">
+<h3 class="font-headline-sm text-headline-sm text-primary">Upcoming Bookings</h3>
+<a class="text-secondary font-label-md hover:underline" href="#">View All</a>
+</div>
+<div class="space-y-sm">
+<!-- Booking Item 1 -->
+<div class="group flex items-center gap-md p-sm rounded-lg hover:bg-surface-container transition-all border border-transparent hover:border-outline-variant/20">
+<div class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A crisp, high-resolution photo of a minimalist podcast studio with acoustic wood paneling and premium silver microphones. The lighting is focused and warm, creating a professional and inviting creative atmosphere. The aesthetic aligns with the Encre &amp; Cobalt premium SaaS brand with deep shadows and clean highlights." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCR1Wc4A907ON_-hBbWU2WeEmwL-kkT_3EfPVHoy2kAVf09IEDGS6IjQcHh3sYApllbfWQzrN0ANRCeaKgvGCLxTC7DIGbHtrJVYq-XwSz0UD7p0G36npLOfPhXw1v-YFM1hA_E-9gYm3CtGVYlQdAyaIavkktsyhFBWPoIyI9Z8_UifceH9_heMbGIRXdK2bH-PyO_BXnRXEwyo3hoW7M9g6xLKz7ZNZnQvfe120y4ds6gPsfQ3AA7GGoi7Z8Jwt52eoknv_vDbW0"/>
+</div>
+<div class="flex-grow">
+<h4 class="font-label-md text-label-md text-primary">Podcast Studio A</h4>
+<p class="text-on-surface-variant font-body-sm">Tomorrow • 02:00 PM - 04:00 PM</p>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="px-2 py-1 bg-surface-container-high rounded text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Confirmed</span>
+<button class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">more_horiz</button>
+</div>
+</div>
+<!-- Booking Item 2 -->
+<div class="group flex items-center gap-md p-sm rounded-lg hover:bg-surface-container transition-all border border-transparent hover:border-outline-variant/20">
+<div class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A wide-angle shot of a luxury conference room featuring a large marble table and ergonomic black leather chairs. Floor-to-ceiling windows reveal a blurred urban skyline in the background. The lighting is bright and airy, representing a sophisticated corporate workspace environment typical of a high-end SaaS platform design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCr6TaqaF4Q3K6PxPKvMsQ0hFFRmbekU-KAHp0MDdw7Oo8fFRIBGoFm2mhTK3BXohotMHIA7qPpLfSY79p30R86dIDdZoZyg4I6HvUgAwkSiJREd1Abt20yD5I7bqMah9jkcaq-8EigApxLEBFHTKeEu7VtDCj8F3NRTEvg65HlfXspBtJ-eIEplApDp0S7Q9FXtMCnKpn9-im4rdIpTwDlACpDj4gpTghvR5NkyDmxSbTqt7AXJYll8gj57FBA5eD47WH6iNC13i8"/>
+</div>
+<div class="flex-grow">
+<h4 class="font-label-md text-label-md text-primary">Main Boardroom</h4>
+<p class="text-on-surface-variant font-body-sm">Wed, Sep 14 • 10:00 AM - 11:30 AM</p>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="px-2 py-1 bg-surface-container-high rounded text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Pending</span>
+<button class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">more_horiz</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- QR Code Card -->
+<div class="md:col-span-4">
+<div class="bg-white rounded-xl p-lg custom-shadow border border-outline-variant/10 text-center space-y-md flex flex-col items-center">
+<div class="flex flex-col items-center gap-1">
+<h3 class="font-headline-sm text-headline-sm text-primary">My Access Pass</h3>
+<p class="text-on-surface-variant font-body-sm">Scan at any kiosk for entry</p>
+</div>
+<div class="p-4 bg-surface-container rounded-xl border border-outline-variant/20 relative group cursor-pointer overflow-hidden">
+<div class="absolute inset-0 bg-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-4xl">fullscreen</span>
+</div>
+<div class="w-48 h-48 flex items-center justify-center">
+<!-- Using an icon to represent the QR since images are controlled by placeholders -->
+<span class="material-symbols-outlined text-primary" style="font-size: 160px;">qr_code_2</span>
+</div>
+</div>
+<div class="w-full pt-sm">
+<button class="w-full py-3 bg-surface-container-high text-primary font-label-md rounded-lg flex items-center justify-center gap-2 hover:bg-outline-variant transition-all">
+<span class="material-symbols-outlined">share</span>
+                                    Share Digital Key
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Footer (Shared Component) -->
+<footer class="w-full py-lg px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-md bg-primary text-on-primary border-t border-white/10 mt-auto">
+<div class="flex flex-col items-center md:items-start gap-2">
+<span class="font-headline-sm text-headline-sm font-bold text-on-primary">Encre &amp; Cobalt</span>
+<p class="font-body-sm text-body-sm text-on-primary-container">© 2024 Encre &amp; Cobalt. Premium Coworking Management.</p>
+</div>
+<div class="flex gap-lg">
+<a class="text-on-primary-container hover:text-on-primary transition-colors font-body-sm" href="#">Privacy Policy</a>
+<a class="text-on-primary-container hover:text-on-primary transition-colors font-body-sm" href="#">Terms of Service</a>
+<a class="text-on-primary-container hover:text-on-primary transition-colors font-body-sm" href="#">Help Center</a>
+<a class="text-on-primary-container hover:text-on-primary transition-colors font-body-sm" href="#">Cookies</a>
+</div>
+</footer>
+<script>
+        // Micro-interaction for the Live Session Timer
+        let timeLeft = 892; // seconds (14m 52s)
+        const totalTime = 7200; // 2 hours in seconds
+        const timerText = document.getElementById('timer-text');
+        const timerCircle = document.getElementById('timer-circle');
+        const circumference = 2 * Math.PI * 42;
+
+        function updateTimer() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerText.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            
+            // Update circular progress
+            const offset = circumference - (timeLeft / totalTime) * circumference;
+            timerCircle.style.strokeDashoffset = offset;
+
+            // Change color to Coral (#FF6F59) if less than 15 mins (900 seconds)
+            if (timeLeft < 900) {
+                timerCircle.setAttribute('stroke', '#FF6F59');
+                timerText.classList.remove('text-primary');
+                timerText.classList.add('text-[#FF6F59]');
+            } else {
+                timerCircle.setAttribute('stroke', '#2FBE8F');
+                timerText.classList.add('text-primary');
+                timerText.classList.remove('text-[#FF6F59]');
+            }
+
+            if (timeLeft > 0) {
+                timeLeft--;
+            }
+        }
+
+        setInterval(updateTimer, 1000);
+        updateTimer(); // Initial call
+    </script>
+</body></html>
