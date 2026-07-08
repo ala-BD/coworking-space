@@ -87,8 +87,13 @@ function requireRoles(...roles) {
 
 app.get('/', (_req, res) => {
   res.json({
-    message: 'VC LOW Coworking API — Dev 1 (Membres & Réservations)',
-    modules: ['A — Membres & Abonnements', 'B — Vérification disponibilité'],
+    message: 'VC LOW Coworking API — Modules A, B, C',
+    modules: [
+      'A — Membres & Abonnements (Dev 1)',
+      'B — Réservations & Disponibilité (Dev 1)',
+      'C — Paiements & Encaissements (Dev 2)',
+    ],
+    version: '1.1.0 (S1)',
   });
 });
 
@@ -413,6 +418,333 @@ app.post('/api/bookings/check-availability', authenticate, async (req, res) => {
     });
   } catch (err) {
     console.error('Erreur disponibilité:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =========================================================================
+// MODULE C — Paiements & Encaissements (Dev 2 — S1)
+// =========================================================================
+
+// POST /api/payments — Créer un paiement (admin/staff uniquement)
+app.post('/api/payments', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const { user_id, reservation_id, abonnement_id, montant, mode, statut, date_paiement } = req.body;
+
+  // Validation des champs requis
+  if (!user_id || !montant || !mode) {
+    return res.status(400).json({ error: 'user_id, montant et mode sont requis.' });
+  }
+
+  // Validation : au moins une référence (réservation OU abonnement)
+  if (!reservation_id && !abonnement_id) {
+    return res.status(400).json({ error: 'Un paiement doit être lié à une réservation ou un abonnement.' });
+  }
+
+  // Validation du mode de paiement
+  const validModes = ['cash', 'bank_transfer', 'check', 'online'];
+  if (!validModes.includes(mode)) {
+    return res.status(400).json({ error: 'Mode de paiement invalide. Valeurs acceptées : cash, bank_transfer, check, online.' });
+  }
+
+  // Validation du statut (si fourni)
+  const validStatuts = ['pending', 'paid', 'failed', 'refunded'];
+  if (statut && !validStatuts.includes(statut)) {
+    return res.status(400).json({ error: 'Statut invalide. Valeurs acceptées : pending, paid, failed, refunded.' });
+  }
+
+  // Validation du montant
+  if (montant <= 0) {
+    return res.status(400).json({ error: 'Le montant doit être supérieur à 0.' });
+  }
+
+  // Vérifier que le membre existe
+  const { data: member, error: memberError } = await supabaseAdmin
+    .from('profiles')
+    .select('id, nom, prenom, email')
+    .eq('id', user_id)
+    .single();
+
+  if (memberError || !member) {
+    return res.status(404).json({ error: 'Membre introuvable.' });
+  }
+
+  // Vérifier que la réservation existe (si fournie)
+  if (reservation_id) {
+    const { data: reservation, error: resError } = await supabaseAdmin
+      .from('reservations')
+      .select('id, user_id')
+      .eq('id', reservation_id)
+      .single();
+
+    if (resError || !reservation) {
+      return res.status(404).json({ error: 'Réservation introuvable.' });
+    }
+
+    // Vérifier que la réservation appartient au membre
+    if (reservation.user_id !== user_id) {
+      return res.status(400).json({ error: 'La réservation n\'appartient pas à ce membre.' });
+    }
+  }
+
+  // Vérifier que l'abonnement existe (si fourni)
+  if (abonnement_id) {
+    const { data: abonnement, error: abError } = await supabaseAdmin
+      .from('abonnements')
+      .select('id, user_id')
+      .eq('id', abonnement_id)
+      .single();
+
+    if (abError || !abonnement) {
+      return res.status(404).json({ error: 'Abonnement introuvable.' });
+    }
+
+    // Vérifier que l'abonnement appartient au membre
+    if (abonnement.user_id !== user_id) {
+      return res.status(400).json({ error: 'L\'abonnement n\'appartient pas à ce membre.' });
+    }
+  }
+
+  // Créer le paiement
+  const paymentData = {
+    user_id,
+    reservation_id: reservation_id || null,
+    abonnement_id: abonnement_id || null,
+    montant: parseFloat(montant),
+    mode,
+    statut: statut || 'pending',
+    date_paiement: date_paiement || null,
+  };
+
+  const { data, error } = await supabaseAdmin
+    .from('paiements')
+    .insert(paymentData)
+    .select('*, profiles(nom, prenom, email)')
+    .single();
+
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+
+  res.status(201).json({ payment: data, message: 'Paiement créé avec succès.' });
+});
+
+// GET /api/payments — Liste tous les paiements (admin/staff uniquement)
+app.get('/api/payments', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const { statut, mode, user_id, limit = 50, offset = 0 } = req.query;
+
+  try {
+    // Construction de la requête avec filtres optionnels
+    let query = supabaseAdmin
+      .from('paiements')
+      .select(`
+        *,
+        profiles(nom, prenom, email, type_membre),
+        reservations(date_debut, date_fin, espaces(nom)),
+        abonnements(type, date_debut, date_fin)
+      `)
+      .order('created_at', { ascending: false })
+      .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+
+    // Filtres optionnels
+    if (statut) {
+      query = query.eq('statut', statut);
+    }
+
+    if (mode) {
+      query = query.eq('mode', mode);
+    }
+
+    if (user_id) {
+      query = query.eq('user_id', user_id);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({
+      payments: data,
+      total: data.length,
+      offset: parseInt(offset),
+      limit: parseInt(limit),
+    });
+  } catch (err) {
+    console.error('Erreur récupération paiements:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/payments/member/:memberId — Paiements d'un membre spécifique
+app.get('/api/payments/member/:memberId', authenticate, async (req, res) => {
+  const { memberId } = req.params;
+  const isSelf = memberId === req.user.id;
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+
+  // Vérification des droits : membre peut voir ses propres paiements, ou être admin/staff
+  if (!isSelf && !isStaff) {
+    return res.status(403).json({ error: 'Accès refusé. Vous ne pouvez consulter que vos propres paiements.' });
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('paiements')
+      .select(`
+        *,
+        profiles(nom, prenom, email),
+        reservations(date_debut, date_fin, espaces(nom, type)),
+        abonnements(type, date_debut, date_fin)
+      `)
+      .eq('user_id', memberId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    // Calculer les statistiques
+    const stats = {
+      total_paiements: data.length,
+      total_montant: data.reduce((sum, p) => sum + parseFloat(p.montant || 0), 0),
+      pending: data.filter(p => p.statut === 'pending').length,
+      paid: data.filter(p => p.statut === 'paid').length,
+      failed: data.filter(p => p.statut === 'failed').length,
+      refunded: data.filter(p => p.statut === 'refunded').length,
+    };
+
+    res.json({
+      payments: data,
+      statistics: stats,
+    });
+  } catch (err) {
+    console.error('Erreur récupération paiements membre:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/payments/pending — Liste des paiements impayés (admin/staff uniquement)
+app.get('/api/payments/pending', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('paiements')
+      .select(`
+        *,
+        profiles(nom, prenom, email, telephone),
+        reservations(date_debut, date_fin, espaces(nom)),
+        abonnements(type, date_debut, date_fin)
+      `)
+      .eq('statut', 'pending')
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    // Calculer le total des impayés
+    const totalImpaye = data.reduce((sum, p) => sum + parseFloat(p.montant || 0), 0);
+
+    // Identifier les paiements en retard (créés il y a plus de 3 jours)
+    const today = new Date();
+    const paymentsEnRetard = data.filter(p => {
+      const createdDate = new Date(p.created_at);
+      const diffTime = Math.abs(today - createdDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays > 3;
+    });
+
+    res.json({
+      pending_payments: data,
+      total_count: data.length,
+      total_amount: totalImpaye,
+      overdue_count: paymentsEnRetard.length,
+      overdue_payments: paymentsEnRetard,
+    });
+  } catch (err) {
+    console.error('Erreur récupération paiements pending:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/payments/:id — Mettre à jour un paiement (admin/staff uniquement)
+app.patch('/api/payments/:id', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const { id } = req.params;
+  const { statut, mode, montant, date_paiement } = req.body;
+  const updates = {};
+
+  // Validation du statut
+  if (statut !== undefined) {
+    const validStatuts = ['pending', 'paid', 'failed', 'refunded'];
+    if (!validStatuts.includes(statut)) {
+      return res.status(400).json({ error: 'Statut invalide. Valeurs acceptées : pending, paid, failed, refunded.' });
+    }
+    updates.statut = statut;
+
+    // Si le statut passe à "paid" et qu'aucune date n'est fournie, utiliser la date actuelle
+    if (statut === 'paid' && !date_paiement) {
+      updates.date_paiement = new Date().toISOString();
+    }
+  }
+
+  // Validation du mode
+  if (mode !== undefined) {
+    const validModes = ['cash', 'bank_transfer', 'check', 'online'];
+    if (!validModes.includes(mode)) {
+      return res.status(400).json({ error: 'Mode de paiement invalide. Valeurs acceptées : cash, bank_transfer, check, online.' });
+    }
+    updates.mode = mode;
+  }
+
+  // Validation du montant
+  if (montant !== undefined) {
+    if (montant <= 0) {
+      return res.status(400).json({ error: 'Le montant doit être supérieur à 0.' });
+    }
+    updates.montant = parseFloat(montant);
+  }
+
+  // Mise à jour de la date de paiement
+  if (date_paiement !== undefined) {
+    updates.date_paiement = date_paiement;
+  }
+
+  // Vérifier qu'il y a au moins une mise à jour
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'Aucune mise à jour fournie.' });
+  }
+
+  try {
+    // Vérifier que le paiement existe
+    const { data: existing, error: checkError } = await supabaseAdmin
+      .from('paiements')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (checkError || !existing) {
+      return res.status(404).json({ error: 'Paiement introuvable.' });
+    }
+
+    // Effectuer la mise à jour
+    const { data, error } = await supabaseAdmin
+      .from('paiements')
+      .update(updates)
+      .eq('id', id)
+      .select(`
+        *,
+        profiles(nom, prenom, email),
+        reservations(date_debut, date_fin, espaces(nom)),
+        abonnements(type, date_debut, date_fin)
+      `)
+      .single();
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ payment: data, message: 'Paiement mis à jour avec succès.' });
+  } catch (err) {
+    console.error('Erreur mise à jour paiement:', err);
     res.status(500).json({ error: err.message });
   }
 });
