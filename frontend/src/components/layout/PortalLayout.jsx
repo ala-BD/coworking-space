@@ -2,13 +2,13 @@ import { Link } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
 
 const S1_NAV = [
-  { id: 'dashboard', label: 'Tableau de bord', icon: 'dashboard', to: '/dashboard', active: true },
+  { id: 'dashboard', label: 'Tableau de bord', icon: 'dashboard', to: '/dashboard' },
+  { id: 'member_payments', label: 'Mes Factures', to: '/member/payments', icon: 'receipt_long' },
 ];
 
 const LATER_NAV = [
   { label: 'Réservations', icon: 'calendar_today', note: 'S2' },
   { label: 'Abonnement', icon: 'payments', note: 'S2' },
-  { label: 'Factures', icon: 'receipt_long', note: 'Dev 2' },
 ];
 
 export default function PortalLayout({ children, profile, onLogout }) {
@@ -44,12 +44,23 @@ export default function PortalLayout({ children, profile, onLogout }) {
               <Link
                 key={item.id}
                 to={item.to}
-                className="flex items-center gap-sm px-4 py-3 bg-primary-container text-on-primary-container rounded-lg font-semibold"
+                className="flex items-center gap-sm px-4 py-3 bg-primary-container text-on-primary-container rounded-lg font-semibold hover:bg-primary/10 transition-colors"
               >
                 <span className="material-symbols-outlined filled text-[20px]">{item.icon}</span>
                 <span className="text-label-md">{item.label}</span>
               </Link>
             ))}
+
+            {/* Menu Admin/Staff spécifique */}
+            {(profile?.role === 'admin' || profile?.role === 'staff' || profile?.role === 'super_admin') && (
+              <Link
+                to="/admin/payments"
+                className="flex items-center gap-sm px-4 py-3 bg-surface-container-high text-on-surface hover:bg-primary/10 rounded-lg font-semibold transition-colors mt-2"
+              >
+                <span className="material-symbols-outlined filled text-[20px]">account_balance_wallet</span>
+                <span className="text-label-md">Gestion Paiements</span>
+              </Link>
+            )}
 
             <div className="mt-md pt-md border-t border-outline-variant/30">
               <p className="px-4 mb-2 text-label-sm text-on-surface-variant uppercase tracking-wider">

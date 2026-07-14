@@ -50,3 +50,36 @@ export const bookingApi = {
   create: (payload) =>
     apiFetch('/api/bookings', { method: 'POST', body: JSON.stringify(payload) }),
 };
+
+export const paymentApi = {
+  getAll: (params) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/api/payments?${qs}`);
+  },
+  getMemberPayments: (memberId) => apiFetch(`/api/payments/member/${memberId}`),
+  update: (id, payload) =>
+    apiFetch(`/api/payments/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  downloadReceipt: async (id) => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_URL}/api/payments/${id}/receipt`, {
+      headers: { ...headers },
+    });
+    if (!response.ok) throw new Error('Erreur de téléchargement');
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `recu-${id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+  },
+  payWithFlouci: (paymentId) =>
+    apiFetch('/api/flouci/pay', { method: 'POST', body: JSON.stringify({ paymentId }) }),
+  verifyFlouci: (paymentId, flouciPaymentId) =>
+    apiFetch('/api/flouci/verify', {
+      method: 'POST',
+      body: JSON.stringify({ paymentId, payment_id: flouciPaymentId || undefined }),
+    }),
+};

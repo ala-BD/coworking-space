@@ -6,6 +6,9 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import AdminPayments from './pages/AdminPayments';
+import MemberPayments from './pages/MemberPayments';
+import FlouciVerify from './pages/FlouciVerify';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -48,6 +51,30 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Dashboard session={session} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/payments"
+          element={
+            <ProtectedRoute>
+              <AdminPayments session={session} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/member/payments"
+          element={
+            <ProtectedRoute>
+              <MemberPayments session={session} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/member/payments/verify"
+          element={
+            <ProtectedRoute>
+              <FlouciVerify session={session} />
             </ProtectedRoute>
           }
         />

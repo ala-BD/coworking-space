@@ -1,8 +1,21 @@
-// server.js — Backend Dev 1 (Modules A, B schéma)
-// Périmètre S1 : Auth JWT, profils, abonnements, vérification disponibilité réservations
+// server.js — Backend Dev 1 + Dev 2 (Modules A, B, C)
+// S1 : Auth JWT, profils, abonnements, réservations
+// S2 Dev 2 : Paiements complets, reçus PDF, relances impayés
 const express = require('express');
 const cors = require('cors');
+const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
+const { generateReceiptPDF } = require('./utils/generateReceipt');
+const { sendReceiptEmail, isEmailConfigured } = require('./utils/sendEmail');
+const { startPaymentRemindersCron } = require('./cron/paymentReminders');
+const { startReservationRemindersCron } = require('./cron/reservationReminders');
+const { startSubscriptionRemindersCron } = require('./cron/subscriptionReminders');
+const {
+  notifyNouveauMembre,
+  notifyConfirmationReservation,
+  notifyAnnulationReservation,
+  notifyPaiementEnregistre
+} = require('./services/notificationService');
 require('dotenv').config();
 
 const app = express();
@@ -172,6 +185,39 @@ app.get('/api/members/:id', authenticate, async (req, res) => {
   }
 
   res.json({ profile: data });
+});
+
+// POST /api/members/welcome — Envoyer l'email de bienvenue (Module F)
+app.post('/api/members/welcome', authenticate, async (req, res) => {
+  const { userId } = req.body;
+  const targetUserId = userId || req.user.id; // Si pas d'userId fourni, utiliser l'utilisateur courant
+
+  try {
+    // Récupérer les infos du membre
+    const { data: membre, error } = await supabaseAdmin
+      .from('profiles')
+      .select('id, nom, prenom, email')
+      .eq('id', targetUserId)
+      .single();
+
+    if (error || !membre) {
+      return res.status(404).json({ error: 'Membre introuvable.' });
+    }
+
+    // ══ MODULE F : Notification nouveau membre ══════════════════════════
+    await notifyNouveauMembre(supabaseAdmin, {
+      id: membre.id,
+      nom: membre.nom,
+      prenom: membre.prenom,
+      email: membre.email
+    });
+    // ═══════════════════════════════════════════════════════════════
+
+    res.json({ message: 'Email de bienvenue envoyé avec succès.', membre });
+  } catch (err) {
+    console.error('Erreur envoi email bienvenue:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // =========================================================================
@@ -382,7 +428,91 @@ app.post('/api/bookings', authenticate, async (req, res) => {
     return res.status(400).json({ error: error.message });
   }
 
+  // ══ MODULE F : Notification de confirmation de réservation ═══════════════
+  try {
+    await notifyConfirmationReservation(
+      supabaseAdmin,
+      {
+        id: data.id,
+        date_debut: data.date_debut,
+        date_fin: data.date_fin,
+        espaces: data.espaces
+      },
+      {
+        id: req.user.id,
+        nom: req.profile.nom,
+        prenom: req.profile.prenom,
+        email: req.user.email
+      }
+    );
+  } catch (notifErr) {
+    console.error('⚠️  Échec notification confirmation réservation:', notifErr.message);
+    // Ne pas bloquer la réponse si la notification échoue
+  }
+  // ═══════════════════════════════════════════════════════════════
+
   res.status(201).json({ reservation: data });
+});
+
+// DELETE /api/bookings/:id — Annuler une réservation
+app.delete('/api/bookings/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+
+  try {
+    // Récupérer la réservation avec les infos nécessaires
+    const { data: reservation, error: fetchErr } = await supabaseAdmin
+      .from('reservations')
+      .select('*, espaces(nom, type)')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr || !reservation) {
+      return res.status(404).json({ error: 'Réservation introuvable.' });
+    }
+
+    // Vérifier les droits : propriétaire ou staff
+    if (!isStaff && reservation.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Vous ne pouvez annuler que vos propres réservations.' });
+    }
+
+    // Supprimer ou marquer comme annulée
+    const { error: deleteErr } = await supabaseAdmin
+      .from('reservations')
+      .update({ statut: 'cancelled' })
+      .eq('id', id);
+
+    if (deleteErr) {
+      return res.status(400).json({ error: deleteErr.message });
+    }
+
+    // ══ MODULE F : Notification d'annulation ═════════════════════════════
+    try {
+      await notifyAnnulationReservation(
+        supabaseAdmin,
+        {
+          id: reservation.id,
+          date_debut: reservation.date_debut,
+          date_fin: reservation.date_fin,
+          espaces: reservation.espaces
+        },
+        {
+          id: reservation.user_id,
+          nom: req.profile.nom,
+          prenom: req.profile.prenom,
+          email: req.user.email
+        }
+      );
+    } catch (notifErr) {
+      console.error('⚠️  Échec notification annulation réservation:', notifErr.message);
+    }
+    // ═══════════════════════════════════════════════════════════════
+
+    res.json({ message: 'Réservation annulée avec succès.', reservation });
+  } catch (err) {
+    console.error('Erreur annulation réservation:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/bookings/check-availability', authenticate, async (req, res) => {
@@ -742,6 +872,53 @@ app.patch('/api/payments/:id', authenticate, requireRoles('super_admin', 'admin'
       return res.status(400).json({ error: error.message });
     }
 
+    // ══ MODULE F : Notification de paiement enregistré ═══════════════════════
+    if (statut === 'paid') {
+      try {
+        // Notification via le nouveau service Module F
+        await notifyPaiementEnregistre(
+          supabaseAdmin,
+          {
+            id: data.id,
+            montant: data.montant,
+            mode: data.mode,
+            statut: data.statut,
+            date_paiement: data.date_paiement,
+            numero_recu: data.numero_recu,
+            reservations: data.reservations,
+            abonnements: data.abonnements
+          },
+          {
+            id: data.user_id,
+            nom: data.profiles.nom,
+            prenom: data.profiles.prenom,
+            email: data.profiles.email
+          }
+        );
+
+        // Générer et envoyer le PDF du reçu (ancien système Module C)
+        if (isEmailConfigured()) {
+          const pdfBuffer = await generateReceiptPDF(data, {
+            coworkingName: process.env.COWORKING_NAME || 'Thirty Three Space',
+            coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
+            coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
+            coworkingAdresse: process.env.COWORKING_ADRESSE || 'Tunis, Tunisie',
+          });
+
+          await sendReceiptEmail(data, pdfBuffer, {
+            coworkingName: process.env.COWORKING_NAME || 'Thirty Three Space',
+            coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
+            coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
+          });
+
+          console.log(`✓ Email reçu PDF envoyé pour paiement ${data.numero_recu || data.id}`);
+        }
+      } catch (emailErr) {
+        console.error('⚠️  Échec notification/email paiement:', emailErr.message);
+      }
+    }
+    // ═══════════════════════════════════════════════════════════════
+
     res.json({ payment: data, message: 'Paiement mis à jour avec succès.' });
   } catch (err) {
     console.error('Erreur mise à jour paiement:', err);
@@ -749,6 +926,214 @@ app.patch('/api/payments/:id', authenticate, requireRoles('super_admin', 'admin'
   }
 });
 
+// =========================================================================
+// MODULE C — Reçu PDF d'un paiement (Dev 2 — S2)
+// =========================================================================
+
+// GET /api/payments/:id/receipt — Télécharger le reçu PDF d'un paiement
+app.get('/api/payments/:id/receipt', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const isSelf = req.profile.role === 'member';
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+
+  try {
+    // Récupérer le paiement avec toutes les jointures nécessaires
+    const { data: payment, error } = await supabaseAdmin
+      .from('paiements')
+      .select(`
+        *,
+        profiles(nom, prenom, email, telephone),
+        reservations(date_debut, date_fin, espaces(nom, type)),
+        abonnements(type, date_debut, date_fin)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error || !payment) {
+      return res.status(404).json({ error: 'Paiement introuvable.' });
+    }
+
+    // Vérification des droits : membre ne peut voir que ses propres reçus
+    if (isSelf && payment.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Accès refusé. Ce reçu ne vous appartient pas.' });
+    }
+
+    // Générer le PDF
+    const pdfBuffer = await generateReceiptPDF(payment, {
+      coworkingName: process.env.COWORKING_NAME || 'Thirty Three Space',
+      coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
+      coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
+      coworkingAdresse: process.env.COWORKING_ADRESSE || 'Tunis, Tunisie',
+    });
+
+    const filename = `recu-${payment.numero_recu || payment.id}.pdf`;
+
+    // Envoyer le PDF en réponse
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+
+  } catch (err) {
+    console.error('Erreur génération reçu PDF:', err);
+    res.status(500).json({ error: 'Impossible de générer le reçu PDF : ' + err.message });
+  }
+});
+
+// =========================================================================
+// MODULE C — Option : Intégration Paiement Flouci
+// =========================================================================
+
+async function finalizeOnlinePayment(paymentId, userId, referenceExterne) {
+  const { data: updatedPayment, error } = await supabaseAdmin
+    .from('paiements')
+    .update({
+      statut: 'paid',
+      mode: 'online',
+      date_paiement: new Date().toISOString(),
+      ...(referenceExterne ? { reference_externe: referenceExterne } : {}),
+    })
+    .eq('id', paymentId)
+    .eq('user_id', userId)
+    .select(`
+      *,
+      profiles(nom, prenom, email, telephone),
+      reservations(date_debut, date_fin, espaces(nom, type)),
+      abonnements(type, date_debut, date_fin)
+    `)
+    .single();
+
+  if (error) throw error;
+
+  if (isEmailConfigured()) {
+    try {
+      const pdfBuffer = await generateReceiptPDF(updatedPayment, {
+        coworkingName: process.env.COWORKING_NAME || 'Thirty Three Space',
+        coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
+        coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
+        coworkingAdresse: process.env.COWORKING_ADRESSE || 'Tunis, Tunisie',
+      });
+      await sendReceiptEmail(updatedPayment, pdfBuffer, {
+        coworkingName: process.env.COWORKING_NAME || 'Thirty Three Space',
+        coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
+        coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
+      });
+    } catch (emailErr) {
+      console.error('Avertissement : échec envoi email après Flouci:', emailErr.message);
+    }
+  }
+
+  return updatedPayment;
+}
+
+// POST /api/flouci/pay — Générer le lien de paiement Flouci
+app.post('/api/flouci/pay', authenticate, async (req, res) => {
+  const { paymentId } = req.body;
+  if (!paymentId) return res.status(400).json({ error: 'paymentId requis' });
+
+  try {
+    if (!process.env.FLOUCI_APP_TOKEN || !process.env.FLOUCI_APP_SECRET) {
+      return res.status(503).json({
+        error: 'Flouci non configuré. Ajoutez FLOUCI_APP_TOKEN et FLOUCI_APP_SECRET dans .env.',
+      });
+    }
+
+    const { data: payment, error } = await supabaseAdmin
+      .from('paiements')
+      .select('*')
+      .eq('id', paymentId)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (error || !payment) return res.status(404).json({ error: 'Paiement introuvable.' });
+    if (payment.statut === 'paid') return res.status(400).json({ error: 'Ce paiement est déjà réglé.' });
+
+    const amountInMillimes = Math.round(parseFloat(payment.montant) * 1000);
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    const payload = {
+      app_token: process.env.FLOUCI_APP_TOKEN,
+      app_secret: process.env.FLOUCI_APP_SECRET,
+      amount: amountInMillimes.toString(),
+      accept_url: `${FRONTEND_URL}/member/payments/verify?paymentId=${paymentId}`,
+      cancel_url: `${FRONTEND_URL}/member/payments`,
+      session_timeout_secs: 1200,
+      success_link: `${FRONTEND_URL}/member/payments/verify?paymentId=${paymentId}`,
+      fail_link: `${FRONTEND_URL}/member/payments`,
+      developer_tracking_id: paymentId,
+    };
+
+    const flouciRes = await axios.post('https://developers.flouci.com/api/generate_payment', payload, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (flouciRes.data && flouciRes.data.result) {
+      const flouciPaymentId = flouciRes.data.result.payment_id;
+      if (flouciPaymentId) {
+        await supabaseAdmin
+          .from('paiements')
+          .update({ reference_externe: flouciPaymentId })
+          .eq('id', paymentId);
+      }
+      res.json({ link: flouciRes.data.result.link, payment_id: flouciPaymentId });
+    } else {
+      res.status(500).json({ error: 'Erreur inattendue depuis Flouci.' });
+    }
+  } catch (err) {
+    console.error('Erreur Flouci Pay:', err.message);
+    res.status(500).json({ error: 'Impossible de contacter la passerelle Flouci.' });
+  }
+});
+
+// POST /api/flouci/verify — Vérifier le statut du paiement Flouci
+app.post('/api/flouci/verify', authenticate, async (req, res) => {
+  const { paymentId, payment_id: flouciPaymentId } = req.body;
+  if (!paymentId) return res.status(400).json({ error: 'paymentId requis' });
+
+  try {
+    const { data: payment, error: fetchErr } = await supabaseAdmin
+      .from('paiements')
+      .select('*')
+      .eq('id', paymentId)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (fetchErr || !payment) return res.status(404).json({ error: 'Paiement introuvable.' });
+
+    if (payment.statut === 'paid') {
+      return res.json({ success: true, payment });
+    }
+
+    const txId = flouciPaymentId || payment.reference_externe;
+    if (!txId) {
+      return res.status(400).json({ error: 'Référence transaction Flouci manquante.' });
+    }
+
+    const flouciRes = await axios.get(`https://developers.flouci.com/api/verify_payment/${txId}`, {
+      headers: {
+        apppublic: process.env.FLOUCI_APP_TOKEN,
+        appsecret: process.env.FLOUCI_APP_SECRET,
+      },
+    });
+
+    if (flouciRes.data?.result?.status === 'SUCCESS') {
+      const updatedPayment = await finalizeOnlinePayment(paymentId, req.user.id, txId);
+      return res.json({ success: true, payment: updatedPayment });
+    }
+
+    res.json({ success: false, message: "Le paiement n'a pas été validé par Flouci." });
+  } catch (err) {
+    console.error('Erreur Flouci Verify:', err.message);
+    res.status(500).json({ error: 'Erreur lors de la vérification Flouci' });
+  }
+});
+
+// Démarrage des tâches planifiées (Cron)
+startPaymentRemindersCron(supabaseAdmin);
+startReservationRemindersCron(supabaseAdmin);
+startSubscriptionRemindersCron(supabaseAdmin);
+
 app.listen(PORT, () => {
-  console.log(`API Dev 1 démarrée sur http://localhost:${PORT}`);
+  console.log(`API Dev 1 + Dev 2 démarrée sur http://localhost:${PORT}`);
+  console.log('✅ Module F - Notifications automatiques activées.');
 });
