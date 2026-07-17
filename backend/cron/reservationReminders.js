@@ -99,13 +99,14 @@ function startReservationRemindersCron(supabaseAdmin) {
           reservations(
             id,
             user_id,
+            date_fin,
             espaces(nom, type),
             profiles(nom, prenom, email)
           )
         `)
         .eq('statut', 'active')
-        .gte('heure_fin', in15Min.toISOString())
-        .lt('heure_fin', in20Min.toISOString());
+        .gte('reservations.date_fin', in15Min.toISOString())
+        .lt('reservations.date_fin', in20Min.toISOString());
 
       if (error) throw error;
 
@@ -133,7 +134,7 @@ function startReservationRemindersCron(supabaseAdmin) {
           await notifyAlerte15MinAvantFin(supabaseAdmin,
             {
               id: session.id,
-              heure_fin: session.heure_fin,
+              heure_fin: session.reservations?.date_fin,
               espaces: session.reservations.espaces
             },
             {
@@ -177,13 +178,15 @@ function startReservationRemindersCron(supabaseAdmin) {
           reservations(
             id,
             user_id,
+            date_debut,
+            date_fin,
             espaces(nom),
             profiles(nom, prenom, email)
           )
         `)
         .eq('statut', 'active')
-        .lte('heure_fin', now.toISOString())
-        .gte('heure_fin', fiveMinAgo.toISOString());
+        .lte('reservations.date_fin', now.toISOString())
+        .gte('reservations.date_fin', fiveMinAgo.toISOString());
 
       if (error) throw error;
 
@@ -207,8 +210,8 @@ function startReservationRemindersCron(supabaseAdmin) {
           await notifyFinSession(supabaseAdmin,
             {
               id: session.id,
-              heure_debut: session.heure_debut,
-              heure_fin: session.heure_fin,
+              heure_debut: session.reservations?.date_debut,
+              heure_fin: session.reservations?.date_fin,
               espaces: session.reservations.espaces
             },
             {
@@ -254,12 +257,13 @@ function startReservationRemindersCron(supabaseAdmin) {
           reservations(
             id,
             user_id,
+            date_fin,
             espaces(nom),
             profiles(nom, prenom, email)
           )
         `)
         .eq('statut', 'active')
-        .lt('heure_fin', fiveMinAgo.toISOString());
+        .lt('reservations.date_fin', fiveMinAgo.toISOString());
 
       if (error) throw error;
 
@@ -270,7 +274,7 @@ function startReservationRemindersCron(supabaseAdmin) {
       let alertesEnvoyees = 0;
 
       for (const session of sessions) {
-        const heureFin = new Date(session.heure_fin);
+        const heureFin = new Date(session.reservations?.date_fin);
         const minutesDepassement = Math.floor((now - heureFin) / 60000);
 
         // Vérifier si une alerte n'a pas déjà été envoyée récemment
@@ -289,7 +293,7 @@ function startReservationRemindersCron(supabaseAdmin) {
           await notifyDepassementSession(supabaseAdmin,
             {
               id: session.id,
-              heure_fin: session.heure_fin,
+              heure_fin: session.reservations?.date_fin,
               espaces: session.reservations.espaces
             },
             {
