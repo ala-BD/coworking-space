@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { memberApi, subscriptionApi } from '../services/api';
+import { memberApi, subscriptionApi, bookingApi, sessionApi } from '../services/api';
+import { connectSocket, joinUser, onSessionStarted, onSessionEnded, onSessionOvertime, onSessionAlert15Min, disconnectSocket } from '../services/socket';
 import PortalLayout from '../components/layout/PortalLayout';
+import { ROLE_LABELS } from '../utils/roles';
 
 const SUBSCRIPTION_LABELS = {
   day_pass: 'Day Pass',
@@ -19,19 +21,16 @@ const MEMBER_TYPE_LABELS = {
   etudiant: 'Étudiant',
 };
 
-const ROLE_LABELS = {
-  member: 'Membre',
-  admin: 'Administrateur',
-  staff: 'Staff',
-  formateur: 'Formateur',
-  super_admin: 'Super Admin',
-  guest: 'Invité',
-};
-
 const STATUT_LABELS = {
   active: 'Actif',
   suspended: 'Suspendu',
   expired: 'Expiré',
+};
+
+const BOOKING_STATUT_LABELS = {
+  pending: 'En attente',
+  confirmed: 'Confirmée',
+  cancelled: 'Annulée',
 };
 
 function StatCard({ label, value, icon }) {
@@ -50,30 +49,71 @@ export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null);
   const [activeSubscription, setActiveSubscription] = useState(null);
   const [subscriptionHistory, setSubscriptionHistory] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [cancellingId, setCancellingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ nom: '', prenom: '', telephone: '', cin: '', type_membre: 'individuel' });
+  const [activeSession, setActiveSession] = useState(null);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     loadData();
   }, [session]);
 
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    connectSocket();
+    joinUser(session.user.id);
+
+    const unsubs = [
+      onSessionStarted((data) => {
+        setActiveSession(data);
+        if (data.reservations?.date_fin) {
+          const remaining = Math.max(0, Math.floor((new Date(data.reservations.date_fin).getTime() - Date.now()) / 1000));
+          setTimerSeconds(remaining);
+        }
+        loadData();
+      }),
+      onSessionEnded(() => {
+        setActiveSession(null);
+        setTimerSeconds(0);
+        loadData();
+      }),
+      onSessionOvertime(() => {
+        loadData();
+      }),
+      onSessionAlert15Min((data) => {
+        setSuccess(`⚠️ Attention : moins de 15 minutes restantes pour votre session au ${data.espace?.nom || 'workspace'}.`);
+      }),
+    ];
+
+    return () => {
+      unsubs.forEach((fn) => fn());
+      disconnectSocket();
+    };
+  }, [session?.user?.id]);
+
   const loadData = async () => {
     try {
       setLoading(true);
       setError('');
-      const [{ profile: prof }, { subscription }, { subscriptions }] = await Promise.all([
+      const [{ profile: prof }, { subscription }, { subscriptions }, { reservations }] = await Promise.all([
         memberApi.getMe(),
         subscriptionApi.getActive(),
         subscriptionApi.getMine(),
+        bookingApi.getAll(),
       ]);
       setProfile(prof);
       setActiveSubscription(subscription);
       setSubscriptionHistory(subscriptions || []);
+      setBookings(reservations || []);
       setForm({
         nom: prof.nom || '',
         prenom: prof.prenom || '',
@@ -81,6 +121,17 @@ export default function Dashboard({ session }) {
         cin: prof.cin || '',
         type_membre: prof.type_membre || 'individuel',
       });
+
+      try {
+        const { session: sess } = await sessionApi.getActive();
+        setActiveSession(sess);
+        if (sess?.reservations?.date_fin) {
+          const remaining = Math.max(0, Math.floor((new Date(sess.reservations.date_fin).getTime() - Date.now()) / 1000));
+          setTimerSeconds(remaining);
+        }
+      } catch {
+        setActiveSession(null);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -88,9 +139,94 @@ export default function Dashboard({ session }) {
     }
   };
 
+  useEffect(() => {
+    if (!activeSession || timerSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setTimerSeconds((s) => {
+        if (s <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [activeSession?.id]);
+
+  useEffect(() => {
+    if (!activeSession) return;
+    const poll = setInterval(() => {
+      sessionApi.getActive().then(({ session: sess }) => {
+        setActiveSession(sess);
+        if (sess?.reservations?.date_fin) {
+          const remaining = Math.max(0, Math.floor((new Date(sess.reservations.date_fin).getTime() - Date.now()) / 1000));
+          setTimerSeconds(remaining);
+        }
+      }).catch(() => {});
+    }, 30000);
+    return () => clearInterval(poll);
+  }, [activeSession?.id]);
+
+  const formatTimer = (totalSeconds) => {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
+  const handleCheckIn = async (reservationId) => {
+    setCheckingIn(true);
+    setError('');
+    try {
+      const { session: sess } = await sessionApi.checkIn({ reservation_id: reservationId });
+      setActiveSession(sess);
+      if (sess?.reservations?.date_fin) {
+        const remaining = Math.max(0, Math.floor((new Date(sess.reservations.date_fin).getTime() - Date.now()) / 1000));
+        setTimerSeconds(remaining);
+      }
+      setSuccess('Check-in réussi ! Bonne session.');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCheckingIn(false);
+    }
+  };
+
+  const handleCheckOut = async () => {
+    if (!activeSession) return;
+    setCheckingOut(true);
+    setError('');
+    try {
+      await sessionApi.checkOut({ session_id: activeSession.id });
+      setActiveSession(null);
+      setTimerSeconds(0);
+      setSuccess('Check-out enregistré. À bientôt !');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCheckingOut(false);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
+  };
+
+  const handleCancelBooking = async (id) => {
+    if (!window.confirm('Annuler cette réservation ?')) return;
+    setCancellingId(id);
+    setError('');
+    setSuccess('');
+    try {
+      await bookingApi.cancel(id);
+      setSuccess('Réservation annulée.');
+      await loadData();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCancellingId(null);
+    }
   };
 
   const handleSaveProfile = async (e) => {
@@ -132,7 +268,7 @@ export default function Dashboard({ session }) {
           {greeting()}, {profile?.prenom || 'Membre'}.
         </h1>
         <p className="text-on-surface-variant text-body-md mt-1">
-          Portail membre — Module A (profil & abonnements) · Semaine S1
+          Espace membre — gérez votre profil, vos réservations et votre abonnement
         </p>
       </header>
 
@@ -147,6 +283,105 @@ export default function Dashboard({ session }) {
         <div className="mb-md p-sm bg-secondary-fixed text-on-secondary-fixed text-body-sm rounded-xl flex items-center gap-xs">
           <span className="material-symbols-outlined text-[18px]">check_circle</span>
           {success}
+        </div>
+      )}
+
+      {/* Session active — B3 */}
+      {activeSession && (
+        <div className="mb-md bg-white rounded-xl p-lg custom-shadow border border-secondary/30">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-md">
+            <div className="flex items-center gap-md">
+              <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-secondary text-[32px]">timer</span>
+              </div>
+              <div>
+                <div className="flex items-center gap-sm mb-xs">
+                  <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-label-sm font-semibold text-green-700 uppercase tracking-wider">Session en cours</span>
+                </div>
+                <p className="font-semibold text-primary">
+                  {activeSession.reservations?.espaces?.nom || 'Espace'}
+                  {activeSession.reservations?.espaces?.type && (
+                    <span className="font-normal text-on-surface-variant capitalize">
+                      {' · '}{activeSession.reservations.espaces.type.replace('_', ' ')}
+                    </span>
+                  )}
+                </p>
+                <p className="text-body-sm text-on-surface-variant">
+                  Début : {new Date(activeSession.check_in).toLocaleTimeString('fr-FR', { timeStyle: 'short' })}
+                  {' · Fin prévue : '}
+                  {activeSession.reservations?.date_fin
+                    ? new Date(activeSession.reservations.date_fin).toLocaleTimeString('fr-FR', { timeStyle: 'short' })
+                    : '—'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-md">
+              <div className={`text-center px-lg py-sm rounded-xl ${timerSeconds <= 900 ? 'bg-red-50 border border-red-200' : 'bg-surface-container-low border border-outline-variant/20'}`}>
+                <p className="text-body-xs text-on-surface-variant mb-xs">Temps restant</p>
+                <p className={`font-mono text-headline-sm font-bold ${timerSeconds <= 900 ? 'text-red-600' : 'text-primary'}`}>
+                  {formatTimer(timerSeconds)}
+                </p>
+                {timerSeconds <= 900 && timerSeconds > 0 && (
+                  <p className="text-body-xs text-red-500 font-medium">Moins de 15 minutes</p>
+                )}
+                {timerSeconds === 0 && (
+                  <p className="text-body-xs text-red-500 font-medium">Session terminée</p>
+                )}
+              </div>
+              <button
+                onClick={handleCheckOut}
+                disabled={checkingOut}
+                className="px-md py-3 bg-error text-white rounded-xl font-semibold hover:bg-error/90 transition-colors disabled:opacity-50 text-label-md"
+              >
+                {checkingOut ? '...' : 'Check-out'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Aujourd'hui — check-in rapide pour réservations du jour */}
+      {!activeSession && bookings.filter((b) => {
+        if (b.statut !== 'confirmed') return false;
+        const debut = new Date(b.date_debut);
+        const fin = new Date(b.date_fin);
+        const now = new Date();
+        return debut <= now && fin > now;
+      }).length > 0 && (
+        <div className="mb-md bg-white rounded-xl p-lg custom-shadow border border-secondary/30">
+          <div className="flex items-center gap-sm mb-md">
+            <span className="material-symbols-outlined text-secondary">event_available</span>
+            <h2 className="font-sora text-headline-sm text-primary">Réservation en cours</h2>
+          </div>
+          {bookings
+            .filter((b) => {
+              if (b.statut !== 'confirmed') return false;
+              const debut = new Date(b.date_debut);
+              const fin = new Date(b.date_fin);
+              const now = new Date();
+              return debut <= now && fin > now;
+            })
+            .map((booking) => (
+              <div key={booking.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-sm py-sm border-t border-outline-variant/10 first:border-0 first:pt-0">
+                <div>
+                  <p className="font-semibold text-primary">{booking.espaces?.nom || 'Espace'}</p>
+                  <p className="text-body-sm text-on-surface-variant">
+                    {new Date(booking.date_debut).toLocaleTimeString('fr-FR', { timeStyle: 'short' })}
+                    {' → '}
+                    {new Date(booking.date_fin).toLocaleTimeString('fr-FR', { timeStyle: 'short' })}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleCheckIn(booking.id)}
+                  disabled={checkingIn}
+                  className="px-md py-3 bg-secondary text-white rounded-xl font-semibold hover:bg-secondary/90 transition-colors disabled:opacity-50 text-label-md self-start"
+                >
+                  {checkingIn ? '...' : 'Check-in'}
+                </button>
+              </div>
+            ))}
         </div>
       )}
 
@@ -256,6 +491,73 @@ export default function Dashboard({ session }) {
             )}
           </div>
 
+          {/* Mes réservations — Module B S2 */}
+          <div className="bg-white rounded-xl p-lg custom-shadow border border-outline-variant/10">
+            <div className="flex items-center justify-between mb-md">
+              <h2 className="font-sora text-headline-sm text-primary">Mes réservations</h2>
+              <Link
+                to="/book/step1"
+                className="text-secondary font-semibold text-label-sm hover:underline"
+              >
+                + Nouvelle réservation
+              </Link>
+            </div>
+            {bookings.length === 0 ? (
+              <p className="text-body-sm text-on-surface-variant">
+                Aucune réservation.{' '}
+                <Link to="/book/step1" className="text-secondary font-semibold hover:underline">
+                  Réservez un espace
+                </Link>
+                .
+              </p>
+            ) : (
+              <div className="divide-y divide-outline-variant/10">
+                {bookings.map((booking) => (
+                  <div key={booking.id} className="py-md flex flex-col sm:flex-row sm:items-center justify-between gap-sm">
+                    <div>
+                      <p className="font-semibold text-primary">
+                        {booking.espaces?.nom || 'Espace'}
+                        {' · '}
+                        <span className="font-normal text-on-surface-variant capitalize">
+                          {(booking.espaces?.type || '').replace('_', ' ')}
+                        </span>
+                      </p>
+                      <p className="text-body-sm text-on-surface-variant">
+                        {new Date(booking.date_debut).toLocaleString('fr-FR', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                        {' → '}
+                        {new Date(booking.date_fin).toLocaleTimeString('fr-FR', { timeStyle: 'short' })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-sm self-start">
+                      <span className={`px-sm py-xs rounded-full text-label-sm font-semibold ${
+                        booking.statut === 'confirmed'
+                          ? 'bg-secondary-fixed text-on-secondary-fixed'
+                          : booking.statut === 'pending'
+                            ? 'bg-surface-container-high text-on-surface-variant'
+                            : 'bg-error-container/30 text-on-error-container'
+                      }`}>
+                        {BOOKING_STATUT_LABELS[booking.statut] || booking.statut}
+                      </span>
+                      {['pending', 'confirmed'].includes(booking.statut) && (
+                        <button
+                          type="button"
+                          onClick={() => handleCancelBooking(booking.id)}
+                          disabled={cancellingId === booking.id}
+                          className="text-label-sm font-semibold text-error hover:underline disabled:opacity-50"
+                        >
+                          {cancellingId === booking.id ? 'Annulation...' : 'Annuler'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Historique abonnements — CDC A1 */}
           <div className="bg-white rounded-xl p-lg custom-shadow border border-outline-variant/10">
             <h2 className="font-sora text-headline-sm text-primary mb-md">Historique des abonnements</h2>
@@ -290,7 +592,19 @@ export default function Dashboard({ session }) {
             <div className="flex gap-sm items-start">
               <span className="material-symbols-outlined text-secondary">info</span>
               <p className="text-body-sm text-on-surface-variant">
-                Réservations et minuteur live : semaine S2. Factures et paiements : Dev 2 (Module C).
+                Consultez vos{' '}
+                <Link to="/dashboard/abonnement" className="text-secondary font-semibold hover:underline">
+                  tarifs & codes promo
+                </Link>
+                ,{' '}
+                <Link to="/book/step1" className="text-secondary font-semibold hover:underline">
+                  réservez un espace
+                </Link>
+                {' '}ou affichez votre{' '}
+                <Link to="/dashboard/qr" className="text-secondary font-semibold hover:underline">
+                  QR d&apos;accès
+                </Link>
+                .
               </p>
             </div>
           </div>
@@ -323,8 +637,11 @@ export default function Dashboard({ session }) {
                 <>
                   <h3 className="font-sora text-headline-sm mb-xs">Aucun abonnement actif</h3>
                   <p className="text-on-primary-container text-body-sm">
-                    Un admin/staff peut créer un abonnement via l&apos;API{' '}
-                    <code className="text-xs bg-white/10 px-1 rounded">POST /api/subscriptions</code>.
+                    Souscrivez à un abonnement depuis la page{' '}
+                    <Link to="/dashboard/abonnement" className="underline font-semibold">
+                      Abonnement & tarifs
+                    </Link>
+                    .
                   </p>
                 </>
               )}

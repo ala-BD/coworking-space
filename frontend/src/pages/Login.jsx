@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import BrandLogo from '../components/layout/BrandLogo';
+import { getHomePath } from '../utils/roles';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -16,9 +17,16 @@ export default function Login() {
     setErrorMsg('');
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      navigate('/dashboard');
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      navigate(getHomePath(profile?.role));
     } catch (error) {
       setErrorMsg(error.message || 'Erreur de connexion.');
     } finally {

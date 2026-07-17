@@ -51,7 +51,7 @@ export default function BookingStep2() {
     const endDateTime = new Date(`${date}T${endTime}:00`).toISOString();
 
     if (new Date(startDateTime) >= new Date(endDateTime)) {
-      setAvailabilityMessage('End time must be after start time.');
+      setAvailabilityMessage('L\'heure de fin doit être postérieure à l\'heure de début.');
       setChecking(false);
       return;
     }
@@ -98,9 +98,9 @@ export default function BookingStep2() {
             NexusDesk
           </Link>
           <div className="flex items-center gap-sm">
-            <span className="text-body-sm text-on-surface-variant font-semibold">Step 2 of 3</span>
+            <span className="text-body-sm text-on-surface-variant font-semibold">Étape 2 sur 3</span>
             <Link to="/book/step1" className="border border-outline-variant/30 text-primary px-sm py-xs rounded-lg font-semibold text-label-md hover:bg-surface-container-high transition-colors">
-              Back
+              Retour
             </Link>
           </div>
         </div>
@@ -110,16 +110,16 @@ export default function BookingStep2() {
       <main className="pt-24 max-w-[600px] mx-auto px-margin-mobile py-lg">
         <div className="bg-surface-container-lowest p-lg rounded-3xl border border-outline-variant/10 shadow-sm space-y-md">
           <div>
-            <h1 className="font-sora text-headline-sm font-semibold text-primary mb-xs">Configure your slot</h1>
+            <h1 className="font-sora text-headline-sm font-semibold text-primary mb-xs">Configurez votre créneau</h1>
             <p className="text-body-sm text-on-surface-variant">
-              You selected: <span className="font-semibold text-primary">{space.nom}</span> ({space.tarif_horaire} DT / hr)
+              Espace sélectionné : <span className="font-semibold text-primary">{space.nom}</span> ({space.tarif_horaire} DT / h)
             </p>
           </div>
 
           <form onSubmit={handleCheckAvailability} className="space-y-md">
             <div>
               <label className="block font-inter text-label-sm text-primary mb-xs" htmlFor="date">
-                Select Date
+                Date
               </label>
               <input
                 id="date"
@@ -134,7 +134,7 @@ export default function BookingStep2() {
             <div className="grid grid-cols-2 gap-sm">
               <div>
                 <label className="block font-inter text-label-sm text-primary mb-xs" htmlFor="start">
-                  Start Time
+                  Heure de début
                 </label>
                 <input
                   id="start"
@@ -147,7 +147,7 @@ export default function BookingStep2() {
               </div>
               <div>
                 <label className="block font-inter text-label-sm text-primary mb-xs" htmlFor="end">
-                  End Time
+                  Heure de fin
                 </label>
                 <input
                   id="end"
@@ -165,7 +165,7 @@ export default function BookingStep2() {
               disabled={checking}
               className="w-full bg-primary text-white py-sm rounded-xl font-semibold text-label-md hover:bg-primary/95 transition-all active:scale-95 disabled:opacity-50"
             >
-              {checking ? 'Checking availability...' : 'Check Availability'}
+              {checking ? 'Vérification...' : 'Vérifier la disponibilité'}
             </button>
           </form>
 
@@ -185,7 +185,7 @@ export default function BookingStep2() {
               onClick={handleProceed}
               className="w-full bg-secondary text-on-secondary py-md rounded-xl font-semibold text-label-md hover:shadow-lg transition-all active:scale-95 flex justify-center items-center gap-xs"
             >
-              Proceed to Confirmation
+              Continuer vers la confirmation
               <span className="material-symbols-outlined">arrow_forward</span>
             </button>
           )}

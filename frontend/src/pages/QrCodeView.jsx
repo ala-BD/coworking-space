@@ -1,86 +1,127 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../supabaseClient';
+import { memberApi } from '../services/api';
+import PortalLayout from '../components/layout/PortalLayout';
 
 export default function QrCodeView({ session }) {
   const [profile, setProfile] = useState(null);
+  const [qrData, setQrData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchProfile();
+    loadData();
   }, [session]);
 
-  const fetchProfile = async () => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
-    if (data) setProfile(data);
+  const loadData = async () => {
+    try {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      setProfile(prof);
+
+      const qr = await memberApi.getQr();
+      setQrData(qr);
+    } catch (err) {
+      setError(err.message || 'Erreur de chargement du QR code.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className="bg-background min-h-screen text-on-background font-inter pb-xl">
-      {/* Top Header */}
-      <nav className="fixed top-0 w-full z-50 bg-surface-container-lowest shadow-sm">
-        <div className="flex justify-between items-center px-margin-desktop py-sm max-w-container-max mx-auto">
-          <Link to="/dashboard" className="font-sora text-headline-md font-bold text-primary">
-            NexusDesk
-          </Link>
-          <Link to="/dashboard" className="border border-outline-variant/30 text-primary px-sm py-xs rounded-lg font-semibold text-label-md hover:bg-surface-container-high transition-colors">
-            Back to Portal
-          </Link>
-        </div>
-      </nav>
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
 
-      {/* Main Container */}
-      <main className="pt-24 max-w-[500px] mx-auto px-margin-mobile py-lg text-center">
-        <div className="bg-surface-container-lowest p-lg rounded-3xl border border-outline-variant/10 shadow-sm space-y-lg">
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F4F6F9]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
+      </div>
+    );
+  }
+
+  return (
+    <PortalLayout profile={profile} onLogout={handleLogout}>
+      <div className="max-w-[500px] mx-auto text-center">
+        <header className="mb-lg">
+          <h1 className="font-sora text-headline-lg text-primary">Mon accès QR</h1>
+          <p className="text-on-surface-variant text-body-md mt-1">
+            Présentez ce pass à l&apos;accueil pour entrer dans l&apos;espace
+          </p>
+        </header>
+
+        {error && (
+          <div className="mb-md p-sm bg-error-container text-on-error-container text-body-sm rounded-xl flex items-center gap-xs">
+            <span className="material-symbols-outlined text-[18px]">warning</span>
+            {error}
+          </div>
+        )}
+
+        <div className="bg-white p-lg rounded-3xl border border-outline-variant/10 shadow-sm space-y-lg">
           <div>
             <span className="bg-secondary-fixed text-on-secondary-fixed px-sm py-xs rounded-full font-semibold text-label-sm uppercase tracking-wider mb-sm inline-block">
-              Physical Access Pass
+              Pass d&apos;accès
             </span>
-            <h1 className="font-sora text-headline-sm font-semibold text-primary">Your Entry QR Code</h1>
             <p className="text-body-sm text-on-surface-variant">
-              Present this pass to the check-in scanner at the reception desk.
+              Scannez ce code à la réception pour activer votre session.
             </p>
           </div>
 
-          {/* QR Code Container */}
           <div className="bg-white p-lg rounded-2xl border border-outline-variant/20 inline-block shadow-inner mx-auto">
-            {/* We will mock a QR code visually using SVG or CSS patterns */}
-            <div className="w-56 h-56 flex flex-col items-center justify-center border-4 border-primary rounded-xl p-md relative bg-white">
-              {/* Visual QR Code Mock Pattern */}
-              <div className="w-full h-full bg-[radial-gradient(circle_at_2px_2px,rgba(0,13,35,1)_3px,transparent_0)] bg-[size:16px_16px] border border-primary/20 opacity-90"></div>
-              {/* Corner squares for QR look */}
-              <div className="absolute top-2 left-2 w-12 h-12 bg-primary border-4 border-white"></div>
-              <div className="absolute top-2 right-2 w-12 h-12 bg-primary border-4 border-white"></div>
-              <div className="absolute bottom-2 left-2 w-12 h-12 bg-primary border-4 border-white"></div>
+            <div className="w-56 h-56 flex items-center justify-center border-4 border-primary rounded-xl p-md bg-white">
+              {qrData?.payload ? (
+                <QRCodeSVG
+                  value={qrData.payload}
+                  size={192}
+                  level="H"
+                  fgColor="#0D1F23"
+                  bgColor="#FFFFFF"
+                  imageSettings={{
+                    src: '',
+                    height: 0,
+                    width: 0,
+                    excavate: false,
+                  }}
+                />
+              ) : (
+                <div className="w-48 h-48 bg-surface-container-low rounded-lg flex items-center justify-center">
+                  <span className="material-symbols-outlined text-4xl text-on-surface-variant">qr_code_2</span>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="space-y-sm text-left border-t border-outline-variant/10 pt-md text-body-sm text-on-surface-variant">
             <div className="flex justify-between">
-              <span>Cardholder</span>
+              <span>Titulaire</span>
               <span className="font-semibold text-primary">{profile?.prenom} {profile?.nom}</span>
             </div>
             <div className="flex justify-between">
-              <span>Member ID</span>
+              <span>Identifiant membre</span>
               <span className="font-mono text-primary text-xs">{session.user.id.substring(0, 18)}...</span>
             </div>
             <div className="flex justify-between">
-              <span>Status</span>
-              <span className="font-semibold text-secondary">Active Membership</span>
+              <span>Statut</span>
+              <span className="font-semibold text-secondary capitalize">{profile?.statut_compte || 'actif'}</span>
             </div>
           </div>
 
           <div className="p-sm bg-surface-container-low rounded-xl text-body-xs text-on-surface-variant flex gap-sm items-start text-left">
             <span className="material-symbols-outlined text-secondary">info</span>
             <p>
-              Your timer starts automatically in the system when the front desk checks you in. Don't forget to checkout when leaving!
+              Votre session démarre automatiquement lors du check-in à l&apos;accueil.
+              Pensez à vous déconnecter en partant.
             </p>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </PortalLayout>
   );
 }

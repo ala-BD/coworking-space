@@ -54,9 +54,9 @@ export default function BookingStep1() {
             NexusDesk
           </Link>
           <div className="flex items-center gap-sm">
-            <span className="text-body-sm text-on-surface-variant font-semibold">Step 1 of 3</span>
+            <span className="text-body-sm text-on-surface-variant font-semibold">Étape 1 sur 3</span>
             <Link to="/dashboard" className="border border-outline-variant/30 text-primary px-sm py-xs rounded-lg font-semibold text-label-md hover:bg-surface-container-high transition-colors">
-              Cancel
+              Annuler
             </Link>
           </div>
         </div>
@@ -65,9 +65,9 @@ export default function BookingStep1() {
       {/* Main Container */}
       <main className="pt-24 max-w-container-max mx-auto px-margin-desktop py-lg">
         <div className="text-center mb-xl">
-          <h1 className="font-sora text-headline-lg text-primary mb-xs">Choose your workspace</h1>
+          <h1 className="font-sora text-headline-lg text-primary mb-xs">Choisissez votre espace</h1>
           <p className="text-body-md text-on-surface-variant max-w-xl mx-auto">
-            Select the room or shared desk configuration that fits your working requirements.
+            Sélectionnez la salle ou le poste qui correspond à vos besoins de travail.
           </p>
         </div>
 
@@ -104,17 +104,17 @@ export default function BookingStep1() {
                 <div>
                   <h3 className="font-sora text-headline-sm text-primary mb-xs">{space.nom}</h3>
                   <p className="text-body-sm text-on-surface-variant">
-                    Capacity: Up to {space.capacite} people.
+                    Capacité : jusqu&apos;à {space.capacite} personnes.
                   </p>
                 </div>
               </div>
               <div className="p-lg border-t border-outline-variant/10 bg-surface-container-low flex justify-between items-center">
-                <span className="text-body-sm text-on-surface-variant">Available today</span>
+                <span className="text-body-sm text-on-surface-variant">Disponible aujourd&apos;hui</span>
                 <button
                   onClick={() => handleSelectSpace(space.id)}
                   className="bg-primary text-white px-md py-sm rounded-xl font-semibold text-label-sm hover:bg-primary/95 transition-all active:scale-95"
                 >
-                  Select Space
+                  Sélectionner
                 </button>
               </div>
             </div>

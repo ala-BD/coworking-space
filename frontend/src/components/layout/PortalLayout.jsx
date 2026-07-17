@@ -1,29 +1,58 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
+import {
+  ADMIN_NAV,
+  MEMBER_NAV,
+  getHomePath,
+  getRoleLabel,
+  isAdminRole,
+} from '../../utils/roles';
 
-const S1_NAV = [
-  { id: 'dashboard', label: 'Tableau de bord', icon: 'dashboard', to: '/dashboard' },
-  { id: 'member_payments', label: 'Mes Factures', to: '/member/payments', icon: 'receipt_long' },
-];
-
-const LATER_NAV = [
-  { label: 'Réservations', icon: 'calendar_today', note: 'S2' },
-  { label: 'Abonnement', icon: 'payments', note: 'S2' },
-];
+function NavLink({ item, isActive }) {
+  return (
+    <Link
+      to={item.to}
+      className={`flex items-center gap-sm px-4 py-3 rounded-lg font-semibold transition-colors ${
+        isActive
+          ? 'bg-primary-container text-on-primary-container'
+          : 'text-on-surface hover:bg-primary/10'
+      }`}
+    >
+      <span className={`material-symbols-outlined text-[20px] ${isActive ? 'filled' : ''}`}>
+        {item.icon}
+      </span>
+      <span className="text-label-md">{item.label}</span>
+    </Link>
+  );
+}
 
 export default function PortalLayout({ children, profile, onLogout }) {
-  const initials = `${profile?.prenom?.[0] || ''}${profile?.nom?.[0] || ''}`.toUpperCase() || 'M';
+  const location = useLocation();
+  const initials = `${profile?.prenom?.[0] || ''}${profile?.nom?.[0] || ''}`.toUpperCase() || 'U';
+  const adminView = isAdminRole(profile?.role);
+  const navItems = adminView ? ADMIN_NAV : MEMBER_NAV;
+  const homePath = getHomePath(profile?.role);
+  const portalLabel = adminView ? 'Administration' : 'Espace membre';
+
+  const isNavActive = (to) => {
+    if (to === homePath) {
+      return location.pathname === to;
+    }
+    return location.pathname === to || location.pathname.startsWith(`${to}/`);
+  };
 
   return (
     <div className="min-h-screen bg-[#F4F6F9] text-on-surface">
       <header className="fixed top-0 w-full z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop py-4 bg-surface/80 backdrop-blur-md border-b border-outline-variant/20">
-        <BrandLogo to="/dashboard" />
+        <BrandLogo to={homePath} />
         <div className="flex items-center gap-sm">
           <div className="hidden sm:flex flex-col items-end mr-2">
             <span className="text-label-sm font-semibold text-primary capitalize">
               {profile?.prenom} {profile?.nom}
             </span>
-            <span className="text-label-sm text-on-surface-variant capitalize">{profile?.role}</span>
+            <span className="text-label-sm text-on-surface-variant">
+              {getRoleLabel(profile?.role)}
+            </span>
           </div>
           <div className="h-10 w-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold border-2 border-white shadow-sm">
             {initials}
@@ -39,49 +68,13 @@ export default function PortalLayout({ children, profile, onLogout }) {
 
       <div className="flex pt-[72px] min-h-screen">
         <aside className="hidden md:flex flex-col w-64 bg-surface-container-lowest border-r border-outline-variant/30 p-lg gap-sm shrink-0">
+          <p className="px-4 mb-2 text-label-sm text-on-surface-variant uppercase tracking-wider">
+            {portalLabel}
+          </p>
           <nav className="flex flex-col gap-xs flex-grow">
-            {S1_NAV.map((item) => (
-              <Link
-                key={item.id}
-                to={item.to}
-                className="flex items-center gap-sm px-4 py-3 bg-primary-container text-on-primary-container rounded-lg font-semibold hover:bg-primary/10 transition-colors"
-              >
-                <span className="material-symbols-outlined filled text-[20px]">{item.icon}</span>
-                <span className="text-label-md">{item.label}</span>
-              </Link>
+            {navItems.map((item) => (
+              <NavLink key={item.id} item={item} isActive={isNavActive(item.to)} />
             ))}
-
-            {/* Menu Admin/Staff spécifique */}
-            {(profile?.role === 'admin' || profile?.role === 'staff' || profile?.role === 'super_admin') && (
-              <Link
-                to="/admin/payments"
-                className="flex items-center gap-sm px-4 py-3 bg-surface-container-high text-on-surface hover:bg-primary/10 rounded-lg font-semibold transition-colors mt-2"
-              >
-                <span className="material-symbols-outlined filled text-[20px]">account_balance_wallet</span>
-                <span className="text-label-md">Gestion Paiements</span>
-              </Link>
-            )}
-
-            <div className="mt-md pt-md border-t border-outline-variant/30">
-              <p className="px-4 mb-2 text-label-sm text-on-surface-variant uppercase tracking-wider">
-                Bientôt disponible
-              </p>
-              {LATER_NAV.map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-center justify-between gap-sm px-4 py-3 text-on-surface-variant/50 rounded-lg cursor-not-allowed"
-                  title={`Prévu : ${item.note}`}
-                >
-                  <span className="flex items-center gap-sm">
-                    <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
-                    <span className="text-label-md">{item.label}</span>
-                  </span>
-                  <span className="text-[10px] font-bold uppercase bg-surface-container-high px-1.5 py-0.5 rounded">
-                    {item.note}
-                  </span>
-                </div>
-              ))}
-            </div>
           </nav>
         </aside>
 

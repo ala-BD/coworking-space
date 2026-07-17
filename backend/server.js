@@ -1,7 +1,9 @@
 // server.js — Backend Dev 1 + Dev 2 (Modules A, B, C)
 // S1 : Auth JWT, profils, abonnements, réservations
-// S2 Dev 2 : Paiements complets, reçus PDF, relances impayés
+// S2 Dev 1 : Tarifs, promo, réservations UI
+// S3 Dev 1 : Agenda admin, check-in/out, politique annulation, profils A1
 const express = require('express');
+const crypto = require('crypto');
 const cors = require('cors');
 const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
@@ -10,6 +12,7 @@ const { sendReceiptEmail, isEmailConfigured } = require('./utils/sendEmail');
 const { startPaymentRemindersCron } = require('./cron/paymentReminders');
 const { startReservationRemindersCron } = require('./cron/reservationReminders');
 const { startSubscriptionRemindersCron } = require('./cron/subscriptionReminders');
+const { initSocket, emitSessionStarted, emitSessionEnded, emitSessionOvertime } = require('./services/socketService');
 const {
   notifyNouveauMembre,
   notifyConfirmationReservation,
@@ -42,6 +45,164 @@ const SUBSCRIPTION_DURATIONS = {
   trimestriel: 90,
   annuel: 365,
 };
+
+const MEMBER_TYPE_TO_PLAN = {
+  individuel: 'standard',
+  etudiant: 'etudiant',
+  entreprise: 'entreprise',
+};
+
+const SUBSCRIPTION_LABELS = {
+  day_pass: 'Day Pass',
+  week_pass: 'Week Pass',
+  mensuel: 'Mensuel',
+  trimestriel: 'Trimestriel',
+  annuel: 'Annuel',
+  bureau_prive: 'Bureau privé',
+};
+
+function todayISO() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function isDateInRange(dateStr, startStr, endStr) {
+  const d = dateStr || todayISO();
+  if (startStr && d < startStr) return false;
+  if (endStr && d > endStr) return false;
+  return true;
+}
+
+function applyPromoDiscount(prix, promo) {
+  if (!promo) return { prixFinal: prix, reduction: 0 };
+  let reduction = promo.type_reduction === 'percent'
+    ? (prix * promo.valeur) / 100
+    : promo.valeur;
+  reduction = Math.min(reduction, prix);
+  return { prixFinal: Math.max(0, prix - reduction), reduction };
+}
+
+async function findActiveTarif(typeAbonnement, planTarifaire) {
+  const today = todayISO();
+  const { data, error } = await supabaseAdmin
+    .from('tarifs_abonnements')
+    .select('*')
+    .eq('type_abonnement', typeAbonnement)
+    .eq('plan_tarifaire', planTarifaire)
+    .eq('actif', true)
+    .lte('date_debut', today)
+    .order('date_debut', { ascending: false });
+
+  if (error) throw error;
+  const tarif = (data || []).find((t) => !t.date_fin || t.date_fin >= today);
+  return tarif || null;
+}
+
+async function findValidPromoCode(code) {
+  const today = todayISO();
+  const { data, error } = await supabaseAdmin
+    .from('codes_promo')
+    .select('*')
+    .eq('code', code.toUpperCase())
+    .eq('actif', true)
+    .single();
+
+  if (error || !data) return null;
+  if (!isDateInRange(today, data.date_debut, data.date_fin)) return null;
+  if (data.utilisations_max != null && data.utilisations_count >= data.utilisations_max) return null;
+  return data;
+}
+
+function sanitizeProfileForClient(profile, isStaff) {
+  const copy = { ...profile };
+  if (!isStaff) {
+    delete copy.notes_admin;
+  }
+  return copy;
+}
+
+async function getCancellationPolicy() {
+  const { data } = await supabaseAdmin
+    .from('politique_annulation')
+    .select('*')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data || {
+    delai_heures: 24,
+    penalite_pct: 0,
+    annulation_membre_autorisee: true,
+    remboursement_auto: false,
+    message_membre: 'Annulation gratuite jusqu\'à 24 h avant le début du créneau.',
+  };
+}
+
+function evaluateCancellation(reservation, policy, isStaff) {
+  if (isStaff) {
+    return { allowed: true, penalite_pct: 0 };
+  }
+  if (!policy.annulation_membre_autorisee) {
+    return { allowed: false, reason: 'Les annulations en ligne sont désactivées. Contactez l\'accueil.' };
+  }
+  const hoursUntilStart = (new Date(reservation.date_debut).getTime() - Date.now()) / 3600000;
+  if (hoursUntilStart < policy.delai_heures) {
+    return {
+      allowed: false,
+      reason: `Annulation impossible moins de ${policy.delai_heures} h avant le début.`,
+      hoursUntilStart: Number(hoursUntilStart.toFixed(1)),
+    };
+  }
+  return { allowed: true, penalite_pct: Number(policy.penalite_pct || 0) };
+}
+
+async function hasActiveSubscription(userId) {
+  const today = todayISO();
+  const { data, error } = await supabaseAdmin
+    .from('abonnements')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('statut', 'active')
+    .lte('date_debut', today)
+    .gte('date_fin', today)
+    .limit(1);
+
+  if (error) throw error;
+  return (data || []).length > 0;
+}
+
+async function ensureQrToken(userId) {
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('qr_token')
+    .eq('id', userId)
+    .single();
+
+  if (profile?.qr_token) return profile.qr_token;
+
+  const token = crypto.randomUUID();
+  await supabaseAdmin.from('profiles').update({ qr_token: token }).eq('id', userId);
+  return token;
+}
+
+function computeRemainingMinutes(dateFin) {
+  return Math.max(0, Math.round((new Date(dateFin).getTime() - Date.now()) / 60000));
+}
+
+async function hasBookingOverlap(espaceId, dateDebut, dateFin, excludeId = null) {
+  let query = supabaseAdmin
+    .from('reservations')
+    .select('id')
+    .eq('espace_id', espaceId)
+    .in('statut', ['confirmed', 'pending'])
+    .lt('date_debut', dateFin)
+    .gt('date_fin', dateDebut);
+
+  if (excludeId) query = query.neq('id', excludeId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []).length > 0;
+}
 
 function addDays(dateStr, days) {
   const d = new Date(dateStr);
@@ -106,7 +267,7 @@ app.get('/', (_req, res) => {
       'B — Réservations & Disponibilité (Dev 1)',
       'C — Paiements & Encaissements (Dev 2)',
     ],
-    version: '1.1.0 (S1)',
+    version: '1.3.0 (S3 Dev1)',
   });
 });
 
@@ -115,11 +276,23 @@ app.get('/', (_req, res) => {
 // =========================================================================
 
 app.get('/api/members/me', authenticate, async (req, res) => {
-  res.json({ profile: req.profile });
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+  await ensureQrToken(req.user.id);
+  const { data: profile, error } = await supabaseAdmin
+    .from('profiles')
+    .select('*')
+    .eq('id', req.user.id)
+    .single();
+
+  if (error || !profile) {
+    return res.status(404).json({ error: 'Profil introuvable.' });
+  }
+
+  res.json({ profile: sanitizeProfileForClient(profile, isStaff) });
 });
 
 app.put('/api/members/me', authenticate, async (req, res) => {
-  const allowed = ['nom', 'prenom', 'telephone', 'cin', 'type_membre'];
+  const allowed = ['nom', 'prenom', 'telephone', 'cin', 'type_membre', 'photo_url'];
   const updates = {};
 
   for (const field of allowed) {
@@ -150,6 +323,95 @@ app.put('/api/members/me', authenticate, async (req, res) => {
     return res.status(400).json({ error: error.message });
   }
 
+  res.json({ profile: sanitizeProfileForClient(data, false) });
+});
+
+app.post('/api/members/me/documents', authenticate, async (req, res) => {
+  const { name, url, type } = req.body;
+  if (!name || !url) {
+    return res.status(400).json({ error: 'name et url sont requis.' });
+  }
+
+  const doc = {
+    name,
+    url,
+    type: type || 'justificatif',
+    uploaded_at: new Date().toISOString(),
+  };
+
+  const currentDocs = Array.isArray(req.profile.documents) ? req.profile.documents : [];
+  const documents = [...currentDocs, doc];
+
+  const { data, error } = await req.db
+    .from('profiles')
+    .update({ documents, updated_at: new Date().toISOString() })
+    .eq('id', req.user.id)
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.status(201).json({ profile: sanitizeProfileForClient(data, false), document: doc });
+});
+
+app.delete('/api/members/me/documents/:index', authenticate, async (req, res) => {
+  const index = Number(req.params.index);
+  const currentDocs = Array.isArray(req.profile.documents) ? [...req.profile.documents] : [];
+
+  if (Number.isNaN(index) || index < 0 || index >= currentDocs.length) {
+    return res.status(404).json({ error: 'Document introuvable.' });
+  }
+
+  currentDocs.splice(index, 1);
+
+  const { data, error } = await req.db
+    .from('profiles')
+    .update({ documents: currentDocs, updated_at: new Date().toISOString() })
+    .eq('id', req.user.id)
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ profile: sanitizeProfileForClient(data, false) });
+});
+
+app.get('/api/members/me/qr', authenticate, async (req, res) => {
+  const qr_token = await ensureQrToken(req.user.id);
+  res.json({
+    qr_token,
+    payload: JSON.stringify({ user_id: req.user.id, qr_token }),
+    member: {
+      id: req.user.id,
+      nom: req.profile.nom,
+      prenom: req.profile.prenom,
+      statut_compte: req.profile.statut_compte,
+    },
+  });
+});
+
+app.patch('/api/members/:id', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const { notes_admin, statut_compte } = req.body;
+  const updates = { updated_at: new Date().toISOString() };
+
+  if (notes_admin !== undefined) updates.notes_admin = notes_admin;
+  if (statut_compte !== undefined) {
+    if (!['actif', 'suspendu', 'expire'].includes(statut_compte)) {
+      return res.status(400).json({ error: 'statut_compte invalide.' });
+    }
+    updates.statut_compte = statut_compte;
+  }
+
+  if (Object.keys(updates).length === 1) {
+    return res.status(400).json({ error: 'Aucune mise à jour fournie.' });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('profiles')
+    .update(updates)
+    .eq('id', req.params.id)
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
   res.json({ profile: data });
 });
 
@@ -184,7 +446,7 @@ app.get('/api/members/:id', authenticate, async (req, res) => {
     return res.status(404).json({ error: 'Membre introuvable.' });
   }
 
-  res.json({ profile: data });
+  res.json({ profile: sanitizeProfileForClient(data, isStaff) });
 });
 
 // POST /api/members/welcome — Envoyer l'email de bienvenue (Module F)
@@ -260,7 +522,7 @@ app.get('/api/subscriptions/me/active', authenticate, async (req, res) => {
 });
 
 app.post('/api/subscriptions', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
-  const { user_id, type, date_debut, renouvellement_auto } = req.body;
+  const { user_id, type, date_debut, renouvellement_auto, code_promo, plan_tarifaire } = req.body;
 
   if (!user_id || !type || !date_debut) {
     return res.status(400).json({ error: 'user_id, type et date_debut sont requis.' });
@@ -282,6 +544,35 @@ app.post('/api/subscriptions', authenticate, requireRoles('super_admin', 'admin'
     return res.status(400).json({ error: 'date_fin doit être >= date_debut.' });
   }
 
+  const { data: memberProfile, error: memberErr } = await supabaseAdmin
+    .from('profiles')
+    .select('type_membre')
+    .eq('id', user_id)
+    .single();
+
+  if (memberErr || !memberProfile) {
+    return res.status(404).json({ error: 'Membre introuvable.' });
+  }
+
+  const plan = plan_tarifaire || MEMBER_TYPE_TO_PLAN[memberProfile.type_membre] || 'standard';
+  let tarifInfo = null;
+  let promoInfo = null;
+
+  try {
+    const tarif = await findActiveTarif(type, plan);
+    if (tarif) {
+      tarifInfo = tarif;
+      if (code_promo) {
+        promoInfo = await findValidPromoCode(code_promo);
+        if (!promoInfo) {
+          return res.status(400).json({ error: 'Code promo invalide ou expiré.' });
+        }
+      }
+    }
+  } catch (pricingErr) {
+    console.warn('Tarification non disponible (migration S2 Dev1 ?):', pricingErr.message);
+  }
+
   const { data, error } = await supabaseAdmin
     .from('abonnements')
     .insert({
@@ -299,7 +590,38 @@ app.post('/api/subscriptions', authenticate, requireRoles('super_admin', 'admin'
     return res.status(400).json({ error: error.message });
   }
 
-  res.status(201).json({ subscription: data });
+  let pricingResult = null;
+  if (tarifInfo) {
+    const { prixFinal, reduction } = applyPromoDiscount(Number(tarifInfo.prix), promoInfo);
+    pricingResult = {
+      type_abonnement: type,
+      plan_tarifaire: plan,
+      prix_initial: Number(tarifInfo.prix),
+      prix_final: prixFinal,
+      reduction,
+      tva_pct: Number(tarifInfo.tva_pct),
+      code_promo: promoInfo?.code || null,
+    };
+
+    await supabaseAdmin.from('historique_tarifs').insert({
+      user_id,
+      abonnement_id: data.id,
+      type_abonnement: type,
+      plan_tarifaire: plan,
+      prix_initial: Number(tarifInfo.prix),
+      prix_final: prixFinal,
+      code_promo_id: promoInfo?.id || null,
+    });
+
+    if (promoInfo) {
+      await supabaseAdmin
+        .from('codes_promo')
+        .update({ utilisations_count: promoInfo.utilisations_count + 1 })
+        .eq('id', promoInfo.id);
+    }
+  }
+
+  res.status(201).json({ subscription: data, pricing: pricingResult });
 });
 
 app.patch('/api/subscriptions/:id', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
@@ -353,8 +675,218 @@ app.get('/api/subscriptions', authenticate, requireRoles('super_admin', 'admin',
 });
 
 // =========================================================================
-// MODULE B — Réservations (préparation S2)
+// MODULE A — Tarification & codes promo (S2 Dev 1 — CDC A3)
 // =========================================================================
+
+app.get('/api/pricing', authenticate, async (req, res) => {
+  const plan = req.query.plan_tarifaire
+    || MEMBER_TYPE_TO_PLAN[req.profile.type_membre]
+    || 'standard';
+  const today = todayISO();
+
+  const { data, error } = await supabaseAdmin
+    .from('tarifs_abonnements')
+    .select('*')
+    .eq('plan_tarifaire', plan)
+    .eq('actif', true)
+    .lte('date_debut', today)
+    .order('type_abonnement', { ascending: true });
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  const tarifs = (data || []).filter((t) => !t.date_fin || t.date_fin >= today);
+  res.json({
+    plan_tarifaire: plan,
+    tarifs: tarifs.map((t) => ({
+      ...t,
+      label: SUBSCRIPTION_LABELS[t.type_abonnement] || t.type_abonnement,
+      duree_jours: SUBSCRIPTION_DURATIONS[t.type_abonnement] || null,
+    })),
+  });
+});
+
+app.get('/api/pricing/all', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (_req, res) => {
+  const { data, error } = await supabaseAdmin
+    .from('tarifs_abonnements')
+    .select('*')
+    .order('type_abonnement', { ascending: true });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ tarifs: data });
+});
+
+app.post('/api/pricing', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const { type_abonnement, plan_tarifaire, prix, tva_pct, date_debut, date_fin, actif } = req.body;
+
+  if (!type_abonnement || !plan_tarifaire || prix == null) {
+    return res.status(400).json({ error: 'type_abonnement, plan_tarifaire et prix sont requis.' });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('tarifs_abonnements')
+    .insert({
+      type_abonnement,
+      plan_tarifaire,
+      prix,
+      tva_pct: tva_pct ?? 19,
+      date_debut: date_debut || todayISO(),
+      date_fin: date_fin || null,
+      actif: actif !== false,
+    })
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.status(201).json({ tarif: data });
+});
+
+app.patch('/api/pricing/:id', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const allowed = ['prix', 'tva_pct', 'date_debut', 'date_fin', 'actif'];
+  const updates = {};
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) updates[key] = req.body[key];
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'Aucune mise à jour fournie.' });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('tarifs_abonnements')
+    .update(updates)
+    .eq('id', req.params.id)
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ tarif: data });
+});
+
+app.post('/api/promo-codes/validate', authenticate, async (req, res) => {
+  const { code, type_abonnement, plan_tarifaire } = req.body;
+
+  if (!code || !type_abonnement) {
+    return res.status(400).json({ error: 'code et type_abonnement sont requis.' });
+  }
+
+  const plan = plan_tarifaire
+    || MEMBER_TYPE_TO_PLAN[req.profile.type_membre]
+    || 'standard';
+
+  try {
+    const promo = await findValidPromoCode(code);
+    if (!promo) {
+      return res.status(404).json({ valid: false, error: 'Code promo invalide ou expiré.' });
+    }
+
+    const tarif = await findActiveTarif(type_abonnement, plan);
+    if (!tarif) {
+      return res.status(404).json({ valid: false, error: 'Tarif introuvable pour cet abonnement.' });
+    }
+
+    const prixInitial = Number(tarif.prix);
+    const { prixFinal, reduction } = applyPromoDiscount(prixInitial, promo);
+
+    res.json({
+      valid: true,
+      code: promo.code,
+      type_reduction: promo.type_reduction,
+      valeur: Number(promo.valeur),
+      plan_tarifaire: plan,
+      type_abonnement,
+      prix_initial: prixInitial,
+      prix_final: prixFinal,
+      reduction,
+      tva_pct: Number(tarif.tva_pct),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/promo-codes', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (_req, res) => {
+  const { data, error } = await supabaseAdmin
+    .from('codes_promo')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ promoCodes: data });
+});
+
+app.post('/api/promo-codes', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const { code, type_reduction, valeur, date_debut, date_fin, utilisations_max, actif } = req.body;
+
+  if (!code || !type_reduction || valeur == null) {
+    return res.status(400).json({ error: 'code, type_reduction et valeur sont requis.' });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('codes_promo')
+    .insert({
+      code: code.toUpperCase(),
+      type_reduction,
+      valeur,
+      date_debut: date_debut || todayISO(),
+      date_fin: date_fin || null,
+      utilisations_max: utilisations_max ?? null,
+      actif: actif !== false,
+    })
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.status(201).json({ promoCode: data });
+});
+
+app.patch('/api/promo-codes/:id', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const allowed = ['type_reduction', 'valeur', 'date_debut', 'date_fin', 'utilisations_max', 'actif'];
+  const updates = {};
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) updates[key] = req.body[key];
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'Aucune mise à jour fournie.' });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('codes_promo')
+    .update(updates)
+    .eq('id', req.params.id)
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ promoCode: data });
+});
+
+app.get('/api/pricing/history/me', authenticate, async (req, res) => {
+  const { data, error } = await supabaseAdmin
+    .from('historique_tarifs')
+    .select('*, codes_promo(code, type_reduction, valeur)')
+    .eq('user_id', req.user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ history: data });
+});
+
+// =========================================================================
+// MODULE B — Réservations (S2 Dev 1)
+// =========================================================================
+
+app.get('/api/espaces', authenticate, async (_req, res) => {
+  const { data, error } = await supabaseAdmin
+    .from('espaces')
+    .select('*')
+    .order('tarif_horaire', { ascending: true });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ espaces: data });
+});
 
 app.get('/api/bookings/calendar', authenticate, async (req, res) => {
   const { espace_id, from, to } = req.query;
@@ -365,10 +897,10 @@ app.get('/api/bookings/calendar', authenticate, async (req, res) => {
 
   let query = supabaseAdmin
     .from('reservations')
-    .select('id, espace_id, user_id, date_debut, date_fin, statut, mode, espaces(nom, type)')
+    .select('id, espace_id, user_id, date_debut, date_fin, statut, mode, espaces(nom, type), profiles(nom, prenom, email)')
     .in('statut', ['confirmed', 'pending'])
-    .gte('date_debut', from)
-    .lte('date_debut', to)
+    .lt('date_debut', to)
+    .gt('date_fin', from)
     .order('date_debut', { ascending: true });
 
   if (espace_id) {
@@ -399,16 +931,9 @@ app.post('/api/bookings', authenticate, async (req, res) => {
     return res.status(400).json({ error: 'date_fin doit être postérieure à date_debut.' });
   }
 
-  const { data: overlaps } = await supabaseAdmin
-    .from('reservations')
-    .select('id')
-    .eq('espace_id', espace_id)
-    .in('statut', ['confirmed', 'pending'])
-    .lt('date_debut', date_fin)
-    .gt('date_fin', date_debut);
-
-  if (overlaps?.length > 0) {
-    return res.status(409).json({ error: 'Conflit : ce créneau est déjà réservé.', overlapsCount: overlaps.length });
+  const overlap = await hasBookingOverlap(espace_id, date_debut, date_fin);
+  if (overlap) {
+    return res.status(409).json({ error: 'Conflit : ce créneau est déjà réservé.' });
   }
 
   const { data, error } = await req.db
@@ -476,6 +1001,16 @@ app.delete('/api/bookings/:id', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Vous ne pouvez annuler que vos propres réservations.' });
     }
 
+    const policy = await getCancellationPolicy();
+    const cancellation = evaluateCancellation(reservation, policy, isStaff);
+    if (!cancellation.allowed) {
+      return res.status(403).json({
+        error: cancellation.reason,
+        policy,
+        hoursUntilStart: cancellation.hoursUntilStart,
+      });
+    }
+
     // Supprimer ou marquer comme annulée
     const { error: deleteErr } = await supabaseAdmin
       .from('reservations')
@@ -508,7 +1043,11 @@ app.delete('/api/bookings/:id', authenticate, async (req, res) => {
     }
     // ═══════════════════════════════════════════════════════════════
 
-    res.json({ message: 'Réservation annulée avec succès.', reservation });
+    res.json({
+      message: 'Réservation annulée avec succès.',
+      reservation,
+      penalite_pct: cancellation.penalite_pct || 0,
+    });
   } catch (err) {
     console.error('Erreur annulation réservation:', err);
     res.status(500).json({ error: err.message });
@@ -527,27 +1066,509 @@ app.post('/api/bookings/check-availability', authenticate, async (req, res) => {
   }
 
   try {
-    let query = supabaseAdmin
-      .from('reservations')
-      .select('id, date_debut, date_fin, statut')
-      .eq('espace_id', espace_id)
-      .in('statut', ['confirmed', 'pending'])
-      .lt('date_debut', date_fin)
-      .gt('date_fin', date_debut);
-
-    if (exclude_reservation_id) {
-      query = query.neq('id', exclude_reservation_id);
-    }
-
-    const { data: overlaps, error } = await query;
-    if (error) throw error;
-
+    const overlap = await hasBookingOverlap(espace_id, date_debut, date_fin, exclude_reservation_id);
     res.json({
-      isAvailable: overlaps.length === 0,
-      overlapsCount: overlaps.length,
+      isAvailable: !overlap,
+      overlapsCount: overlap ? 1 : 0,
     });
   } catch (err) {
     console.error('Erreur disponibilité:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/bookings', authenticate, async (req, res) => {
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+  const { statut, espace_id, from, to } = req.query;
+
+  let query = supabaseAdmin
+    .from('reservations')
+    .select('*, espaces(nom, type, tarif_horaire), profiles(nom, prenom, email)')
+    .order('date_debut', { ascending: false });
+
+  if (!isStaff) {
+    query = query.eq('user_id', req.user.id);
+  }
+
+  if (statut) query = query.eq('statut', statut);
+  if (espace_id) query = query.eq('espace_id', espace_id);
+  if (from) query = query.gte('date_debut', from);
+  if (to) query = query.lte('date_debut', to);
+
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ reservations: data });
+});
+
+app.get('/api/bookings/occupation', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const { from, to } = req.query;
+
+  if (!from || !to) {
+    return res.status(400).json({ error: 'Paramètres from et to requis (ISO date).' });
+  }
+
+  const { data: espaces, error: espErr } = await supabaseAdmin.from('espaces').select('id, nom, type, capacite');
+  if (espErr) return res.status(500).json({ error: espErr.message });
+
+  const { data: reservations, error: resErr } = await supabaseAdmin
+    .from('reservations')
+    .select('id, espace_id, date_debut, date_fin, statut')
+    .in('statut', ['confirmed', 'pending'])
+    .gte('date_debut', from)
+    .lte('date_debut', to);
+
+  if (resErr) return res.status(500).json({ error: resErr.message });
+
+  const periodMs = new Date(to).getTime() - new Date(from).getTime();
+  const report = (espaces || []).map((espace) => {
+    const espaceReservations = (reservations || []).filter((r) => r.espace_id === espace.id);
+    const reservedMs = espaceReservations.reduce((acc, r) => {
+      return acc + (new Date(r.date_fin).getTime() - new Date(r.date_debut).getTime());
+    }, 0);
+    const taux = periodMs > 0 ? Math.min(100, (reservedMs / periodMs) * 100) : 0;
+
+    return {
+      espace_id: espace.id,
+      nom: espace.nom,
+      type: espace.type,
+      capacite: espace.capacite,
+      reservations_count: espaceReservations.length,
+      taux_occupation_pct: Number(taux.toFixed(1)),
+    };
+  });
+
+  res.json({ from, to, report });
+});
+
+app.patch('/api/bookings/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const { date_debut, date_fin, statut } = req.body;
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+
+  const { data: existing, error: fetchErr } = await supabaseAdmin
+    .from('reservations')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (fetchErr || !existing) {
+    return res.status(404).json({ error: 'Réservation introuvable.' });
+  }
+
+  if (!isStaff && existing.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Modification non autorisée.' });
+  }
+
+  const newDebut = date_debut || existing.date_debut;
+  const newFin = date_fin || existing.date_fin;
+
+  if (new Date(newDebut) >= new Date(newFin)) {
+    return res.status(400).json({ error: 'date_fin doit être postérieure à date_debut.' });
+  }
+
+  if (date_debut || date_fin) {
+    const overlap = await hasBookingOverlap(existing.espace_id, newDebut, newFin, id);
+    if (overlap) {
+      return res.status(409).json({ error: 'Conflit : ce créneau est déjà réservé.' });
+    }
+  }
+
+  const updates = {};
+  if (date_debut) updates.date_debut = date_debut;
+  if (date_fin) updates.date_fin = date_fin;
+  if (statut && isStaff) {
+    if (!['pending', 'confirmed', 'cancelled'].includes(statut)) {
+      return res.status(400).json({ error: 'statut invalide.' });
+    }
+    updates.statut = statut;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'Aucune mise à jour fournie.' });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('reservations')
+    .update(updates)
+    .eq('id', id)
+    .select('*, espaces(nom, type)')
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ reservation: data });
+});
+
+// =========================================================================
+// MODULE B — Politique d'annulation (S3 Dev 1 — CDC B2)
+// =========================================================================
+
+app.get('/api/settings/cancellation-policy', authenticate, async (_req, res) => {
+  const policy = await getCancellationPolicy();
+  res.json({ policy });
+});
+
+app.patch('/api/settings/cancellation-policy', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const {
+    delai_heures,
+    penalite_pct,
+    annulation_membre_autorisee,
+    remboursement_auto,
+    message_membre,
+  } = req.body;
+
+  const current = await getCancellationPolicy();
+  const updates = {
+    delai_heures: delai_heures ?? current.delai_heures,
+    penalite_pct: penalite_pct ?? current.penalite_pct,
+    annulation_membre_autorisee: annulation_membre_autorisee ?? current.annulation_membre_autorisee,
+    remboursement_auto: remboursement_auto ?? current.remboursement_auto,
+    message_membre: message_membre ?? current.message_membre,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabaseAdmin
+    .from('politique_annulation')
+    .update(updates)
+    .eq('id', current.id)
+    .select()
+    .single();
+
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+
+  res.json({ policy: data });
+});
+
+// =========================================================================
+// MODULE B — Sessions check-in / check-out (S3 Dev 1 — CDC B3)
+// =========================================================================
+
+app.get('/api/sessions', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const { statut, from, to } = req.query;
+
+  let query = supabaseAdmin
+    .from('sessions')
+    .select(`
+      *,
+      reservations (
+        id, user_id, espace_id, date_debut, date_fin, statut,
+        espaces (nom, type),
+        profiles (nom, prenom, email)
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (statut) query = query.eq('statut', statut);
+  if (from) query = query.gte('created_at', from);
+  if (to) query = query.lte('created_at', to);
+
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ sessions: data });
+});
+
+app.get('/api/sessions/me', authenticate, async (req, res) => {
+  const { data: reservations, error: resErr } = await supabaseAdmin
+    .from('reservations')
+    .select('id')
+    .eq('user_id', req.user.id);
+
+  if (resErr) return res.status(500).json({ error: resErr.message });
+
+  const reservationIds = (reservations || []).map((r) => r.id);
+  if (reservationIds.length === 0) {
+    return res.json({ sessions: [], activeSession: null });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('sessions')
+    .select(`
+      *,
+      reservations (
+        id, date_debut, date_fin, statut,
+        espaces (nom, type)
+      )
+    `)
+    .in('reservation_id', reservationIds)
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  const sessions = (data || []).map((session) => ({
+    ...session,
+    temps_restant: session.statut === 'active'
+      ? computeRemainingMinutes(session.reservations?.date_fin)
+      : session.temps_restant,
+  }));
+
+  const activeSession = sessions.find((s) => s.statut === 'active') || null;
+  res.json({ sessions, activeSession });
+});
+
+app.get('/api/sessions/me/active', authenticate, async (req, res) => {
+  const { data: reservations } = await supabaseAdmin
+    .from('reservations')
+    .select('id')
+    .eq('user_id', req.user.id);
+
+  const reservationIds = (reservations || []).map((r) => r.id);
+  if (reservationIds.length === 0) {
+    return res.json({ session: null });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('sessions')
+    .select(`
+      *,
+      reservations (
+        id, date_debut, date_fin, statut,
+        espaces (nom, type)
+      )
+    `)
+    .in('reservation_id', reservationIds)
+    .eq('statut', 'active')
+    .order('check_in', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  if (!data) {
+    return res.json({ session: null });
+  }
+
+  res.json({
+    session: {
+      ...data,
+      temps_restant: computeRemainingMinutes(data.reservations?.date_fin),
+    },
+  });
+});
+
+app.post('/api/sessions/check-in', authenticate, async (req, res) => {
+  const { reservation_id, qr_token, force } = req.body;
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+
+  try {
+    let targetUserId = req.user.id;
+    let reservation;
+
+    if (qr_token && isStaff) {
+      const { data: memberProfile, error: profErr } = await supabaseAdmin
+        .from('profiles')
+        .select('id, nom, prenom, statut_compte')
+        .eq('qr_token', qr_token)
+        .single();
+
+      if (profErr || !memberProfile) {
+        return res.status(404).json({ error: 'QR code invalide ou expiré.' });
+      }
+
+      targetUserId = memberProfile.id;
+
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      const { data: todayReservations } = await supabaseAdmin
+        .from('reservations')
+        .select('*, espaces(nom, type)')
+        .eq('user_id', targetUserId)
+        .eq('statut', 'confirmed')
+        .gte('date_debut', todayStart.toISOString())
+        .lte('date_debut', todayEnd.toISOString())
+        .order('date_debut', { ascending: true })
+        .limit(1);
+
+      reservation = todayReservations?.[0];
+      if (!reservation) {
+        return res.status(404).json({
+          error: 'Aucune réservation confirmée aujourd\'hui pour ce membre.',
+          member: memberProfile,
+        });
+      }
+    } else if (reservation_id) {
+      const { data, error } = await supabaseAdmin
+        .from('reservations')
+        .select('*, espaces(nom, type)')
+        .eq('id', reservation_id)
+        .single();
+
+      if (error || !data) {
+        return res.status(404).json({ error: 'Réservation introuvable.' });
+      }
+
+      if (!isStaff && data.user_id !== req.user.id) {
+        return res.status(403).json({ error: 'Check-in non autorisé.' });
+      }
+
+      if (data.statut !== 'confirmed' && !isStaff) {
+        return res.status(400).json({ error: 'Seules les réservations confirmées peuvent être check-in.' });
+      }
+
+      reservation = data;
+      targetUserId = data.user_id;
+    } else {
+      return res.status(400).json({ error: 'reservation_id ou qr_token requis.' });
+    }
+
+    const hasSub = await hasActiveSubscription(targetUserId);
+    if (!hasSub && !force && !isStaff) {
+      return res.status(403).json({ error: 'Abonnement actif requis pour le check-in.' });
+    }
+
+    const remaining = computeRemainingMinutes(reservation.date_fin);
+    const now = new Date().toISOString();
+
+    const { data: existingSession } = await supabaseAdmin
+      .from('sessions')
+      .select('*')
+      .eq('reservation_id', reservation.id)
+      .maybeSingle();
+
+    let session;
+    if (existingSession) {
+      const { data, error } = await supabaseAdmin
+        .from('sessions')
+        .update({
+          check_in: existingSession.check_in || now,
+          statut: 'active',
+          temps_restant: remaining,
+        })
+        .eq('id', existingSession.id)
+        .select(`
+          *,
+          reservations (
+            id, date_debut, date_fin, statut,
+            espaces (nom, type),
+            profiles (nom, prenom, email)
+          )
+        `)
+        .single();
+
+      if (error) return res.status(400).json({ error: error.message });
+      session = data;
+    } else {
+      const { data, error } = await supabaseAdmin
+        .from('sessions')
+        .insert({
+          reservation_id: reservation.id,
+          check_in: now,
+          statut: 'active',
+          temps_restant: remaining,
+        })
+        .select(`
+          *,
+          reservations (
+            id, date_debut, date_fin, statut,
+            espaces (nom, type),
+            profiles (nom, prenom, email)
+          )
+        `)
+        .single();
+
+      if (error) return res.status(400).json({ error: error.message });
+      session = data;
+    }
+
+    res.status(201).json({
+      session: { ...session, temps_restant: remaining },
+      warning: !hasSub ? 'Check-in effectué sans abonnement actif.' : null,
+    });
+
+    // ══ MODULE B+ : Événement temps réel ═══════════════════════════
+    emitSessionStarted({
+      id: session.id,
+      user_id: targetUserId,
+      reservation_id: reservation.id,
+      check_in: session.check_in,
+      temps_restant: remaining,
+      espace: reservation.espaces,
+    });
+    // ═══════════════════════════════════════════════════════════════
+  } catch (err) {
+    console.error('Erreur check-in:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/sessions/check-out', authenticate, async (req, res) => {
+  const { session_id, reservation_id } = req.body;
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+
+  if (!session_id && !reservation_id) {
+    return res.status(400).json({ error: 'session_id ou reservation_id requis.' });
+  }
+
+  try {
+    let query = supabaseAdmin
+      .from('sessions')
+      .select(`
+        *,
+        reservations (id, user_id, date_debut, date_fin, espaces(nom, type))
+      `);
+
+    if (session_id) query = query.eq('id', session_id);
+    else query = query.eq('reservation_id', reservation_id);
+
+    const { data: session, error: fetchErr } = await query.maybeSingle();
+
+    if (fetchErr || !session) {
+      return res.status(404).json({ error: 'Session introuvable.' });
+    }
+
+    if (!isStaff && session.reservations?.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Check-out non autorisé.' });
+    }
+
+    const now = new Date().toISOString();
+    const endTime = new Date(session.reservations?.date_fin || now);
+    const overtime = new Date(now) > endTime;
+
+    const { data, error } = await supabaseAdmin
+      .from('sessions')
+      .update({
+        check_out: now,
+        statut: overtime ? 'overtime' : 'completed',
+        temps_restant: 0,
+      })
+      .eq('id', session.id)
+      .select(`
+        *,
+        reservations (
+          id, date_debut, date_fin, statut,
+          espaces (nom, type)
+        )
+      `)
+      .single();
+
+    if (error) return res.status(400).json({ error: error.message });
+
+    res.json({
+      session: data,
+      overtime,
+      message: overtime ? 'Session terminée avec dépassement horaire.' : 'Check-out enregistré.',
+    });
+
+    // ══ MODULE B+ : Événement temps réel ═══════════════════════════
+    const sessionEventData = {
+      id: data.id,
+      user_id: session.reservations?.user_id,
+      reservation_id: session.reservation_id,
+      check_out: data.check_out,
+      statut: data.statut,
+      espace: session.reservations?.espaces,
+    };
+    if (overtime) {
+      emitSessionOvertime(sessionEventData);
+    } else {
+      emitSessionEnded(sessionEventData);
+    }
+    // ═══════════════════════════════════════════════════════════════
+  } catch (err) {
+    console.error('Erreur check-out:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1133,7 +2154,13 @@ startPaymentRemindersCron(supabaseAdmin);
 startReservationRemindersCron(supabaseAdmin);
 startSubscriptionRemindersCron(supabaseAdmin);
 
-app.listen(PORT, () => {
+// Socket.io (Module B+ — Sessions temps réel)
+const http = require('http');
+const server = http.createServer(app);
+initSocket(server, supabaseUrl, supabaseServiceKey);
+
+server.listen(PORT, () => {
   console.log(`API Dev 1 + Dev 2 démarrée sur http://localhost:${PORT}`);
   console.log('✅ Module F - Notifications automatiques activées.');
+  console.log('✅ Module B+ - Socket.io temps réel activé.');
 });

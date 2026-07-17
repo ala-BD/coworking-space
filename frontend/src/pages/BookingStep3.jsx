@@ -66,18 +66,12 @@ export default function BookingStep3({ session }) {
         throw new Error('Ce créneau n\'est plus disponible.');
       }
 
-      const { error: resErr } = await supabase
-        .from('reservations')
-        .insert({
-          user_id: session.user.id,
-          espace_id: espaceId,
-          date_debut: startDateTime,
-          date_fin: endDateTime,
-          statut: 'pending',
-          mode: 'online',
-        });
-
-      if (resErr) throw resErr;
+      await bookingApi.create({
+        espace_id: espaceId,
+        date_debut: startDateTime,
+        date_fin: endDateTime,
+        mode: 'online',
+      });
 
       setSuccess(true);
       setTimeout(() => navigate('/dashboard'), 3000);
