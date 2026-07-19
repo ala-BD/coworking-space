@@ -35,12 +35,20 @@ const BOOKING_STATUT_LABELS = {
 
 function StatCard({ label, value, icon }) {
   return (
-    <div className="bg-white rounded-xl p-md custom-shadow border border-outline-variant/10">
-      <div className="flex items-center gap-sm mb-xs">
-        <span className="material-symbols-outlined text-secondary text-[20px]">{icon}</span>
-        <span className="text-label-sm text-on-surface-variant uppercase tracking-wider">{label}</span>
+    <div
+      className="bg-white rounded-3xl border border-outline-variant/10 transition-all duration-300 hover:-translate-y-1"
+      style={{ padding: '20px 22px', boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}
+    >
+      <div className="flex items-center gap-3 mb-3">
+        <span
+          className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0"
+          style={{ background: 'rgba(0,84,203,0.09)', color: '#0054cb' }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{icon}</span>
+        </span>
+        <span className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">{label}</span>
       </div>
-      <p className="font-sora text-headline-sm text-primary capitalize">{value || '—'}</p>
+      <p className="font-sora font-bold text-primary" style={{ fontSize: 18 }}>{value || '—'}</p>
     </div>
   );
 }
@@ -255,21 +263,41 @@ export default function Dashboard({ session }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F4F6F9]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: '#f4f6f9' }}>
+        <div
+          className="w-14 h-14 rounded-full border-4 border-secondary/20 border-t-secondary animate-spin mb-4"
+          style={{ borderTopColor: '#0054cb' }}
+        />
+        <p className="text-sm text-on-surface-variant font-medium">Chargement…</p>
       </div>
     );
   }
 
   return (
     <PortalLayout profile={profile} onLogout={handleLogout}>
-      <header className="mb-lg">
-        <h1 className="font-sora text-headline-lg text-primary">
-          {greeting()}, {profile?.prenom || 'Membre'}.
-        </h1>
-        <p className="text-on-surface-variant text-body-md mt-1">
-          Espace membre — gérez votre profil, vos réservations et votre abonnement
-        </p>
+      {/* ── En-tête salutation ── */}
+      <header className="mb-7 animate-fade-up">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant mb-1">
+              {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </p>
+            <h1 className="font-sora font-bold text-primary" style={{ fontSize: 28, lineHeight: '36px' }}>
+              {greeting()}, {profile?.prenom || 'Membre'}&nbsp;👋
+            </h1>
+            <p className="text-on-surface-variant text-sm mt-1">
+              Espace membre — gérez votre profil, vos réservations et votre abonnement
+            </p>
+          </div>
+          <Link
+            to="/book/step1"
+            className="hidden sm:flex items-center gap-2 text-sm font-semibold text-white px-4 py-2.5 rounded-xl shrink-0 transition-all hover:-translate-y-0.5"
+            style={{ background: '#0054cb', boxShadow: '0 4px 14px rgba(0,84,203,0.3)' }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 17 }}>add_circle</span>
+            Réserver
+          </Link>
+        </div>
       </header>
 
       {error && (
@@ -288,7 +316,7 @@ export default function Dashboard({ session }) {
 
       {/* Session active — B3 */}
       {activeSession && (
-        <div className="mb-md bg-white rounded-xl p-lg custom-shadow border border-secondary/30">
+        <div className="mb-md bg-white rounded-3xl p-lg custom-shadow border border-secondary/30">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-md">
             <div className="flex items-center gap-md">
               <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center shrink-0">
@@ -350,7 +378,7 @@ export default function Dashboard({ session }) {
         const now = new Date();
         return debut <= now && fin > now;
       }).length > 0 && (
-        <div className="mb-md bg-white rounded-xl p-lg custom-shadow border border-secondary/30">
+        <div className="mb-md bg-white rounded-3xl p-lg custom-shadow border border-secondary/30">
           <div className="flex items-center gap-sm mb-md">
             <span className="material-symbols-outlined text-secondary">event_available</span>
             <h2 className="font-sora text-headline-sm text-primary">Réservation en cours</h2>
@@ -387,7 +415,7 @@ export default function Dashboard({ session }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-md">
         <div className="lg:col-span-8 space-y-md">
-          <div className="bg-white rounded-xl p-lg custom-shadow border border-outline-variant/10">
+          <div className="bg-white rounded-3xl p-lg custom-shadow border border-outline-variant/10">
             <div className="flex items-center justify-between mb-md">
               <h2 className="font-sora text-headline-sm text-primary">Mon profil</h2>
               <div className="flex items-center gap-sm">
@@ -492,7 +520,7 @@ export default function Dashboard({ session }) {
           </div>
 
           {/* Mes réservations — Module B S2 */}
-          <div className="bg-white rounded-xl p-lg custom-shadow border border-outline-variant/10">
+          <div className="bg-white rounded-3xl p-lg custom-shadow border border-outline-variant/10">
             <div className="flex items-center justify-between mb-md">
               <h2 className="font-sora text-headline-sm text-primary">Mes réservations</h2>
               <Link
@@ -559,7 +587,7 @@ export default function Dashboard({ session }) {
           </div>
 
           {/* Historique abonnements — CDC A1 */}
-          <div className="bg-white rounded-xl p-lg custom-shadow border border-outline-variant/10">
+          <div className="bg-white rounded-3xl p-lg custom-shadow border border-outline-variant/10">
             <h2 className="font-sora text-headline-sm text-primary mb-md">Historique des abonnements</h2>
             {subscriptionHistory.length === 0 ? (
               <p className="text-body-sm text-on-surface-variant">Aucun abonnement enregistré.</p>
@@ -611,7 +639,7 @@ export default function Dashboard({ session }) {
         </div>
 
         <div className="lg:col-span-4">
-          <div className="bg-primary text-white rounded-xl p-lg custom-shadow h-full relative overflow-hidden flex flex-col justify-between min-h-[280px]">
+          <div className="bg-primary text-white rounded-3xl p-lg custom-shadow h-full relative overflow-hidden flex flex-col justify-between min-h-[280px]">
             <div className="absolute top-[-20px] right-[-20px] w-40 h-40 bg-secondary/10 rounded-full blur-3xl" />
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-md">

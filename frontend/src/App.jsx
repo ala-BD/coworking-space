@@ -51,27 +51,40 @@ export default function App() {
 
 
   useEffect(() => {
+    const hasAuthParams = window.location.search.includes('code=') || window.location.hash.includes('access_token=');
+    console.log('App Mounted. URL Search:', window.location.search);
+    console.log('App Mounted. URL Hash:', window.location.hash);
+    console.log('hasAuthParams:', hasAuthParams);
 
     supabase.auth.getSession().then(({ data: { session: s } }) => {
-
+      console.log('getSession resolved. Session:', s);
       setSession(s);
-
-      setLoading(false);
-
+      if (!hasAuthParams || s) {
+        setLoading(false);
+      }
     });
 
-
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      console.log('onAuthStateChange Event:', event, 'Session:', s);
       setSession(s);
-
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || s) {
+        setLoading(false);
+      }
     });
 
+    let fallbackTimeout;
+    if (hasAuthParams) {
+      console.log('Setting OAuth fallback timeout...');
+      fallbackTimeout = setTimeout(() => {
+        console.log('OAuth fallback timeout fired. Setting loading to false.');
+        setLoading(false);
+      }, 5000);
+    }
 
-
-    return () => subscription.unsubscribe();
-
+    return () => {
+      subscription.unsubscribe();
+      if (fallbackTimeout) clearTimeout(fallbackTimeout);
+    };
   }, []);
 
 

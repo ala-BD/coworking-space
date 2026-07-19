@@ -12,18 +12,36 @@ const BOOKING_STATUT_LABELS = {
 };
 
 function StatCard({ label, value, icon, to, accent }) {
+  const accentColor = accent || '#0054cb';
+  const accentBg = accent
+    ? (accent === '#2fbe8f' ? 'rgba(47,190,143,0.1)'
+      : accent === '#ba1a1a' ? 'rgba(186,26,26,0.09)'
+      : 'rgba(0,84,203,0.09)')
+    : 'rgba(0,84,203,0.09)';
+
   const content = (
-    <div className={`bg-white rounded-xl p-md custom-shadow border border-outline-variant/10 h-full ${to ? 'hover:border-secondary/40 transition-colors' : ''}`}>
-      <div className="flex items-center gap-sm mb-xs">
-        <span className={`material-symbols-outlined text-[20px] ${accent || 'text-secondary'}`}>{icon}</span>
-        <span className="text-label-sm text-on-surface-variant uppercase tracking-wider">{label}</span>
+    <div
+      className="bg-white rounded-3xl border border-outline-variant/10 h-full transition-all duration-300 hover:-translate-y-1"
+      style={{ padding: '20px 22px', boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}
+    >
+      <div className="flex items-center gap-3 mb-3">
+        <span
+          className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0"
+          style={{ background: accentBg, color: accentColor }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{icon}</span>
+        </span>
+        <span className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">{label}</span>
       </div>
-      <p className="font-sora text-headline-sm text-primary">{value}</p>
+      <p className="font-sora font-bold text-primary" style={{ fontSize: 24 }}>{value}</p>
+      {to && (
+        <p className="text-xs text-on-surface-variant mt-2 font-medium">Voir le détail →</p>
+      )}
     </div>
   );
 
   if (to) {
-    return <Link to={to}>{content}</Link>;
+    return <Link to={to} className="block no-underline hover:no-underline">{content}</Link>;
   }
   return content;
 }
@@ -102,21 +120,40 @@ export default function AdminDashboard({ session }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F4F6F9]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: '#f4f6f9' }}>
+        <div
+          className="w-14 h-14 rounded-full border-4 animate-spin mb-4"
+          style={{ borderColor: 'rgba(0,84,203,0.15)', borderTopColor: '#0054cb' }}
+        />
+        <p className="text-sm text-on-surface-variant font-medium">Chargement…</p>
       </div>
     );
   }
 
   return (
     <PortalLayout profile={profile} onLogout={handleLogout}>
-      <header className="mb-lg">
-        <h1 className="font-sora text-headline-lg text-primary">
-          {greeting()}, {profile?.prenom || 'Admin'}.
-        </h1>
-        <p className="text-on-surface-variant text-body-md mt-1">
-          Tableau de bord administration — {getRoleLabel(profile?.role)}
-        </p>
+      {/* ── En-tête ── */}
+      <header className="mb-7 animate-fade-up">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant mb-1">
+              {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </p>
+            <h1 className="font-sora font-bold text-primary" style={{ fontSize: 28, lineHeight: '36px' }}>
+              {greeting()}, {profile?.prenom || 'Admin'} 👋
+            </h1>
+            <p className="text-on-surface-variant text-sm mt-1">
+              Tableau de bord administration — {getRoleLabel(profile?.role)}
+            </p>
+          </div>
+          <span
+            className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold"
+            style={{ background: 'rgba(0,84,203,0.08)', color: '#0054cb', border: '1px solid rgba(0,84,203,0.15)' }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>admin_panel_settings</span>
+            Administration
+          </span>
+        </div>
       </header>
 
       {error && (
@@ -126,36 +163,40 @@ export default function AdminDashboard({ session }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-md mb-lg">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-7 animate-fade-up delay-100">
         <StatCard
           label="Réservations en attente"
           value={stats.pendingBookings}
           icon="pending_actions"
           to="/admin/pricing"
+          accent="#f59e0b"
         />
         <StatCard
           label="Réservations confirmées"
           value={stats.confirmedBookings}
           icon="event_available"
           to="/admin/pricing"
+          accent="#2fbe8f"
         />
         <StatCard
           label="Paiements en attente"
           value={stats.pendingPayments}
           icon="payments"
           to="/admin/payments"
+          accent="#ba1a1a"
         />
         <StatCard
           label="Tarifs actifs"
           value={stats.activeTarifs}
           icon="sell"
           to="/admin/pricing"
+          accent="#0054cb"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-md">
         <div className="lg:col-span-7 space-y-md">
-          <div className="bg-white rounded-xl p-lg custom-shadow border border-outline-variant/10">
+          <div className="bg-white rounded-3xl p-lg custom-shadow border border-outline-variant/10">
             <div className="flex items-center justify-between mb-md">
               <h2 className="font-sora text-headline-sm text-primary">Réservations à valider</h2>
               <Link to="/admin/pricing" className="text-secondary font-semibold text-label-sm hover:underline">
@@ -192,7 +233,7 @@ export default function AdminDashboard({ session }) {
         </div>
 
         <div className="lg:col-span-5 space-y-md">
-          <div className="bg-primary text-white rounded-xl p-lg custom-shadow relative overflow-hidden">
+          <div className="bg-primary text-white rounded-3xl p-lg custom-shadow relative overflow-hidden">
             <div className="absolute top-[-20px] right-[-20px] w-40 h-40 bg-secondary/10 rounded-full blur-3xl" />
             <div className="relative z-10 space-y-md">
               <h2 className="font-sora text-headline-sm">Actions rapides</h2>

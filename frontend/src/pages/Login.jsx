@@ -4,10 +4,29 @@ import { supabase } from '../supabaseClient';
 import BrandLogo from '../components/layout/BrandLogo';
 import { getHomePath } from '../utils/roles';
 
+/* ─── Icône SVG Google ─── */
+const GoogleIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+  </svg>
+);
+
+/* ─── Icône SVG LinkedIn ─── */
+const LinkedInIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <rect width="48" height="48" rx="8" fill="#0077B5"/>
+    <path fill="white" d="M13 18h5v17h-5V18zm2.5-7a2.9 2.9 0 1 1 0 5.8A2.9 2.9 0 0 1 15.5 11zM21 18h4.8v2.3h.1c.7-1.3 2.3-2.7 4.7-2.7C35.7 17.6 37 20 37 24.3V35h-5v-9.7c0-2.3-.8-3.9-2.7-3.9-1.5 0-2.4 1-2.8 2-.1.4-.2.9-.2 1.4V35h-5V18z"/>
+  </svg>
+);
+
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [showPwd, setShowPwd]   = useState(false);
+  const [loading, setLoading]   = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
 
@@ -15,17 +34,14 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
-
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', data.user.id)
         .single();
-
       navigate(getHomePath(profile?.role));
     } catch (error) {
       setErrorMsg(error.message || 'Erreur de connexion.');
@@ -34,96 +50,292 @@ export default function Login() {
     }
   };
 
+  const handleSocialLogin = async (provider) => {
+    setErrorMsg('');
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${window.location.origin}/dashboard` },
+      });
+      if (error) throw error;
+    } catch (err) {
+      setErrorMsg(err.message || 'Erreur lors de la connexion sociale.');
+    }
+  };
+
   return (
-    <div className="bg-surface-container-low font-inter text-on-surface min-h-screen flex flex-col relative overflow-hidden">
-      <div className="absolute -bottom-12 -right-12 w-64 h-64 bg-secondary/5 blur-[100px] rounded-full" />
-      <div className="absolute -top-12 -left-12 w-64 h-64 bg-primary/5 blur-[100px] rounded-full" />
+    <div className="min-h-screen flex font-inter text-on-surface">
 
-      <main className="flex-grow flex items-center justify-center relative z-10 px-margin-mobile md:px-0 py-xl">
-        <div className="bg-surface-container-lowest w-full max-w-[480px] rounded-xl shadow-xl overflow-hidden border border-outline-variant/10 flex flex-col">
-          <div className="p-lg md:p-xl flex flex-col items-center text-center space-y-2">
-            <div className="mb-2">
-              <BrandLogo to="/" />
-            </div>
-            <h1 className="font-sora text-headline-sm text-primary">Bon retour</h1>
-            <p className="text-body-sm text-on-surface-variant max-w-[300px]">
-              Accédez à votre espace coworking et gérez votre profil membre.
-            </p>
+      {/* ══════════════════════════════════════════
+          PANNEAU GAUCHE — Illustratif (desktop only)
+          ══════════════════════════════════════════ */}
+      <div
+        className="hidden lg:flex flex-col justify-between shrink-0"
+        aria-hidden="true"
+        style={{
+          width: '46%',
+          minWidth: 340,
+          padding: '40px 48px',
+          background: 'linear-gradient(145deg, #000d23 0%, #10233f 50%, #0040a0 100%)',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Blobs décoratifs */}
+        <div style={{
+          position: 'absolute', top: -80, right: -60,
+          width: 400, height: 400, borderRadius: '50%', opacity: 0.15,
+          background: 'radial-gradient(circle, #0054cb, transparent)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute', bottom: -60, left: -40,
+          width: 300, height: 300, borderRadius: '50%', opacity: 0.1,
+          background: 'radial-gradient(circle, #b5c7eb, transparent)',
+          pointerEvents: 'none',
+        }} />
+
+        {/* Logo haut gauche */}
+        <div style={{ position: 'relative', zIndex: 10 }}>
+          <BrandLogo to="/" light />
+        </div>
+
+        {/* Contenu central */}
+        <div style={{ position: 'relative', zIndex: 10, width: '100%' }} className="animate-fade-up">
+          {/* Badge */}
+          <span
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '6px 16px', borderRadius: 99,
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+              background: 'rgba(181,199,235,0.15)', color: '#b5c7eb',
+              border: '1px solid rgba(181,199,235,0.2)',
+              marginBottom: 24,
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', animation: 'pulse 2s infinite', flexShrink: 0 }} />
+            Espace sécurisé
+          </span>
+
+          {/* Titre */}
+          <h2
+            className="font-sora"
+            style={{ color: '#f0f4ff', fontWeight: 700, fontSize: 'clamp(28px, 3.5vw, 44px)', lineHeight: 1.18, marginBottom: 16 }}
+          >
+            Votre espace<br/>
+            <span style={{ color: '#b1c5ff' }}>de travail</span><br/>
+            vous attend.
+          </h2>
+
+          {/* Description */}
+          <p
+            style={{
+              color: 'rgba(181,199,235,0.78)',
+              fontSize: 15, lineHeight: 1.65,
+              marginBottom: 28,
+              width: '100%',
+              overflowWrap: 'break-word',
+            }}
+          >
+            Accédez à des espaces premium, gérez vos réservations et suivez votre abonnement en temps réel.
+          </p>
+
+          {/* Features */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[
+              { icon: 'wifi',          text: 'Wi-Fi fibre gigabit symétrique' },
+              { icon: 'lock',          text: 'Accès biométrique 24h/7j' },
+              { icon: 'support_agent', text: 'Conciergerie dédiée on-site' },
+            ].map(({ icon, text }) => (
+              <div key={icon} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                    background: 'rgba(255,255,255,0.08)', color: '#b1c5ff',
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 17 }}>{icon}</span>
+                </span>
+                <span style={{ color: 'rgba(214,227,255,0.82)', fontSize: 14 }}>{text}</span>
+              </div>
+            ))}
           </div>
+        </div>
 
-          {errorMsg && (
-            <div className="mx-lg md:mx-xl mb-md p-sm bg-error-container text-on-error-container text-body-sm rounded-lg flex items-center gap-xs">
-              <span className="material-symbols-outlined text-[18px]">warning</span>
-              {errorMsg}
+        {/* Stats bas */}
+        <div
+          style={{ position: 'relative', zIndex: 10, display: 'flex', gap: 32 }}
+          className="animate-fade-up delay-200"
+        >
+          {[
+            { value: '3', label: 'Sites premium' },
+            { value: '200+', label: 'Membres actifs' },
+            { value: '24/7', label: 'Accès garanti' },
+          ].map(({ value, label }) => (
+            <div key={label}>
+              <div className="font-sora" style={{ fontSize: 22, fontWeight: 700, color: '#dae2ff' }}>{value}</div>
+              <div style={{ fontSize: 11, color: 'rgba(181,199,235,0.6)', marginTop: 2 }}>{label}</div>
             </div>
-          )}
+          ))}
+        </div>
+      </div>
 
-          <form onSubmit={handleLogin} className="px-lg pb-xl md:px-xl space-y-6">
-            <div className="space-y-2">
-              <label className="text-label-md font-semibold text-on-surface" htmlFor="email">
-                Adresse email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-outline">
-                  <span className="material-symbols-outlined text-[20px]">mail</span>
-                </div>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-surface-container-lowest border border-outline/20 rounded-lg py-3 pl-10 pr-4 text-on-surface form-input-focus transition-all placeholder:text-outline-variant text-body-md"
-                  placeholder="nom@entreprise.com"
-                />
-              </div>
-            </div>
+      {/* ══════════════════════════════════════════
+          PANNEAU DROIT — Formulaire
+          ══════════════════════════════════════════ */}
+      <div className="flex-1 page-gradient flex flex-col relative overflow-hidden">
+        {/* Blobs background */}
+        <div className="absolute -bottom-24 -right-24 w-80 h-80 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(0,84,203,0.08), transparent)' }} />
+        <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(0,13,35,0.06), transparent)' }} />
 
-            <div className="space-y-2">
-              <label className="text-label-md font-semibold text-on-surface" htmlFor="password">
-                Mot de passe
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-outline">
-                  <span className="material-symbols-outlined text-[20px]">lock</span>
-                </div>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-surface-container-lowest border border-outline/20 rounded-lg py-3 pl-10 pr-4 text-on-surface form-input-focus transition-all placeholder:text-outline-variant text-body-md"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
+        {/* Header mobile — logo visible uniquement sur petit écran */}
+        <header className="lg:hidden flex items-center justify-between px-6 py-4 relative z-10">
+          <BrandLogo to="/" />
+          <Link to="/register" className="text-secondary font-semibold text-sm hover:underline">
+            Créer un compte
+          </Link>
+        </header>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-secondary text-on-secondary font-semibold text-label-md py-4 rounded-lg shadow-lg hover:bg-secondary-container transition-all active:scale-[0.98] disabled:opacity-50"
-            >
-              {loading ? 'Connexion...' : 'Se connecter'}
-            </button>
+        {/* Formulaire centré */}
+        <main className="flex-1 flex items-center justify-center px-6 py-4 relative z-10">
+          <div className="w-full max-w-[440px] animate-fade-up">
 
-            <div className="text-center pt-2">
+            {/* En-tête form */}
+            <div className="text-center mb-5">
+              <h1 className="font-sora text-2xl font-bold text-primary mb-1">Bon retour 👋</h1>
               <p className="text-body-sm text-on-surface-variant">
-                Pas encore de compte ?{' '}
-                <Link to="/register" className="text-secondary font-semibold hover:underline">
-                  Créer un compte
-                </Link>
+                Connectez-vous pour accéder à votre espace
               </p>
             </div>
-          </form>
-        </div>
-      </main>
 
-      <footer className="w-full py-sm px-margin-desktop flex justify-center relative z-10">
-        <p className="text-body-sm text-outline-variant">
-          © 2026 Encre &amp; Cobalt · VC LOW Coworking
-        </p>
-      </footer>
+            {/* Alerte erreur */}
+            {errorMsg && (
+              <div className="mb-6 p-4 rounded-2xl flex items-center gap-3 text-sm animate-fade-in"
+                style={{ background: '#ffdad6', color: '#93000a', border: '1px solid rgba(186,26,26,0.15)' }}>
+                <span className="material-symbols-outlined text-[18px] shrink-0">warning</span>
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            {/* Card form */}
+            <div className="glass-card rounded-3xl shadow-elevated p-6 space-y-5">
+              
+              <form onSubmit={handleLogin} className="space-y-4">
+                {/* Email */}
+                <div className="space-y-1.5">
+                  <label className="block text-label-sm font-semibold text-on-surface" htmlFor="login-email">
+                    Adresse email
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-outline pointer-events-none">
+                      <span className="material-symbols-outlined" style={{ fontSize: 19 }}>mail</span>
+                    </span>
+                    <input
+                      id="login-email"
+                      type="email"
+                      required
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="form-input"
+                      placeholder="nom@entreprise.com"
+                    />
+                  </div>
+                </div>
+
+                {/* Mot de passe */}
+                <div className="space-y-1.5">
+                  <label className="block text-label-sm font-semibold text-on-surface" htmlFor="login-password">
+                    Mot de passe
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-outline pointer-events-none">
+                      <span className="material-symbols-outlined" style={{ fontSize: 19 }}>lock</span>
+                    </span>
+                    <input
+                      id="login-password"
+                      type={showPwd ? 'text' : 'password'}
+                      required
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="form-input"
+                      style={{ paddingRight: 44 }}
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPwd((v) => !v)}
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-outline hover:text-secondary transition-colors"
+                      tabIndex={-1}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 19 }}>
+                        {showPwd ? 'visibility_off' : 'visibility'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* CTA */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary w-full mt-2"
+                  style={{ padding: '14px 24px', borderRadius: 12 }}
+                >
+                  {loading
+                    ? <><span className="animate-spin material-symbols-outlined" style={{ fontSize: 18 }}>refresh</span> Connexion…</>
+                    : <><span className="material-symbols-outlined" style={{ fontSize: 18 }}>login</span> Se connecter</>
+                  }
+                </button>
+              </form>
+
+              {/* Séparateur */}
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-px bg-outline-variant/30" />
+                <span className="text-label-sm text-on-surface-variant font-medium whitespace-nowrap">OU CONTINUER AVEC</span>
+                <div className="flex-1 h-px bg-outline-variant/30" />
+              </div>
+
+              {/* Boutons sociaux */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleSocialLogin('google')}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:-translate-y-px transition-all active:scale-[0.97] shadow-sm"
+                >
+                  <GoogleIcon /> Google
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSocialLogin('linkedin_oidc')}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:-translate-y-px transition-all active:scale-[0.97] shadow-sm"
+                >
+                  <LinkedInIcon /> LinkedIn
+                </button>
+              </div>
+            </div>
+
+            {/* Lien inscription */}
+            <p className="text-center text-body-sm text-on-surface-variant mt-5">
+              Pas encore de compte ?{' '}
+              <Link to="/register" className="text-secondary font-semibold hover:underline">
+                Créer un compte
+              </Link>
+            </p>
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="relative z-10 text-center py-2 px-6">
+          <p className="text-[10px] text-outline-variant">
+            © {new Date().getFullYear()} Encre &amp; Cobalt · Tous droits réservés
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }

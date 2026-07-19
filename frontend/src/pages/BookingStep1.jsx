@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import BrandLogo from '../components/layout/BrandLogo';
 
 export default function BookingStep1() {
   const [spaces, setSpaces] = useState([]);
@@ -39,20 +40,18 @@ export default function BookingStep1() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-screen items-center justify-center bg-[#F4F6F9]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary"></div>
       </div>
     );
   }
 
   return (
-    <div className="bg-background min-h-screen text-on-background font-inter pb-xl">
+    <div className="bg-[#F4F6F9] min-h-screen text-on-background font-inter pb-xl">
       {/* Top Header */}
       <nav className="fixed top-0 w-full z-50 bg-surface-container-lowest shadow-sm">
         <div className="flex justify-between items-center px-margin-desktop py-sm max-w-container-max mx-auto">
-          <Link to="/dashboard" className="font-sora text-headline-md font-bold text-primary">
-            NexusDesk
-          </Link>
+          <BrandLogo to="/dashboard" />
           <div className="flex items-center gap-sm">
             <span className="text-body-sm text-on-surface-variant font-semibold">Étape 1 sur 3</span>
             <Link to="/dashboard" className="border border-outline-variant/30 text-primary px-sm py-xs rounded-lg font-semibold text-label-md hover:bg-surface-container-high transition-colors">
