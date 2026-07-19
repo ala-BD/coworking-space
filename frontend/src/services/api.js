@@ -173,11 +173,11 @@ export const paymentApi = {
     window.URL.revokeObjectURL(url);
     a.remove();
   },
-  payWithFlouci: (paymentId) =>
-    apiFetch('/api/flouci/pay', { method: 'POST', body: JSON.stringify({ paymentId }) }),
-  verifyFlouci: (paymentId, flouciPaymentId) =>
-    apiFetch('/api/flouci/verify', {
+  payWithStripe: (paymentId) =>
+    apiFetch('/api/stripe/pay', { method: 'POST', body: JSON.stringify({ paymentId }) }),
+  verifyStripe: (paymentId, sessionId) =>
+    apiFetch('/api/stripe/verify', {
       method: 'POST',
-      body: JSON.stringify({ paymentId, payment_id: flouciPaymentId || undefined }),
+      body: JSON.stringify({ paymentId, session_id: sessionId || undefined }),
     }),
 };

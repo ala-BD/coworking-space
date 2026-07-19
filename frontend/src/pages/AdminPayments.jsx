@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { paymentApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import { exportPaymentsToExcel } from '../utils/exportPaymentsExcel';
 
 const STATUT_STYLES = {
   paid: 'bg-[#D1FAE5] text-[#065F46]',
@@ -23,6 +24,18 @@ const MODE_LABELS = {
   check: 'Chèque',
   online: 'En ligne',
 };
+
+function computePaymentStats(payments) {
+  const stats = {
+    totalRevenue: payments.filter(p => p.statut === 'paid').reduce((sum, p) => sum + parseFloat(p.montant || 0), 0),
+    pendingAmount: payments.filter(p => p.statut === 'pending').reduce((sum, p) => sum + parseFloat(p.montant || 0), 0),
+    paidCount: payments.filter(p => p.statut === 'paid').length,
+    pendingCount: payments.filter(p => p.statut === 'pending').length,
+  };
+  const totalInvoices = stats.paidCount + stats.pendingCount;
+  const recoveryRate = totalInvoices > 0 ? Math.round((stats.paidCount / totalInvoices) * 100) : 0;
+  return { stats, totalInvoices, recoveryRate };
+}
 
 export default function AdminPayments({ session }) {
   const [profile, setProfile] = useState(null);
@@ -111,39 +124,21 @@ export default function AdminPayments({ session }) {
     }
   };
 
-  const handleExportCSV = () => {
+  const handleExportExcel = async () => {
     if (!payments || payments.length === 0) return;
 
-    // En-têtes colonnes
-    const headers = ['Référence', 'Date', 'Membre', 'Email', 'Montant (DT)', 'Mode', 'Statut'];
-
-    // Lignes de données
-    const rows = payments.map(p => {
-      const ref = p.numero_recu || p.id.slice(0, 8);
-      const dateStr = p.date_paiement ? new Date(p.date_paiement).toLocaleDateString() : new Date(p.created_at).toLocaleDateString();
-      const memberName = p.profiles ? `${p.profiles.prenom} ${p.profiles.nom}` : p.user_id;
-      const email = p.profiles?.email || '—';
-      const montant = p.montant;
-      const mode = MODE_LABELS[p.mode] || p.mode;
-      const statut = STATUT_LABELS[p.statut] || p.statut;
-
-      // On entoure les champs texte par des guillemets pour éviter que les virgules cassent le CSV
-      return [ref, dateStr, `"${memberName}"`, email, montant, `"${mode}"`, `"${statut}"`].join(',');
-    });
-
-    // Assemblage final
-    const csvContent = [headers.join(','), ...rows].join('\n');
-
-    // Création du fichier et téléchargement forcé
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' }); // \uFEFF for Excel UTF-8 BOM
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `export_paiements_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const { stats, totalInvoices, recoveryRate } = computePaymentStats(payments);
+      await exportPaymentsToExcel(payments, {
+        totalRevenue: stats.totalRevenue,
+        pendingAmount: stats.pendingAmount,
+        recoveryRate,
+        paidCount: stats.paidCount,
+        totalInvoices,
+      });
+    } catch (err) {
+      alert('Erreur lors de l\'export Excel.');
+    }
   };
 
   if (loading) {
@@ -154,15 +149,7 @@ export default function AdminPayments({ session }) {
     );
   }
 
-  // Calcul des statistiques
-  const stats = {
-    totalRevenue: payments.filter(p => p.statut === 'paid').reduce((sum, p) => sum + parseFloat(p.montant || 0), 0),
-    pendingAmount: payments.filter(p => p.statut === 'pending').reduce((sum, p) => sum + parseFloat(p.montant || 0), 0),
-    paidCount: payments.filter(p => p.statut === 'paid').length,
-    pendingCount: payments.filter(p => p.statut === 'pending').length,
-  };
-  const totalInvoices = stats.paidCount + stats.pendingCount;
-  const recoveryRate = totalInvoices > 0 ? Math.round((stats.paidCount / totalInvoices) * 100) : 0;
+  const { stats, totalInvoices, recoveryRate } = computePaymentStats(payments);
 
   return (
     <PortalLayout profile={profile} onLogout={handleLogout}>
@@ -172,12 +159,12 @@ export default function AdminPayments({ session }) {
           <p className="text-body-md text-on-surface-variant">Visualisez et mettez à jour les transactions (Module C).</p>
         </div>
         <button
-          onClick={handleExportCSV}
+          onClick={handleExportExcel}
           disabled={payments.length === 0}
           className="flex items-center gap-xs px-4 py-2 bg-secondary text-on-secondary rounded-lg font-semibold hover:bg-secondary/90 transition-colors disabled:opacity-50"
         >
           <span className="material-symbols-outlined text-[20px]">download</span>
-          Exporter CSV
+          Exporter Excel
         </button>
       </div>
 

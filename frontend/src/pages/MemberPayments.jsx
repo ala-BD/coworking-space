@@ -52,13 +52,13 @@ export default function MemberPayments({ session }) {
     await supabase.auth.signOut();
   };
 
-  const handlePayFlouci = async (paymentId) => {
+  const handlePayStripe = async (paymentId) => {
     try {
       setPayingId(paymentId);
       setErrorMsg('');
-      const res = await paymentApi.payWithFlouci(paymentId);
+      const res = await paymentApi.payWithStripe(paymentId);
       if (res.link) {
-        window.location.href = res.link; // Redirection vers Flouci
+        window.location.href = res.link;
       } else {
         throw new Error('Lien de paiement non reçu.');
       }
@@ -88,7 +88,7 @@ export default function MemberPayments({ session }) {
     <PortalLayout profile={profile} onLogout={handleLogout}>
       <div className="mb-lg">
         <h1 className="font-sora text-headline-md font-bold text-primary mb-xs">Mes Factures</h1>
-        <p className="text-body-md text-on-surface-variant">Consultez et réglez vos paiements en attente (Flouci).</p>
+        <p className="text-body-md text-on-surface-variant">Consultez et réglez vos paiements en attente (Stripe).</p>
       </div>
 
       {errorMsg && (
@@ -130,7 +130,7 @@ export default function MemberPayments({ session }) {
                 <div className="flex items-center gap-2 mt-auto pt-4 border-t border-outline-variant/20">
                   {p.statut === 'pending' ? (
                     <button 
-                      onClick={() => handlePayFlouci(p.id)}
+                      onClick={() => handlePayStripe(p.id)}
                       disabled={payingId === p.id}
                       className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
                     >

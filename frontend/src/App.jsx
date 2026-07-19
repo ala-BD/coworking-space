@@ -26,7 +26,7 @@ import MemberPayments from './pages/MemberPayments';
 
 import MemberSubscription from './pages/MemberSubscription';
 
-import FlouciVerify from './pages/FlouciVerify';
+import StripeVerify from './pages/StripeVerify';
 
 import AdminCancellationPolicy from './pages/AdminCancellationPolicy';
 
@@ -247,7 +247,7 @@ export default function App() {
 
             <MemberRoute>
 
-              <FlouciVerify session={session} />
+              <StripeVerify session={session} />
 
             </MemberRoute>
 

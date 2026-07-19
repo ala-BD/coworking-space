@@ -5,10 +5,19 @@
 const express = require('express');
 const crypto = require('crypto');
 const cors = require('cors');
-const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
 const { generateReceiptPDF } = require('./utils/generateReceipt');
 const { sendReceiptEmail, isEmailConfigured } = require('./utils/sendEmail');
+const { finalizeOnlinePayment } = require('./services/onlinePaymentService');
+const {
+  isStripeConfigured,
+  createCheckoutSession,
+  retrieveCheckoutSession,
+  validateCheckoutSession,
+  isCheckoutSessionPaid,
+  getExternalReference,
+  constructWebhookEvent,
+} = require('./services/stripeService');
 const { startPaymentRemindersCron } = require('./cron/paymentReminders');
 const { startReservationRemindersCron } = require('./cron/reservationReminders');
 const { startSubscriptionRemindersCron } = require('./cron/subscriptionReminders');
@@ -36,6 +45,37 @@ if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 app.use(cors());
+
+// Stripe webhook — doit recevoir le body brut (avant express.json)
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const signature = req.headers['stripe-signature'];
+  if (!signature) return res.status(400).send('Signature Stripe manquante.');
+
+  try {
+    const event = constructWebhookEvent(req.body, signature);
+
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      const paymentId = session.metadata?.paymentId;
+      const userId = session.metadata?.userId;
+
+      if (paymentId && userId && isCheckoutSessionPaid(session)) {
+        await finalizeOnlinePayment(
+          supabaseAdmin,
+          paymentId,
+          userId,
+          getExternalReference(session)
+        );
+      }
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    console.error('Erreur Stripe Webhook:', err.message);
+    res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+});
+
 app.use(express.json());
 
 const SUBSCRIPTION_DURATIONS = {
@@ -2002,60 +2042,18 @@ app.get('/api/payments/:id/receipt', authenticate, async (req, res) => {
 });
 
 // =========================================================================
-// MODULE C — Option : Intégration Paiement Flouci
+// MODULE C — Intégration Paiement Stripe
 // =========================================================================
 
-async function finalizeOnlinePayment(paymentId, userId, referenceExterne) {
-  const { data: updatedPayment, error } = await supabaseAdmin
-    .from('paiements')
-    .update({
-      statut: 'paid',
-      mode: 'online',
-      date_paiement: new Date().toISOString(),
-      ...(referenceExterne ? { reference_externe: referenceExterne } : {}),
-    })
-    .eq('id', paymentId)
-    .eq('user_id', userId)
-    .select(`
-      *,
-      profiles(nom, prenom, email, telephone),
-      reservations(date_debut, date_fin, espaces(nom, type)),
-      abonnements(type, date_debut, date_fin)
-    `)
-    .single();
-
-  if (error) throw error;
-
-  if (isEmailConfigured()) {
-    try {
-      const pdfBuffer = await generateReceiptPDF(updatedPayment, {
-        coworkingName: process.env.COWORKING_NAME || 'Thirty Three Space',
-        coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
-        coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
-        coworkingAdresse: process.env.COWORKING_ADRESSE || 'Tunis, Tunisie',
-      });
-      await sendReceiptEmail(updatedPayment, pdfBuffer, {
-        coworkingName: process.env.COWORKING_NAME || 'Thirty Three Space',
-        coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
-        coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
-      });
-    } catch (emailErr) {
-      console.error('Avertissement : échec envoi email après Flouci:', emailErr.message);
-    }
-  }
-
-  return updatedPayment;
-}
-
-// POST /api/flouci/pay — Générer le lien de paiement Flouci
-app.post('/api/flouci/pay', authenticate, async (req, res) => {
+// POST /api/stripe/pay — Créer une session Stripe Checkout
+app.post('/api/stripe/pay', authenticate, async (req, res) => {
   const { paymentId } = req.body;
   if (!paymentId) return res.status(400).json({ error: 'paymentId requis' });
 
   try {
-    if (!process.env.FLOUCI_APP_TOKEN || !process.env.FLOUCI_APP_SECRET) {
+    if (!isStripeConfigured()) {
       return res.status(503).json({
-        error: 'Flouci non configuré. Ajoutez FLOUCI_APP_TOKEN et FLOUCI_APP_SECRET dans .env.',
+        error: 'Stripe non configuré. Ajoutez STRIPE_SECRET_KEY dans .env.',
       });
     }
 
@@ -2069,46 +2067,25 @@ app.post('/api/flouci/pay', authenticate, async (req, res) => {
     if (error || !payment) return res.status(404).json({ error: 'Paiement introuvable.' });
     if (payment.statut === 'paid') return res.status(400).json({ error: 'Ce paiement est déjà réglé.' });
 
-    const amountInMillimes = Math.round(parseFloat(payment.montant) * 1000);
-    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const session = await createCheckoutSession(payment, req.user.id);
 
-    const payload = {
-      app_token: process.env.FLOUCI_APP_TOKEN,
-      app_secret: process.env.FLOUCI_APP_SECRET,
-      amount: amountInMillimes.toString(),
-      accept_url: `${FRONTEND_URL}/member/payments/verify?paymentId=${paymentId}`,
-      cancel_url: `${FRONTEND_URL}/member/payments`,
-      session_timeout_secs: 1200,
-      success_link: `${FRONTEND_URL}/member/payments/verify?paymentId=${paymentId}`,
-      fail_link: `${FRONTEND_URL}/member/payments`,
-      developer_tracking_id: paymentId,
-    };
-
-    const flouciRes = await axios.post('https://developers.flouci.com/api/generate_payment', payload, {
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    if (flouciRes.data && flouciRes.data.result) {
-      const flouciPaymentId = flouciRes.data.result.payment_id;
-      if (flouciPaymentId) {
-        await supabaseAdmin
-          .from('paiements')
-          .update({ reference_externe: flouciPaymentId })
-          .eq('id', paymentId);
-      }
-      res.json({ link: flouciRes.data.result.link, payment_id: flouciPaymentId });
-    } else {
-      res.status(500).json({ error: 'Erreur inattendue depuis Flouci.' });
+    if (session.id) {
+      await supabaseAdmin
+        .from('paiements')
+        .update({ reference_externe: session.id })
+        .eq('id', paymentId);
     }
+
+    res.json({ link: session.url, session_id: session.id });
   } catch (err) {
-    console.error('Erreur Flouci Pay:', err.message);
-    res.status(500).json({ error: 'Impossible de contacter la passerelle Flouci.' });
+    console.error('Erreur Stripe Pay:', err.message);
+    res.status(500).json({ error: err.message || 'Impossible de contacter Stripe.' });
   }
 });
 
-// POST /api/flouci/verify — Vérifier le statut du paiement Flouci
-app.post('/api/flouci/verify', authenticate, async (req, res) => {
-  const { paymentId, payment_id: flouciPaymentId } = req.body;
+// POST /api/stripe/verify — Vérifier le paiement après retour Stripe Checkout
+app.post('/api/stripe/verify', authenticate, async (req, res) => {
+  const { paymentId, session_id: sessionId } = req.body;
   if (!paymentId) return res.status(400).json({ error: 'paymentId requis' });
 
   try {
@@ -2125,27 +2102,28 @@ app.post('/api/flouci/verify', authenticate, async (req, res) => {
       return res.json({ success: true, payment });
     }
 
-    const txId = flouciPaymentId || payment.reference_externe;
-    if (!txId) {
-      return res.status(400).json({ error: 'Référence transaction Flouci manquante.' });
+    const stripeSessionId = sessionId || payment.reference_externe;
+    if (!stripeSessionId) {
+      return res.status(400).json({ error: 'Référence session Stripe manquante.' });
     }
 
-    const flouciRes = await axios.get(`https://developers.flouci.com/api/verify_payment/${txId}`, {
-      headers: {
-        apppublic: process.env.FLOUCI_APP_TOKEN,
-        appsecret: process.env.FLOUCI_APP_SECRET,
-      },
-    });
+    const session = await retrieveCheckoutSession(stripeSessionId);
+    validateCheckoutSession(session, paymentId, req.user.id);
 
-    if (flouciRes.data?.result?.status === 'SUCCESS') {
-      const updatedPayment = await finalizeOnlinePayment(paymentId, req.user.id, txId);
+    if (isCheckoutSessionPaid(session)) {
+      const updatedPayment = await finalizeOnlinePayment(
+        supabaseAdmin,
+        paymentId,
+        req.user.id,
+        getExternalReference(session)
+      );
       return res.json({ success: true, payment: updatedPayment });
     }
 
-    res.json({ success: false, message: "Le paiement n'a pas été validé par Flouci." });
+    res.json({ success: false, message: "Le paiement n'a pas été validé par Stripe." });
   } catch (err) {
-    console.error('Erreur Flouci Verify:', err.message);
-    res.status(500).json({ error: 'Erreur lors de la vérification Flouci' });
+    console.error('Erreur Stripe Verify:', err.message);
+    res.status(500).json({ error: err.message || 'Erreur lors de la vérification Stripe' });
   }
 });
 

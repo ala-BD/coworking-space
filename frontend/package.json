@@ -13,6 +13,7 @@
     "@popperjs/core": "^2.11.8",
     "@supabase/supabase-js": "^2.110.0",
     "bootstrap": "^5.3.8",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.23.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.7",
