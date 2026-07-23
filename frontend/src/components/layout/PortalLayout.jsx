@@ -4,6 +4,7 @@ import BrandLogo from './BrandLogo';
 import {
   ADMIN_NAV,
   MEMBER_NAV,
+  FORMATEUR_NAV,
   getHomePath,
   getRoleLabel,
   isAdminRole,
@@ -71,9 +72,10 @@ export default function PortalLayout({ children, profile, onLogout }) {
 
   const initials   = `${profile?.prenom?.[0] || ''}${profile?.nom?.[0] || ''}`.toUpperCase() || 'U';
   const adminView  = isAdminRole(profile?.role);
-  const navItems   = adminView ? ADMIN_NAV : MEMBER_NAV;
+  const isTrainer  = profile?.role === 'formateur';
+  const navItems   = adminView ? ADMIN_NAV : (isTrainer ? FORMATEUR_NAV : MEMBER_NAV);
   const homePath   = getHomePath(profile?.role);
-  const portalLabel = adminView ? 'Administration' : 'Espace membre';
+  const portalLabel = adminView ? 'Administration' : (isTrainer ? 'Espace Formateur' : 'Espace membre');
 
   const isNavActive = (to) => {
     if (to === homePath) return location.pathname === to;

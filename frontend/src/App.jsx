@@ -1,46 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import { supabase } from './supabaseClient';
 
-import { RoleGuard, HomeRedirect } from './components/auth/RoleGuard';
+const RoleGuard = lazy(() => import('./components/auth/RoleGuard').then((m) => ({ default: m.RoleGuard })));
+const HomeRedirect = lazy(() => import('./components/auth/RoleGuard').then((m) => ({ default: m.HomeRedirect })));
 
+const Landing = lazy(() => import('./pages/Landing'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminPayments = lazy(() => import('./pages/AdminPayments'));
+const AdminPricing = lazy(() => import('./pages/AdminPricing'));
+const MemberPayments = lazy(() => import('./pages/MemberPayments'));
+const MemberSubscription = lazy(() => import('./pages/MemberSubscription'));
+const StripeVerify = lazy(() => import('./pages/StripeVerify'));
+const AdminCancellationPolicy = lazy(() => import('./pages/AdminCancellationPolicy'));
+const AdminAgenda = lazy(() => import('./pages/AdminAgenda'));
+const BookingStep1 = lazy(() => import('./pages/BookingStep1'));
+const BookingStep2 = lazy(() => import('./pages/BookingStep2'));
+const BookingStep3 = lazy(() => import('./pages/BookingStep3'));
+const QrCodeView = lazy(() => import('./pages/QrCodeView'));
+const AdminFormations = lazy(() => import('./pages/AdminFormations'));
+const AdminFormateurs = lazy(() => import('./pages/AdminFormateurs'));
+const MemberFormations = lazy(() => import('./pages/MemberFormations'));
+const TrainerPlanning = lazy(() => import('./pages/TrainerPlanning'));
 
-
-import Landing from './pages/Landing';
-
-import Login from './pages/Login';
-
-import Register from './pages/Register';
-
-import Dashboard from './pages/Dashboard';
-
-import AdminDashboard from './pages/AdminDashboard';
-
-import AdminPayments from './pages/AdminPayments';
-
-import AdminPricing from './pages/AdminPricing';
-
-import MemberPayments from './pages/MemberPayments';
-
-import MemberSubscription from './pages/MemberSubscription';
-
-import StripeVerify from './pages/StripeVerify';
-
-import AdminCancellationPolicy from './pages/AdminCancellationPolicy';
-
-import AdminAgenda from './pages/AdminAgenda';
-
-import BookingStep1 from './pages/BookingStep1';
-
-import BookingStep2 from './pages/BookingStep2';
-
-import BookingStep3 from './pages/BookingStep3';
-
-import QrCodeView from './pages/QrCodeView';
-
-
+function LoadingFallback() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-[#F4F6F9]">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
+    </div>
+  );
+}
 
 export default function App() {
 
@@ -145,13 +139,27 @@ export default function App() {
 
   );
 
+  const TrainerRoute = ({ children }) => (
+
+    <ProtectedRoute>
+
+      <RoleGuard session={session} requireTrainer>
+
+        {children}
+
+      </RoleGuard>
+
+    </ProtectedRoute>
+
+  );
+
 
 
   return (
 
     <Router>
-
-      <Routes>
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
 
         <Route path="/" element={<Landing session={session} />} />
 
@@ -216,6 +224,22 @@ export default function App() {
             <MemberRoute>
 
               <QrCodeView session={session} />
+
+            </MemberRoute>
+
+          }
+
+        />
+
+        <Route
+
+          path="/dashboard/formations"
+
+          element={
+
+            <MemberRoute>
+
+              <MemberFormations session={session} />
 
             </MemberRoute>
 
@@ -355,7 +379,37 @@ export default function App() {
 
         />
 
+        <Route
 
+          path="/admin/formations"
+
+          element={
+
+            <AdminRoute>
+
+              <AdminFormations session={session} />
+
+            </AdminRoute>
+
+          }
+
+        />
+
+        <Route
+
+          path="/admin/formateurs"
+
+          element={
+
+            <AdminRoute>
+
+              <AdminFormateurs session={session} />
+
+            </AdminRoute>
+
+          }
+
+        />
 
         <Route
 
@@ -389,12 +443,28 @@ export default function App() {
 
         />
 
+        <Route
+
+          path="/trainer/planning"
+
+          element={
+
+            <TrainerRoute>
+
+              <TrainerPlanning session={session} />
+
+            </TrainerRoute>
+
+          }
+
+        />
+
 
 
         <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>
-
+      </Suspense>
     </Router>
 
   );

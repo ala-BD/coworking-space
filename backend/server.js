@@ -21,6 +21,7 @@ const {
 const { startPaymentRemindersCron } = require('./cron/paymentReminders');
 const { startReservationRemindersCron } = require('./cron/reservationReminders');
 const { startSubscriptionRemindersCron } = require('./cron/subscriptionReminders');
+const { startFormationRemindersCron } = require('./cron/formationReminders');
 const { initSocket, emitSessionStarted, emitSessionEnded, emitSessionOvertime } = require('./services/socketService');
 const {
   notifyNouveauMembre,
@@ -1785,7 +1786,8 @@ app.get('/api/payments/member/:memberId', authenticate, async (req, res) => {
         *,
         profiles(nom, prenom, email),
         reservations(date_debut, date_fin, espaces(nom, type)),
-        abonnements(type, date_debut, date_fin)
+        abonnements(type, date_debut, date_fin),
+        inscriptions_formations ( formations (id, titre) )
       `)
       .eq('user_id', memberId)
       .order('created_at', { ascending: false });
@@ -2059,7 +2061,7 @@ app.post('/api/stripe/pay', authenticate, async (req, res) => {
 
     const { data: payment, error } = await supabaseAdmin
       .from('paiements')
-      .select('*')
+      .select(`*, inscriptions_formations ( formations (titre) )`)
       .eq('id', paymentId)
       .eq('user_id', req.user.id)
       .single();
@@ -2127,10 +2129,877 @@ app.post('/api/stripe/verify', authenticate, async (req, res) => {
   }
 });
 
+// =========================================================================
+// MODULE D — KPIs & Dashboard Admin (Dev 2 — S4)
+// =========================================================================
+
+// GET /api/admin/kpis — Tous les KPIs du dashboard en un seul appel
+app.get('/api/admin/kpis', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (_req, res) => {
+  try {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    // Début du mois et début de l'année
+    const debutMois = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
+    const debutMoisPrecedent = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString();
+    const finMoisPrecedent = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59).toISOString();
+    const debutAnnee = new Date(today.getFullYear(), 0, 1).toISOString();
+    const debutJour = new Date(today.setHours(0, 0, 0, 0)).toISOString();
+    const finJour = new Date(new Date().setHours(23, 59, 59, 999)).toISOString();
+
+    // ── 1. Membres actifs ──────────────────────────────────────────────
+    const { count: membresActifs } = await supabaseAdmin
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('statut_compte', 'actif')
+      .eq('role', 'member');
+
+    // ── 2. Nouveaux membres ce mois vs mois précédent ──────────────────
+    const { count: nouveauxMoisActuel } = await supabaseAdmin
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'member')
+      .gte('created_at', debutMois);
+
+    const { count: nouveauxMoisPrecedent } = await supabaseAdmin
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'member')
+      .gte('created_at', debutMoisPrecedent)
+      .lte('created_at', finMoisPrecedent);
+
+    const evolutionMembres = nouveauxMoisPrecedent > 0
+      ? Math.round(((nouveauxMoisActuel - nouveauxMoisPrecedent) / nouveauxMoisPrecedent) * 100)
+      : nouveauxMoisActuel > 0 ? 100 : 0;
+
+    // ── 3. Chiffre d'affaires ──────────────────────────────────────────
+    const { data: paieJour } = await supabaseAdmin
+      .from('paiements')
+      .select('montant')
+      .eq('statut', 'paid')
+      .gte('date_paiement', debutJour)
+      .lte('date_paiement', finJour);
+
+    const { data: paieMois } = await supabaseAdmin
+      .from('paiements')
+      .select('montant')
+      .eq('statut', 'paid')
+      .gte('date_paiement', debutMois);
+
+    const { data: paieAnnee } = await supabaseAdmin
+      .from('paiements')
+      .select('montant')
+      .eq('statut', 'paid')
+      .gte('date_paiement', debutAnnee);
+
+    const caJour = (paieJour || []).reduce((s, p) => s + parseFloat(p.montant || 0), 0);
+    const caMois = (paieMois || []).reduce((s, p) => s + parseFloat(p.montant || 0), 0);
+    const caAnnee = (paieAnnee || []).reduce((s, p) => s + parseFloat(p.montant || 0), 0);
+
+    // ── 4. Taux d'occupation des espaces ──────────────────────────────
+    const { data: espaces } = await supabaseAdmin
+      .from('espaces')
+      .select('id, nom, type');
+
+    const { data: reservationsMois } = await supabaseAdmin
+      .from('reservations')
+      .select('espace_id, date_debut, date_fin')
+      .in('statut', ['confirmed', 'pending'])
+      .gte('date_debut', debutMois);
+
+    const periodMs = Date.now() - new Date(debutMois).getTime();
+    const tauxOccupation = (espaces || []).map((espace) => {
+      const resEspace = (reservationsMois || []).filter((r) => r.espace_id === espace.id);
+      const reservedMs = resEspace.reduce((acc, r) => {
+        return acc + (new Date(r.date_fin).getTime() - new Date(r.date_debut).getTime());
+      }, 0);
+      const taux = periodMs > 0 ? Math.min(100, Math.round((reservedMs / periodMs) * 100)) : 0;
+      return { nom: espace.nom, type: espace.type, taux };
+    });
+
+    // ── 5. Sessions en cours (actives) ────────────────────────────────
+    const { data: sessionsActives } = await supabaseAdmin
+      .from('sessions')
+      .select(`
+        id, check_in, temps_restant, statut,
+        reservations (
+          date_debut, date_fin,
+          espaces (nom, type),
+          profiles (nom, prenom)
+        )
+      `)
+      .eq('statut', 'active');
+
+    const sessionsEnCours = (sessionsActives || []).map((s) => ({
+      id: s.id,
+      membre: s.reservations?.profiles
+        ? `${s.reservations.profiles.prenom} ${s.reservations.profiles.nom}`
+        : 'Inconnu',
+      espace: s.reservations?.espaces?.nom || 'Inconnu',
+      check_in: s.check_in,
+      tempsRestant: computeRemainingMinutes(s.reservations?.date_fin),
+      dateFin: s.reservations?.date_fin,
+    }));
+
+    // ── 6. Paiements en attente ────────────────────────────────────────
+    const { data: paiementsEnAttente } = await supabaseAdmin
+      .from('paiements')
+      .select('montant, created_at')
+      .eq('statut', 'pending');
+
+    const montantEnAttente = (paiementsEnAttente || [])
+      .reduce((s, p) => s + parseFloat(p.montant || 0), 0);
+
+    // ── 7. Abonnements expirant dans 7 jours ──────────────────────────
+    const dans7Jours = new Date();
+    dans7Jours.setDate(dans7Jours.getDate() + 7);
+    const dans7JoursStr = dans7Jours.toISOString().split('T')[0];
+
+    const { count: abonnementsExpirant } = await supabaseAdmin
+      .from('abonnements')
+      .select('*', { count: 'exact', head: true })
+      .eq('statut', 'active')
+      .gte('date_fin', todayStr)
+      .lte('date_fin', dans7JoursStr);
+
+    // ── 8. Réservations du jour ───────────────────────────────────────
+    const debutJourStr = new Date().toISOString().split('T')[0] + 'T00:00:00.000Z';
+    const finJourStr = new Date().toISOString().split('T')[0] + 'T23:59:59.999Z';
+
+    const { count: reservationsDuJour } = await supabaseAdmin
+      .from('reservations')
+      .select('*', { count: 'exact', head: true })
+      .in('statut', ['confirmed', 'pending'])
+      .gte('date_debut', debutJourStr)
+      .lte('date_debut', finJourStr);
+
+    // ── 9. Formations du jour ─────────────────────────────────────────
+    let formationsDuJour = 0;
+    try {
+      const { count: fdj } = await supabaseAdmin
+        .from('formations')
+        .select('*', { count: 'exact', head: true })
+        .in('statut', ['planifiee', 'en_cours'])
+        .gte('date_debut', debutJourStr)
+        .lte('date_debut', finJourStr);
+      formationsDuJour = fdj || 0;
+    } catch (_) {
+      // Table formations pas encore créée (Module G)
+      formationsDuJour = 0;
+    }
+
+    // ── 10. Top membres (par CA généré) ──────────────────────────────
+    const { data: topPaiements } = await supabaseAdmin
+      .from('paiements')
+      .select('user_id, montant, profiles(nom, prenom, email)')
+      .eq('statut', 'paid')
+      .gte('date_paiement', debutAnnee);
+
+    const topMembresMap = {};
+    (topPaiements || []).forEach((p) => {
+      if (!p.user_id) return;
+      if (!topMembresMap[p.user_id]) {
+        topMembresMap[p.user_id] = {
+          nom: p.profiles ? `${p.profiles.prenom} ${p.profiles.nom}` : 'Inconnu',
+          email: p.profiles?.email || '',
+          ca: 0,
+        };
+      }
+      topMembresMap[p.user_id].ca += parseFloat(p.montant || 0);
+    });
+
+    const topMembres = Object.values(topMembresMap)
+      .sort((a, b) => b.ca - a.ca)
+      .slice(0, 5);
+
+    res.json({
+      membresActifs: membresActifs || 0,
+      nouveauxMembres: {
+        moisActuel: nouveauxMoisActuel || 0,
+        moisPrecedent: nouveauxMoisPrecedent || 0,
+        evolution: evolutionMembres,
+      },
+      chiffreAffaires: {
+        jour: Math.round(caJour * 100) / 100,
+        mois: Math.round(caMois * 100) / 100,
+        annee: Math.round(caAnnee * 100) / 100,
+      },
+      tauxOccupation,
+      sessionsEnCours,
+      paiementsEnAttente: {
+        count: (paiementsEnAttente || []).length,
+        montantTotal: Math.round(montantEnAttente * 100) / 100,
+      },
+      abonnementsExpirant: abonnementsExpirant || 0,
+      reservationsDuJour: reservationsDuJour || 0,
+      formationsDuJour,
+      topMembres,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('Erreur KPIs:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/kpis/revenue-chart — Évolution CA sur les 6 derniers mois
+app.get('/api/admin/kpis/revenue-chart', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (_req, res) => {
+  try {
+    const months = [];
+    const now = new Date();
+
+    // Construire les 6 derniers mois
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        year: d.getFullYear(),
+        month: d.getMonth(),
+        label: d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
+        debut: new Date(d.getFullYear(), d.getMonth(), 1).toISOString(),
+        fin: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).toISOString(),
+      });
+    }
+
+    // Récupérer tous les paiements paid des 6 derniers mois en une requête
+    const { data: paiements } = await supabaseAdmin
+      .from('paiements')
+      .select('montant, date_paiement')
+      .eq('statut', 'paid')
+      .gte('date_paiement', months[0].debut)
+      .lte('date_paiement', months[months.length - 1].fin);
+
+    // Agréger par mois
+    const chart = months.map((m) => {
+      const moisPaiements = (paiements || []).filter((p) => {
+        if (!p.date_paiement) return false;
+        const d = new Date(p.date_paiement);
+        return d.getFullYear() === m.year && d.getMonth() === m.month;
+      });
+      const ca = moisPaiements.reduce((s, p) => s + parseFloat(p.montant || 0), 0);
+      return {
+        mois: m.label,
+        ca: Math.round(ca * 100) / 100,
+        transactions: moisPaiements.length,
+      };
+    });
+
+    // Récupérer les données d'occupation pour les 6 mois (moyenne mensuelle)
+    const { data: reservationsAll } = await supabaseAdmin
+      .from('reservations')
+      .select('espace_id, date_debut, date_fin, statut')
+      .in('statut', ['confirmed', 'pending'])
+      .gte('date_debut', months[0].debut)
+      .lte('date_debut', months[months.length - 1].fin);
+
+    const { data: espaces } = await supabaseAdmin
+      .from('espaces')
+      .select('id, nom');
+
+    const occupationChart = months.map((m) => {
+      const moisRes = (reservationsAll || []).filter((r) => {
+        const d = new Date(r.date_debut);
+        return d.getFullYear() === m.year && d.getMonth() === m.month;
+      });
+      const periodMs = new Date(m.fin).getTime() - new Date(m.debut).getTime();
+      const tauxMoyen = (espaces || []).length > 0
+        ? Math.round(
+          (espaces || []).reduce((acc, esp) => {
+            const espRes = moisRes.filter((r) => r.espace_id === esp.id);
+            const ms = espRes.reduce((s, r) =>
+              s + (new Date(r.date_fin).getTime() - new Date(r.date_debut).getTime()), 0);
+            return acc + (periodMs > 0 ? Math.min(100, (ms / periodMs) * 100) : 0);
+          }, 0) / (espaces || []).length
+        )
+        : 0;
+
+      return { mois: m.label, taux: tauxMoyen };
+    });
+
+    res.json({ revenueChart: chart, occupationChart });
+  } catch (err) {
+    console.error('Erreur revenue-chart:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =========================================================================
+// MODULE G — FORMATEURS (Dev 2 — S5)
+// =========================================================================
+
+// GET /api/formateurs — Liste tous les formateurs
+app.get('/api/formateurs', authenticate, async (req, res) => {
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+  let query = supabaseAdmin
+    .from('profiles')
+    .select('id, nom, prenom, email, telephone, specialite, biographie, statut_compte, created_at')
+    .eq('role', 'formateur')
+    .order('nom', { ascending: true });
+
+  if (!isStaff) query = query.eq('statut_compte', 'actif');
+
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ formateurs: data });
+});
+
+// GET /api/formateurs/:id — Profil d'un formateur avec ses formations
+app.get('/api/formateurs/:id', authenticate, async (req, res) => {
+  const { data: profile, error: profErr } = await supabaseAdmin
+    .from('profiles')
+    .select('id, nom, prenom, email, telephone, specialite, biographie, statut_compte, created_at')
+    .eq('id', req.params.id)
+    .eq('role', 'formateur')
+    .single();
+
+  if (profErr || !profile) return res.status(404).json({ error: 'Formateur introuvable.' });
+
+  const { data: formations } = await supabaseAdmin
+    .from('formations')
+    .select('id, titre, date_debut, date_fin, statut, capacite_max, prix_inscription')
+    .eq('formateur_id', req.params.id)
+    .order('date_debut', { ascending: false });
+
+  const { data: remuneration } = await supabaseAdmin
+    .from('remuneration_formateurs')
+    .select('id, montant, statut, date_versement, formations(titre)')
+    .eq('formateur_id', req.params.id);
+
+  res.json({ formateur: profile, formations: formations || [], remuneration: remuneration || [] });
+});
+
+// POST /api/formateurs — Créer un profil formateur (admin uniquement)
+app.post('/api/formateurs', authenticate, requireRoles('super_admin', 'admin'), async (req, res) => {
+  const { nom, prenom, email, telephone, specialite, biographie } = req.body;
+  if (!nom || !prenom || !email) {
+    return res.status(400).json({ error: 'nom, prenom et email sont requis.' });
+  }
+
+  const temporaryPassword = crypto.randomUUID().slice(0, 12) + 'Aa1!';
+
+  // Créer l'utilisateur via Supabase Auth
+  const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password: temporaryPassword,
+    email_confirm: true,
+    user_metadata: { nom, prenom, role: 'formateur', telephone: telephone || '' },
+  });
+  if (authErr) return res.status(400).json({ error: authErr.message });
+
+  // Mettre à jour le profil avec les infos formateur
+  const { data: profile, error: profErr } = await supabaseAdmin
+    .from('profiles')
+    .update({ nom, prenom, telephone: telephone || '', specialite: specialite || '', biographie: biographie || '', updated_at: new Date().toISOString() })
+    .eq('id', authData.user.id)
+    .select()
+    .single();
+
+  if (profErr) return res.status(400).json({ error: profErr.message });
+
+  res.status(201).json({ formateur: profile });
+});
+
+// PATCH /api/formateurs/:id — Mettre à jour un formateur
+app.patch('/api/formateurs/:id', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const allowed = ['nom', 'prenom', 'telephone', 'specialite', 'biographie', 'statut_compte'];
+  const updates = { updated_at: new Date().toISOString() };
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) updates[key] = req.body[key];
+  }
+  if (Object.keys(updates).length === 1) return res.status(400).json({ error: 'Aucune mise à jour fournie.' });
+
+  const { data, error } = await supabaseAdmin
+    .from('profiles')
+    .update(updates)
+    .eq('id', req.params.id)
+    .eq('role', 'formateur')
+    .select('id, nom, prenom, email, telephone, specialite, biographie, statut_compte')
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ formateur: data });
+});
+
+// POST /api/formateurs/:id/remuneration — Enregistrer rémunération
+app.post('/api/formateurs/:id/remuneration', authenticate, requireRoles('super_admin', 'admin'), async (req, res) => {
+  const { formation_id, montant, statut, date_versement, note } = req.body;
+  if (!formation_id || montant == null) return res.status(400).json({ error: 'formation_id et montant requis.' });
+
+  const { data, error } = await supabaseAdmin
+    .from('remuneration_formateurs')
+    .upsert({ formateur_id: req.params.id, formation_id, montant: parseFloat(montant), statut: statut || 'en_attente', date_versement: date_versement || null, note: note || null }, { onConflict: 'formateur_id,formation_id' })
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.status(201).json({ remuneration: data });
+});
+
+// =========================================================================
+// MODULE G — FORMATIONS (Dev 2 — S5)
+// =========================================================================
+
+// GET /api/formations — Catalogue des formations (filtrable)
+app.get('/api/formations', authenticate, async (req, res) => {
+  const { statut, formateur_id, from, to } = req.query;
+  let query = supabaseAdmin
+    .from('formations')
+    .select(`
+      *,
+      profiles!formateur_id (id, nom, prenom, specialite),
+      espaces (id, nom, type),
+      inscriptions_formations (count)
+    `)
+    .order('date_debut', { ascending: true });
+
+  if (statut) query = query.eq('statut', statut);
+  if (formateur_id) query = query.eq('formateur_id', formateur_id);
+  if (from) query = query.gte('date_debut', from);
+  if (to) query = query.lte('date_debut', to);
+
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+
+  // Calculer le nombre d'inscrits pour chaque formation
+  const formatted = await Promise.all((data || []).map(async (f) => {
+    const { count } = await supabaseAdmin
+      .from('inscriptions_formations')
+      .select('*', { count: 'exact', head: true })
+      .eq('formation_id', f.id)
+      .neq('statut', 'annulee');
+    return { ...f, nb_inscrits: count || 0, places_restantes: f.capacite_max - (count || 0) };
+  }));
+
+  res.json({ formations: formatted });
+});
+
+// GET /api/formations/:id — Détail d'une formation
+app.get('/api/formations/:id', authenticate, async (req, res) => {
+  const { data, error } = await supabaseAdmin
+    .from('formations')
+    .select(`*, profiles!formateur_id (id, nom, prenom, email, specialite, biographie), espaces (id, nom, type, capacite)`)
+    .eq('id', req.params.id)
+    .single();
+
+  if (error || !data) return res.status(404).json({ error: 'Formation introuvable.' });
+
+  const { data: inscrits, count } = await supabaseAdmin
+    .from('inscriptions_formations')
+    .select('*, profiles!user_id (id, nom, prenom, email, telephone)', { count: 'exact' })
+    .eq('formation_id', req.params.id)
+    .neq('statut', 'annulee');
+
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+  const isFormateur = req.profile.role === 'formateur' && data.formateur_id === req.user.id;
+
+  res.json({
+    formation: { ...data, nb_inscrits: count || 0, places_restantes: data.capacite_max - (count || 0) },
+    participants: (isStaff || isFormateur) ? (inscrits || []) : [],
+  });
+});
+
+// POST /api/formations — Créer une formation (admin/staff/formateur)
+app.post('/api/formations', authenticate, requireRoles('super_admin', 'admin', 'staff', 'formateur'), async (req, res) => {
+  const { titre, description, formateur_id, espace_id, date_debut, date_fin, capacite_max, prix_inscription, programme, prerequis, materiel } = req.body;
+
+  if (!titre || !formateur_id || !date_debut || !date_fin || !capacite_max) {
+    return res.status(400).json({ error: 'titre, formateur_id, date_debut, date_fin et capacite_max sont requis.' });
+  }
+  if (new Date(date_debut) >= new Date(date_fin)) {
+    return res.status(400).json({ error: 'date_fin doit être postérieure à date_debut.' });
+  }
+
+  // Vérifier que le formateur existe
+  const { data: formateur, error: fErr } = await supabaseAdmin
+    .from('profiles').select('id').eq('id', formateur_id).eq('role', 'formateur').single();
+  if (fErr || !formateur) return res.status(404).json({ error: 'Formateur introuvable.' });
+
+  // Vérifier disponibilité de la salle si fournie
+  if (espace_id) {
+    const overlap = await hasBookingOverlap(espace_id, date_debut, date_fin);
+    if (overlap) return res.status(409).json({ error: 'La salle est déjà réservée sur ce créneau.' });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('formations')
+    .insert({ titre, description: description || null, formateur_id, espace_id: espace_id || null, date_debut, date_fin, capacite_max: parseInt(capacite_max), prix_inscription: parseFloat(prix_inscription || 0), programme: programme || null, prerequis: prerequis || null, materiel: materiel || null, statut: 'planifiee' })
+    .select(`*, profiles!formateur_id (id, nom, prenom), espaces (id, nom, type)`)
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.status(201).json({ formation: data });
+});
+
+// PATCH /api/formations/:id — Modifier une formation
+app.patch('/api/formations/:id', authenticate, async (req, res) => {
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+  const { data: existing, error: fetchErr } = await supabaseAdmin
+    .from('formations').select('*').eq('id', req.params.id).single();
+  if (fetchErr || !existing) return res.status(404).json({ error: 'Formation introuvable.' });
+
+  const isFormateur = req.profile.role === 'formateur' && existing.formateur_id === req.user.id;
+  if (!isStaff && !isFormateur) return res.status(403).json({ error: 'Droits insuffisants.' });
+
+  const allowed = ['titre', 'description', 'espace_id', 'date_debut', 'date_fin', 'capacite_max', 'prix_inscription', 'statut', 'programme', 'prerequis', 'materiel'];
+  const updates = { updated_at: new Date().toISOString() };
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) updates[key] = req.body[key];
+  }
+
+  if (updates.date_debut || updates.date_fin) {
+    const debut = updates.date_debut || existing.date_debut;
+    const fin = updates.date_fin || existing.date_fin;
+    if (new Date(debut) >= new Date(fin)) return res.status(400).json({ error: 'date_fin doit être postérieure à date_debut.' });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('formations').update(updates).eq('id', req.params.id)
+    .select(`*, profiles!formateur_id (id, nom, prenom), espaces (id, nom, type)`).single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ formation: data });
+});
+
+// DELETE /api/formations/:id — Annuler/supprimer une formation
+app.delete('/api/formations/:id', authenticate, requireRoles('super_admin', 'admin'), async (req, res) => {
+  const { data: formation, error: fetchErr } = await supabaseAdmin
+    .from('formations').select('id, statut, titre').eq('id', req.params.id).single();
+  if (fetchErr || !formation) return res.status(404).json({ error: 'Formation introuvable.' });
+
+  // Annuler plutôt que supprimer si des inscrits existent
+  const { count } = await supabaseAdmin
+    .from('inscriptions_formations').select('*', { count: 'exact', head: true })
+    .eq('formation_id', req.params.id).neq('statut', 'annulee');
+
+  if ((count || 0) > 0) {
+    const { error } = await supabaseAdmin
+      .from('formations').update({ statut: 'annulee', updated_at: new Date().toISOString() }).eq('id', req.params.id);
+    if (error) return res.status(400).json({ error: error.message });
+    return res.json({ message: `Formation "${formation.titre}" marquée comme annulée (${count} inscrit(s) notifié(s)).` });
+  }
+
+  const { error } = await supabaseAdmin.from('formations').delete().eq('id', req.params.id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: 'Formation supprimée.' });
+});
+
+// =========================================================================
+// MODULE G — INSCRIPTIONS (Dev 2 — S5)
+// =========================================================================
+
+// POST /api/formations/:id/inscriptions — S'inscrire à une formation
+app.post('/api/formations/:id/inscriptions', authenticate, async (req, res) => {
+  const formationId = req.params.id;
+
+  const { data: formation, error: fErr } = await supabaseAdmin
+    .from('formations').select('*').eq('id', formationId).single();
+  if (fErr || !formation) return res.status(404).json({ error: 'Formation introuvable.' });
+  if (formation.statut === 'annulee') return res.status(400).json({ error: 'Cette formation est annulée.' });
+  if (formation.statut === 'terminee') return res.status(400).json({ error: 'Cette formation est terminée.' });
+
+  // Vérifier inscription existante
+  const { data: existing } = await supabaseAdmin
+    .from('inscriptions_formations').select('id, statut').eq('formation_id', formationId).eq('user_id', req.user.id).maybeSingle();
+
+  if (existing && existing.statut !== 'annulee') {
+    return res.status(409).json({ error: 'Vous êtes déjà inscrit à cette formation.' });
+  }
+
+  // Vérifier places disponibles
+  const { count: nbInscrits } = await supabaseAdmin
+    .from('inscriptions_formations').select('*', { count: 'exact', head: true })
+    .eq('formation_id', formationId).neq('statut', 'annulee');
+
+  const placesRestantes = formation.capacite_max - (nbInscrits || 0);
+
+  if (placesRestantes <= 0) {
+    // Ajouter en liste d'attente
+    const { data: attente, error: atErr } = await supabaseAdmin
+      .from('inscriptions_formations')
+      .upsert({ formation_id: formationId, user_id: req.user.id, statut: 'en_attente', statut_paiement: formation.prix_inscription > 0 ? 'en_attente' : 'gratuit', updated_at: new Date().toISOString() }, { onConflict: 'formation_id,user_id' })
+      .select().single();
+    if (atErr) return res.status(400).json({ error: atErr.message });
+    return res.status(201).json({ inscription: attente, message: 'Formation complète — ajouté en liste d\'attente.', liste_attente: true });
+  }
+
+  // Inscription confirmée
+  const { data: inscription, error: insErr } = await supabaseAdmin
+    .from('inscriptions_formations')
+    .upsert({ formation_id: formationId, user_id: req.user.id, statut: 'confirmee', statut_paiement: formation.prix_inscription > 0 ? 'en_attente' : 'gratuit', updated_at: new Date().toISOString() }, { onConflict: 'formation_id,user_id' })
+    .select().single();
+
+  if (insErr) return res.status(400).json({ error: insErr.message });
+
+  // Créer un paiement associé si la formation est payante
+  if (formation.prix_inscription > 0 && !inscription.paiement_id) {
+    const { data: payment, error: payErr } = await supabaseAdmin
+      .from('paiements')
+      .insert({
+        user_id: req.user.id,
+        reservation_id: null,
+        abonnement_id: null,
+        montant: parseFloat(formation.prix_inscription),
+        mode: 'online',
+        statut: 'pending',
+        date_paiement: null,
+      })
+      .select()
+      .single();
+
+    if (payErr) {
+      console.error('Erreur création paiement formation:', payErr.message);
+      return res.status(500).json({ error: 'Impossible de créer le paiement associé à l\'inscription.' });
+    }
+
+    await supabaseAdmin
+      .from('inscriptions_formations')
+      .update({ paiement_id: payment.id })
+      .eq('id', inscription.id);
+
+    inscription.paiement_id = payment.id;
+  }
+
+  // Notification Module F
+  try {
+    const { notifyInscriptionFormation } = require('./services/notificationService');
+    await notifyInscriptionFormation(supabaseAdmin,
+      { id: formationId, titre: formation.titre, date_debut: formation.date_debut, date_fin: formation.date_fin },
+      { id: req.user.id, nom: req.profile.nom, prenom: req.profile.prenom, email: req.user.email }
+    );
+  } catch (notifErr) { console.warn('⚠️  Notif inscription formation:', notifErr.message); }
+
+  res.status(201).json({ inscription, message: 'Inscription confirmée.', places_restantes: placesRestantes - 1 });
+});
+
+// POST /api/formations/:id/inscriptions/payment — Créer un paiement manquant pour une inscription
+app.post('/api/formations/:id/inscriptions/payment', authenticate, async (req, res) => {
+  const formationId = req.params.id;
+  console.log('POST /api/formations/:id/inscriptions/payment', { formationId, userId: req.user.id });
+
+  try {
+    const { data: inscription, error: insErr } = await supabaseAdmin
+      .from('inscriptions_formations')
+      .select('*')
+      .eq('formation_id', formationId)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (insErr || !inscription) return res.status(404).json({ error: 'Inscription introuvable.' });
+    if (inscription.statut !== 'confirmee') {
+      return res.status(400).json({ error: 'Paiement possible uniquement pour une inscription confirmée.' });
+    }
+
+    const { data: formation, error: formationErr } = await supabaseAdmin
+      .from('formations')
+      .select('id, titre, prix_inscription')
+      .eq('id', formationId)
+      .single();
+
+    if (formationErr || !formation) {
+      console.error('Erreur récupération formation liée', formationErr);
+      return res.status(500).json({ error: 'Impossible de récupérer la formation liée.' });
+    }
+    if (parseFloat(formation.prix_inscription) <= 0) {
+      return res.status(400).json({ error: 'Cette formation est gratuite, aucun paiement requis.' });
+    }
+
+    if (inscription.paiement_id) {
+      const { data: existingPayment, error: payErr } = await supabaseAdmin
+        .from('paiements')
+        .select('*')
+        .eq('id', inscription.paiement_id)
+        .single();
+      if (payErr || !existingPayment) {
+        return res.status(500).json({ error: 'Impossible de retrouver le paiement existant.' });
+      }
+      return res.json({ payment: existingPayment });
+    }
+
+    const { data: payment, error: payErr } = await supabaseAdmin
+      .from('paiements')
+      .insert({
+        user_id: req.user.id,
+        reservation_id: null,
+        abonnement_id: null,
+        montant: parseFloat(formation.prix_inscription),
+        mode: 'online',
+        statut: 'pending',
+        date_paiement: null,
+      })
+      .select()
+      .single();
+
+    if (payErr) {
+      console.error('Erreur création paiement formation à la demande :', payErr);
+      return res.status(500).json({ error: payErr.message || 'Impossible de créer le paiement.' });
+    }
+
+    const { error: updErr } = await supabaseAdmin
+      .from('inscriptions_formations')
+      .update({ paiement_id: payment.id })
+      .eq('id', inscription.id);
+
+    if (updErr) {
+      console.error('Erreur mise à jour inscription paiement_id :', updErr.message, updErr);
+    }
+
+    res.status(201).json({ payment });
+  } catch (err) {
+    console.error('Erreur route /inscriptions/payment :', err);
+    res.status(500).json({ error: 'Erreur serveur lors de la création du paiement.' });
+  }
+});
+
+// DELETE /api/formations/:id/inscriptions — Annuler son inscription
+app.delete('/api/formations/:id/inscriptions', authenticate, async (req, res) => {
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+  const targetUserId = (isStaff && req.body.user_id) ? req.body.user_id : req.user.id;
+
+  const { data: inscription, error: fetchErr } = await supabaseAdmin
+    .from('inscriptions_formations').select('*').eq('formation_id', req.params.id).eq('user_id', targetUserId).single();
+  if (fetchErr || !inscription) return res.status(404).json({ error: 'Inscription introuvable.' });
+
+  const { error } = await supabaseAdmin
+    .from('inscriptions_formations')
+    .update({ statut: 'annulee', updated_at: new Date().toISOString() })
+    .eq('id', inscription.id);
+  if (error) return res.status(400).json({ error: error.message });
+
+  // Promouvoir premier en liste d'attente
+  const { data: premier } = await supabaseAdmin
+    .from('inscriptions_formations').select('*').eq('formation_id', req.params.id).eq('statut', 'en_attente').order('created_at', { ascending: true }).limit(1).maybeSingle();
+  if (premier) {
+    const { data: payment, error: payErr } = await supabaseAdmin
+      .from('formations')
+      .select('prix_inscription')
+      .eq('id', req.params.id)
+      .single();
+
+    const updates = { statut: 'confirmee', updated_at: new Date().toISOString() };
+
+    if (payment?.prix_inscription > 0 && !premier.paiement_id) {
+      const { data: newPayment, error: payInsertErr } = await supabaseAdmin
+        .from('paiements')
+        .insert({
+          user_id: premier.user_id,
+          reservation_id: null,
+          abonnement_id: null,
+          montant: parseFloat(payment.prix_inscription),
+          mode: 'online',
+          statut: 'pending',
+          date_paiement: null,
+        })
+        .select()
+        .single();
+
+      if (payInsertErr) {
+        console.error('Erreur création paiement promotion liste d\'attente :', payInsertErr.message);
+      } else {
+        updates.paiement_id = newPayment.id;
+      }
+    }
+
+    await supabaseAdmin.from('inscriptions_formations')
+      .update(updates).eq('id', premier.id);
+  }
+
+  res.json({ message: 'Inscription annulée.', promoted: !!premier });
+});
+
+// GET /api/formations/:id/inscriptions — Liste participants (admin/formateur)
+app.get('/api/formations/:id/inscriptions', authenticate, async (req, res) => {
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+  const { data: formation } = await supabaseAdmin.from('formations').select('formateur_id').eq('id', req.params.id).single();
+  const isFormateur = req.profile.role === 'formateur' && formation?.formateur_id === req.user.id;
+  if (!isStaff && !isFormateur) return res.status(403).json({ error: 'Accès réservé à l\'admin ou au formateur.' });
+
+  const { data, error } = await supabaseAdmin
+    .from('inscriptions_formations')
+    .select('*, profiles!user_id (id, nom, prenom, email, telephone, type_membre)')
+    .eq('formation_id', req.params.id)
+    .order('created_at', { ascending: true });
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  const confirmes = (data || []).filter(i => i.statut === 'confirmee');
+  const attente = (data || []).filter(i => i.statut === 'en_attente');
+
+  res.json({ participants: confirmes, liste_attente: attente, total: data.length });
+});
+
+// PATCH /api/formations/:id/inscriptions/:userId/presence — Marquer présence
+app.patch('/api/formations/:id/inscriptions/:userId/presence', authenticate, async (req, res) => {
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+  const { data: formation } = await supabaseAdmin.from('formations').select('formateur_id').eq('id', req.params.id).single();
+  const isFormateur = req.profile.role === 'formateur' && formation?.formateur_id === req.user.id;
+  if (!isStaff && !isFormateur) return res.status(403).json({ error: 'Droits insuffisants.' });
+
+  const { data, error } = await supabaseAdmin
+    .from('inscriptions_formations')
+    .update({ present: req.body.present !== false, updated_at: new Date().toISOString() })
+    .eq('formation_id', req.params.id)
+    .eq('user_id', req.params.userId)
+    .select().single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ inscription: data });
+});
+
+// GET /api/formations/:id/emargement — Export liste d'émargement JSON
+app.get('/api/formations/:id/emargement', authenticate, async (req, res) => {
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+  const { data: formation } = await supabaseAdmin
+    .from('formations')
+    .select('*, profiles!formateur_id (nom, prenom), espaces (nom)')
+    .eq('id', req.params.id).single();
+  if (!formation) return res.status(404).json({ error: 'Formation introuvable.' });
+
+  const isFormateur = req.profile.role === 'formateur' && formation.formateur_id === req.user.id;
+  if (!isStaff && !isFormateur) return res.status(403).json({ error: 'Droits insuffisants.' });
+
+  const { data: inscrits } = await supabaseAdmin
+    .from('inscriptions_formations')
+    .select('*, profiles!user_id (nom, prenom, email, telephone)')
+    .eq('formation_id', req.params.id)
+    .eq('statut', 'confirmee')
+    .order('created_at', { ascending: true });
+
+  res.json({
+    formation: {
+      titre: formation.titre,
+      date: new Date(formation.date_debut).toLocaleDateString('fr-FR'),
+      horaire: `${new Date(formation.date_debut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} – ${new Date(formation.date_fin).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`,
+      formateur: formation.profiles ? `${formation.profiles.prenom} ${formation.profiles.nom}` : '—',
+      salle: formation.espaces?.nom || '—',
+    },
+    participants: (inscrits || []).map((i, idx) => ({
+      numero: idx + 1,
+      nom: i.profiles?.nom || '—',
+      prenom: i.profiles?.prenom || '—',
+      email: i.profiles?.email || '—',
+      telephone: i.profiles?.telephone || '—',
+      present: i.present,
+      statut_paiement: i.statut_paiement,
+    })),
+  });
+});
+
+// GET /api/members/me/formations — Formations auxquelles le membre est inscrit
+app.get('/api/members/me/formations', authenticate, async (req, res) => {
+  const { data, error } = await supabaseAdmin
+    .from('inscriptions_formations')
+    .select('*, formations (id, titre, date_debut, date_fin, statut, prix_inscription, profiles!formateur_id (nom, prenom))')
+    .eq('user_id', req.user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ inscriptions: data });
+});
+
 // Démarrage des tâches planifiées (Cron)
 startPaymentRemindersCron(supabaseAdmin);
 startReservationRemindersCron(supabaseAdmin);
 startSubscriptionRemindersCron(supabaseAdmin);
+startFormationRemindersCron(supabaseAdmin);
 
 // Socket.io (Module B+ — Sessions temps réel)
 const http = require('http');

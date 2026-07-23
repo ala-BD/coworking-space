@@ -132,6 +132,14 @@ function generateEmailFromType(type, data, config) {
       break;
 
     // ────────────────────────────────────────────────────────────────────
+    // 1b. Nouveau formateur
+    // ────────────────────────────────────────────────────────────────────
+    case 'nouveau_formateur':
+      html = templates.templateNouveauFormateur(data.formateur, config);
+      autoSubject = `✨ Votre compte formateur est prêt chez ${config.coworkingName}`;
+      break;
+
+    // ────────────────────────────────────────────────────────────────────
     // 2. Confirmation réservation
     // ────────────────────────────────────────────────────────────────────
     case 'confirmation_reservation':
@@ -271,6 +279,15 @@ async function notifyNouveauMembre(supabase, membre) {
     email: membre.email,
     userId: membre.id,
     data: { membre },
+  });
+}
+
+async function notifyNouveauFormateur(supabase, formateur) {
+  return sendNotification(supabase, {
+    type: 'nouveau_formateur',
+    email: formateur.email,
+    userId: formateur.id,
+    data: { formateur },
   });
 }
 
@@ -465,5 +482,6 @@ module.exports = {
   notifyAnnulationReservation,
   notifyInscriptionFormation,
   notifyRappelFormationJ1,
+  notifyNouveauFormateur,
   notifyNouveauMessagePortail,
 };

@@ -31,6 +31,11 @@ async function createCheckoutSession(payment, userId) {
   const ref = payment.numero_recu || paymentId.slice(0, 8);
   const frontendUrl = getFrontendUrl();
   const currency = (process.env.STRIPE_CURRENCY || 'usd').toLowerCase();
+  const formationTitre = payment.inscriptions_formations?.[0]?.formations?.titre;
+  const productName = formationTitre ? `Formation : ${formationTitre}` : `Paiement ${ref}`;
+  const productDescription = formationTitre
+    ? `Inscription à la formation « ${formationTitre} »`
+    : process.env.COWORKING_NAME || 'Coworking Space';
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
@@ -38,8 +43,8 @@ async function createCheckoutSession(payment, userId) {
       price_data: {
         currency,
         product_data: {
-          name: `Paiement ${ref}`,
-          description: process.env.COWORKING_NAME || 'Coworking Space',
+          name: productName,
+          description: productDescription,
         },
         unit_amount: toStripeAmount(payment.montant),
       },

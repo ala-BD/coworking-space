@@ -121,9 +121,10 @@ export default function MemberPayments({ session }) {
                     </div>
                   </div>
                   <p className="text-sm text-on-surface mb-4">
+                    {p.inscriptions_formations?.[0]?.formations?.titre ? `Formation : ${p.inscriptions_formations[0].formations.titre}` : ''}
                     {p.reservations ? `Réservation Espace : ${p.reservations.espaces?.nom || '—'}` : ''}
                     {p.abonnements ? `Abonnement : ${p.abonnements.type}` : ''}
-                    {!p.reservations && !p.abonnements ? 'Frais divers' : ''}
+                    {!p.inscriptions_formations?.[0]?.formations?.titre && !p.reservations && !p.abonnements ? 'Frais divers' : ''}
                   </p>
                 </div>
                 
