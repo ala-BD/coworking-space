@@ -122,30 +122,32 @@ function applyPromoDiscount(prix, promo) {
   return { prixFinal: Math.max(0, prix - reduction), reduction };
 }
 
-async function findActiveTarif(typeAbonnement, planTarifaire) {
+async function findActiveTarif(typeAbonnement, planTarifaire, tenantId) {
   const today = todayISO();
-  const { data, error } = await supabaseAdmin
+  let q = supabaseAdmin
     .from('tarifs_abonnements')
     .select('*')
     .eq('type_abonnement', typeAbonnement)
     .eq('plan_tarifaire', planTarifaire)
     .eq('actif', true)
-    .lte('date_debut', today)
-    .order('date_debut', { ascending: false });
+    .lte('date_debut', today);
+  if (tenantId) q = q.eq('tenant_id', tenantId);
+  const { data, error } = await q.order('date_debut', { ascending: false });
 
   if (error) throw error;
   const tarif = (data || []).find((t) => !t.date_fin || t.date_fin >= today);
   return tarif || null;
 }
 
-async function findValidPromoCode(code) {
+async function findValidPromoCode(code, tenantId) {
   const today = todayISO();
-  const { data, error } = await supabaseAdmin
+  let q = supabaseAdmin
     .from('codes_promo')
     .select('*')
     .eq('code', code.toUpperCase())
-    .eq('actif', true)
-    .single();
+    .eq('actif', true);
+  if (tenantId) q = q.eq('tenant_id', tenantId);
+  const { data, error } = await q.single();
 
   if (error || !data) return null;
   if (!isDateInRange(today, data.date_debut, data.date_fin)) return null;
@@ -161,11 +163,12 @@ function sanitizeProfileForClient(profile, isStaff) {
   return copy;
 }
 
-async function getCancellationPolicy() {
-  const { data } = await supabaseAdmin
+async function getCancellationPolicy(tenantId) {
+  let q = supabaseAdmin
     .from('politique_annulation')
-    .select('*')
-    .order('updated_at', { ascending: false })
+    .select('*');
+  if (tenantId) q = q.eq('tenant_id', tenantId);
+  const { data } = await q.order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -835,11 +838,11 @@ app.post('/api/subscriptions', authenticate, requireRoles('super_admin', 'admin'
   let promoInfo = null;
 
   try {
-    const tarif = await findActiveTarif(type, plan);
+    const tarif = await findActiveTarif(type, plan, req.tenantId);
     if (tarif) {
       tarifInfo = tarif;
       if (code_promo) {
-        promoInfo = await findValidPromoCode(code_promo);
+        promoInfo = await findValidPromoCode(code_promo, req.tenantId);
         if (!promoInfo) {
           return res.status(400).json({ error: 'Code promo invalide ou expiré.' });
         }
@@ -944,9 +947,9 @@ app.post('/api/subscriptions/self', authenticate, async (req, res) => {
   let promoInfo = null;
 
   try {
-    tarifInfo = await findActiveTarif(type, plan);
+    tarifInfo = await findActiveTarif(type, plan, req.tenantId);
     if (code_promo && tarifInfo) {
-      promoInfo = await findValidPromoCode(code_promo);
+      promoInfo = await findValidPromoCode(code_promo, req.tenantId);
       if (!promoInfo) {
         return res.status(400).json({ error: 'Code promo invalide ou expiré.' });
       }
@@ -1045,11 +1048,13 @@ app.patch('/api/subscriptions/:id', authenticate, requireRoles('super_admin', 'a
   res.json({ subscription: data });
 });
 
-app.get('/api/subscriptions', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (_req, res) => {
-  const { data, error } = await supabaseAdmin
+app.get('/api/subscriptions', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  let query = supabaseAdmin
     .from('abonnements')
     .select('*, profiles(nom, prenom, email)')
     .order('created_at', { ascending: false });
+  query = applyTenantFilter(query, req);
+  const { data, error } = await query;
 
   if (error) {
     return res.status(500).json({ error: error.message });
@@ -1068,12 +1073,14 @@ app.get('/api/pricing', authenticate, async (req, res) => {
     || 'standard';
   const today = todayISO();
 
-  const { data, error } = await supabaseAdmin
+  let q = supabaseAdmin
     .from('tarifs_abonnements')
     .select('*')
     .eq('plan_tarifaire', plan)
     .eq('actif', true)
-    .lte('date_debut', today)
+    .lte('date_debut', today);
+  if (req.tenantId) q = q.eq('tenant_id', req.tenantId);
+  const { data, error } = await q
     .order('type_abonnement', { ascending: true });
 
   if (error) {
@@ -1091,11 +1098,13 @@ app.get('/api/pricing', authenticate, async (req, res) => {
   });
 });
 
-app.get('/api/pricing/all', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (_req, res) => {
-  const { data, error } = await supabaseAdmin
+app.get('/api/pricing/all', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  let query = supabaseAdmin
     .from('tarifs_abonnements')
     .select('*')
     .order('type_abonnement', { ascending: true });
+  query = applyTenantFilter(query, req);
+  const { data, error } = await query;
 
   if (error) return res.status(500).json({ error: error.message });
   res.json({ tarifs: data });
@@ -1111,6 +1120,7 @@ app.post('/api/pricing', authenticate, requireRoles('super_admin', 'admin', 'sta
   const { data, error } = await supabaseAdmin
     .from('tarifs_abonnements')
     .insert({
+      tenant_id: req.tenantId,
       type_abonnement,
       plan_tarifaire,
       prix,
@@ -1160,12 +1170,12 @@ app.post('/api/promo-codes/validate', authenticate, async (req, res) => {
     || 'standard';
 
   try {
-    const promo = await findValidPromoCode(code);
+    const promo = await findValidPromoCode(code, req.tenantId);
     if (!promo) {
       return res.status(404).json({ valid: false, error: 'Code promo invalide ou expiré.' });
     }
 
-    const tarif = await findActiveTarif(type_abonnement, plan);
+    const tarif = await findActiveTarif(type_abonnement, plan, req.tenantId);
     if (!tarif) {
       return res.status(404).json({ valid: false, error: 'Tarif introuvable pour cet abonnement.' });
     }
@@ -1190,11 +1200,13 @@ app.post('/api/promo-codes/validate', authenticate, async (req, res) => {
   }
 });
 
-app.get('/api/promo-codes', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (_req, res) => {
-  const { data, error } = await supabaseAdmin
+app.get('/api/promo-codes', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  let query = supabaseAdmin
     .from('codes_promo')
     .select('*')
     .order('created_at', { ascending: false });
+  query = applyTenantFilter(query, req);
+  const { data, error } = await query;
 
   if (error) return res.status(500).json({ error: error.message });
   res.json({ promoCodes: data });
@@ -1210,6 +1222,7 @@ app.post('/api/promo-codes', authenticate, requireRoles('super_admin', 'admin', 
   const { data, error } = await supabaseAdmin
     .from('codes_promo')
     .insert({
+      tenant_id: req.tenantId,
       code: code.toUpperCase(),
       type_reduction,
       valeur,
@@ -1391,7 +1404,7 @@ app.delete('/api/bookings/:id', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Vous ne pouvez annuler que vos propres réservations.' });
     }
 
-    const policy = await getCancellationPolicy();
+    const policy = await getCancellationPolicy(req.tenantId);
     const cancellation = evaluateCancellation(reservation, policy, isStaff);
     if (!cancellation.allowed) {
       return res.status(403).json({
@@ -1593,7 +1606,7 @@ app.patch('/api/bookings/:id', authenticate, async (req, res) => {
 // =========================================================================
 
 app.get('/api/settings/cancellation-policy', authenticate, async (_req, res) => {
-  const policy = await getCancellationPolicy();
+  const policy = await getCancellationPolicy(req.tenantId);
   res.json({ policy });
 });
 
@@ -1606,7 +1619,7 @@ app.patch('/api/settings/cancellation-policy', authenticate, requireRoles('super
     message_membre,
   } = req.body;
 
-  const current = await getCancellationPolicy();
+  const current = await getCancellationPolicy(req.tenantId);
   const updates = {
     delai_heures: delai_heures ?? current.delai_heures,
     penalite_pct: penalite_pct ?? current.penalite_pct,
@@ -1652,6 +1665,7 @@ app.get('/api/sessions', authenticate, requireRoles('super_admin', 'admin', 'sta
   if (statut) query = query.eq('statut', statut);
   if (from) query = query.gte('created_at', from);
   if (to) query = query.lte('created_at', to);
+  query = applyTenantFilter(query, req);
 
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
@@ -2054,6 +2068,7 @@ app.post('/api/payments', authenticate, requireRoles('super_admin', 'admin', 'st
     mode,
     statut: statut || 'pending',
     date_paiement: date_paiement || null,
+    tenant_id: req.tenantId,
   };
 
   const { data, error } = await supabaseAdmin
@@ -2085,6 +2100,8 @@ app.get('/api/payments', authenticate, requireRoles('super_admin', 'admin', 'sta
       `)
       .order('created_at', { ascending: false })
       .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+
+    query = applyTenantFilter(query, req);
 
     // Filtres optionnels
     if (statut) {
@@ -2168,7 +2185,7 @@ app.get('/api/payments/member/:memberId', authenticate, async (req, res) => {
 // GET /api/payments/pending — Liste des paiements impayés (admin/staff uniquement)
 app.get('/api/payments/pending', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
   try {
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('paiements')
       .select(`
         *,
@@ -2178,6 +2195,8 @@ app.get('/api/payments/pending', authenticate, requireRoles('super_admin', 'admi
       `)
       .eq('statut', 'pending')
       .order('created_at', { ascending: true });
+    query = applyTenantFilter(query, req);
+    const { data, error } = await query;
 
     if (error) {
       return res.status(500).json({ error: error.message });
@@ -2483,10 +2502,11 @@ app.post('/api/stripe/verify', authenticate, async (req, res) => {
 // =========================================================================
 
 // GET /api/admin/kpis — Tous les KPIs du dashboard en un seul appel
-app.get('/api/admin/kpis', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (_req, res) => {
+app.get('/api/admin/kpis', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
   try {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
+    const tid = req.tenantId;
 
     // Début du mois et début de l'année
     const debutMois = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
@@ -2497,64 +2517,61 @@ app.get('/api/admin/kpis', authenticate, requireRoles('super_admin', 'admin', 's
     const finJour = new Date(new Date().setHours(23, 59, 59, 999)).toISOString();
 
     // ── 1. Membres actifs ──────────────────────────────────────────────
-    const { count: membresActifs } = await supabaseAdmin
+    let membQ = supabaseAdmin
       .from('profiles')
       .select('*', { count: 'exact', head: true })
       .eq('statut_compte', 'actif')
       .eq('role', 'member');
+    if (tid) membQ = membQ.eq('tenant_id', tid);
+    const { count: membresActifs } = await membQ;
 
     // ── 2. Nouveaux membres ce mois vs mois précédent ──────────────────
-    const { count: nouveauxMoisActuel } = await supabaseAdmin
+    let nmQ = supabaseAdmin
       .from('profiles')
       .select('*', { count: 'exact', head: true })
       .eq('role', 'member')
       .gte('created_at', debutMois);
+    if (tid) nmQ = nmQ.eq('tenant_id', tid);
+    const { count: nouveauxMoisActuel } = await nmQ;
 
-    const { count: nouveauxMoisPrecedent } = await supabaseAdmin
+    let nmpQ = supabaseAdmin
       .from('profiles')
       .select('*', { count: 'exact', head: true })
       .eq('role', 'member')
       .gte('created_at', debutMoisPrecedent)
       .lte('created_at', finMoisPrecedent);
+    if (tid) nmpQ = nmpQ.eq('tenant_id', tid);
+    const { count: nouveauxMoisPrecedent } = await nmpQ;
 
     const evolutionMembres = nouveauxMoisPrecedent > 0
       ? Math.round(((nouveauxMoisActuel - nouveauxMoisPrecedent) / nouveauxMoisPrecedent) * 100)
       : nouveauxMoisActuel > 0 ? 100 : 0;
 
     // ── 3. Chiffre d'affaires ──────────────────────────────────────────
-    const { data: paieJour } = await supabaseAdmin
-      .from('paiements')
-      .select('montant')
-      .eq('statut', 'paid')
-      .gte('date_paiement', debutJour)
-      .lte('date_paiement', finJour);
+    let pjQ = supabaseAdmin.from('paiements').select('montant').eq('statut', 'paid').gte('date_paiement', debutJour).lte('date_paiement', finJour);
+    if (tid) pjQ = pjQ.eq('tenant_id', tid);
+    const { data: paieJour } = await pjQ;
 
-    const { data: paieMois } = await supabaseAdmin
-      .from('paiements')
-      .select('montant')
-      .eq('statut', 'paid')
-      .gte('date_paiement', debutMois);
+    let pmQ = supabaseAdmin.from('paiements').select('montant').eq('statut', 'paid').gte('date_paiement', debutMois);
+    if (tid) pmQ = pmQ.eq('tenant_id', tid);
+    const { data: paieMois } = await pmQ;
 
-    const { data: paieAnnee } = await supabaseAdmin
-      .from('paiements')
-      .select('montant')
-      .eq('statut', 'paid')
-      .gte('date_paiement', debutAnnee);
+    let paQ = supabaseAdmin.from('paiements').select('montant').eq('statut', 'paid').gte('date_paiement', debutAnnee);
+    if (tid) paQ = paQ.eq('tenant_id', tid);
+    const { data: paieAnnee } = await paQ;
 
     const caJour = (paieJour || []).reduce((s, p) => s + parseFloat(p.montant || 0), 0);
     const caMois = (paieMois || []).reduce((s, p) => s + parseFloat(p.montant || 0), 0);
     const caAnnee = (paieAnnee || []).reduce((s, p) => s + parseFloat(p.montant || 0), 0);
 
     // ── 4. Taux d'occupation des espaces ──────────────────────────────
-    const { data: espaces } = await supabaseAdmin
-      .from('espaces')
-      .select('id, nom, type');
+    let espQ = supabaseAdmin.from('espaces').select('id, nom, type');
+    if (tid) espQ = espQ.eq('tenant_id', tid);
+    const { data: espaces } = await espQ;
 
-    const { data: reservationsMois } = await supabaseAdmin
-      .from('reservations')
-      .select('espace_id, date_debut, date_fin')
-      .in('statut', ['confirmed', 'pending'])
-      .gte('date_debut', debutMois);
+    let resvQ = supabaseAdmin.from('reservations').select('espace_id, date_debut, date_fin').in('statut', ['confirmed', 'pending']).gte('date_debut', debutMois);
+    if (tid) resvQ = resvQ.eq('tenant_id', tid);
+    const { data: reservationsMois } = await resvQ;
 
     const periodMs = Date.now() - new Date(debutMois).getTime();
     const tauxOccupation = (espaces || []).map((espace) => {
@@ -2567,7 +2584,7 @@ app.get('/api/admin/kpis', authenticate, requireRoles('super_admin', 'admin', 's
     });
 
     // ── 5. Sessions en cours (actives) ────────────────────────────────
-    const { data: sessionsActives } = await supabaseAdmin
+    let sessQ = supabaseAdmin
       .from('sessions')
       .select(`
         id, check_in, temps_restant, statut,
@@ -2578,6 +2595,8 @@ app.get('/api/admin/kpis', authenticate, requireRoles('super_admin', 'admin', 's
         )
       `)
       .eq('statut', 'active');
+    if (tid) sessQ = sessQ.eq('tenant_id', tid);
+    const { data: sessionsActives } = await sessQ;
 
     const sessionsEnCours = (sessionsActives || []).map((s) => ({
       id: s.id,
@@ -2591,10 +2610,9 @@ app.get('/api/admin/kpis', authenticate, requireRoles('super_admin', 'admin', 's
     }));
 
     // ── 6. Paiements en attente ────────────────────────────────────────
-    const { data: paiementsEnAttente } = await supabaseAdmin
-      .from('paiements')
-      .select('montant, created_at')
-      .eq('statut', 'pending');
+    let peaQ = supabaseAdmin.from('paiements').select('montant, created_at').eq('statut', 'pending');
+    if (tid) peaQ = peaQ.eq('tenant_id', tid);
+    const { data: paiementsEnAttente } = await peaQ;
 
     const montantEnAttente = (paiementsEnAttente || [])
       .reduce((s, p) => s + parseFloat(p.montant || 0), 0);
@@ -2604,45 +2622,52 @@ app.get('/api/admin/kpis', authenticate, requireRoles('super_admin', 'admin', 's
     dans7Jours.setDate(dans7Jours.getDate() + 7);
     const dans7JoursStr = dans7Jours.toISOString().split('T')[0];
 
-    const { count: abonnementsExpirant } = await supabaseAdmin
+    let abExpQ = supabaseAdmin
       .from('abonnements')
       .select('*', { count: 'exact', head: true })
       .eq('statut', 'active')
       .gte('date_fin', todayStr)
       .lte('date_fin', dans7JoursStr);
+    if (tid) abExpQ = abExpQ.eq('tenant_id', tid);
+    const { count: abonnementsExpirant } = await abExpQ;
 
     // ── 8. Réservations du jour ───────────────────────────────────────
     const debutJourStr = new Date().toISOString().split('T')[0] + 'T00:00:00.000Z';
     const finJourStr = new Date().toISOString().split('T')[0] + 'T23:59:59.999Z';
 
-    const { count: reservationsDuJour } = await supabaseAdmin
+    let resvJQ = supabaseAdmin
       .from('reservations')
       .select('*', { count: 'exact', head: true })
       .in('statut', ['confirmed', 'pending'])
       .gte('date_debut', debutJourStr)
       .lte('date_debut', finJourStr);
+    if (tid) resvJQ = resvJQ.eq('tenant_id', tid);
+    const { count: reservationsDuJour } = await resvJQ;
 
     // ── 9. Formations du jour ─────────────────────────────────────────
     let formationsDuJour = 0;
     try {
-      const { count: fdj } = await supabaseAdmin
+      let fdjQ = supabaseAdmin
         .from('formations')
         .select('*', { count: 'exact', head: true })
         .in('statut', ['planifiee', 'en_cours'])
         .gte('date_debut', debutJourStr)
         .lte('date_debut', finJourStr);
+      if (tid) fdjQ = fdjQ.eq('tenant_id', tid);
+      const { count: fdj } = await fdjQ;
       formationsDuJour = fdj || 0;
     } catch (_) {
-      // Table formations pas encore créée (Module G)
       formationsDuJour = 0;
     }
 
     // ── 10. Top membres (par CA généré) ──────────────────────────────
-    const { data: topPaiements } = await supabaseAdmin
+    let topPQ = supabaseAdmin
       .from('paiements')
       .select('user_id, montant, profiles(nom, prenom, email)')
       .eq('statut', 'paid')
       .gte('date_paiement', debutAnnee);
+    if (tid) topPQ = topPQ.eq('tenant_id', tid);
+    const { data: topPaiements } = await topPQ;
 
     const topMembresMap = {};
     (topPaiements || []).forEach((p) => {
@@ -2692,10 +2717,11 @@ app.get('/api/admin/kpis', authenticate, requireRoles('super_admin', 'admin', 's
 });
 
 // GET /api/admin/kpis/revenue-chart — Évolution CA sur les 6 derniers mois
-app.get('/api/admin/kpis/revenue-chart', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (_req, res) => {
+app.get('/api/admin/kpis/revenue-chart', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
   try {
     const months = [];
     const now = new Date();
+    const tid = req.tenantId;
 
     // Construire les 6 derniers mois
     for (let i = 5; i >= 0; i--) {
@@ -2709,13 +2735,14 @@ app.get('/api/admin/kpis/revenue-chart', authenticate, requireRoles('super_admin
       });
     }
 
-    // Récupérer tous les paiements paid des 6 derniers mois en une requête
-    const { data: paiements } = await supabaseAdmin
+    let paieQ = supabaseAdmin
       .from('paiements')
       .select('montant, date_paiement')
       .eq('statut', 'paid')
       .gte('date_paiement', months[0].debut)
       .lte('date_paiement', months[months.length - 1].fin);
+    if (tid) paieQ = paieQ.eq('tenant_id', tid);
+    const { data: paiements } = await paieQ;
 
     // Agréger par mois
     const chart = months.map((m) => {
@@ -2733,16 +2760,18 @@ app.get('/api/admin/kpis/revenue-chart', authenticate, requireRoles('super_admin
     });
 
     // Récupérer les données d'occupation pour les 6 mois (moyenne mensuelle)
-    const { data: reservationsAll } = await supabaseAdmin
+    let resvAllQ = supabaseAdmin
       .from('reservations')
       .select('espace_id, date_debut, date_fin, statut')
       .in('statut', ['confirmed', 'pending'])
       .gte('date_debut', months[0].debut)
       .lte('date_debut', months[months.length - 1].fin);
+    if (tid) resvAllQ = resvAllQ.eq('tenant_id', tid);
+    const { data: reservationsAll } = await resvAllQ;
 
-    const { data: espaces } = await supabaseAdmin
-      .from('espaces')
-      .select('id, nom');
+    let espChartQ = supabaseAdmin.from('espaces').select('id, nom');
+    if (tid) espChartQ = espChartQ.eq('tenant_id', tid);
+    const { data: espaces } = await espChartQ;
 
     const occupationChart = months.map((m) => {
       const moisRes = (reservationsAll || []).filter((r) => {
@@ -2785,6 +2814,7 @@ app.get('/api/formateurs', authenticate, async (req, res) => {
     .order('nom', { ascending: true });
 
   if (!isStaff) query = query.eq('statut_compte', 'actif');
+  query = applyTenantFilter(query, req);
 
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
@@ -2837,7 +2867,7 @@ app.post('/api/formateurs', authenticate, requireRoles('super_admin', 'admin'), 
   // Mettre à jour le profil avec les infos formateur
   const { data: profile, error: profErr } = await supabaseAdmin
     .from('profiles')
-    .update({ nom, prenom, telephone: telephone || '', specialite: specialite || '', biographie: biographie || '', updated_at: new Date().toISOString() })
+    .update({ nom, prenom, telephone: telephone || '', specialite: specialite || '', biographie: biographie || '', tenant_id: req.tenantId, updated_at: new Date().toISOString() })
     .eq('id', authData.user.id)
     .select()
     .single();
@@ -2904,6 +2934,7 @@ app.get('/api/formations', authenticate, async (req, res) => {
   if (formateur_id) query = query.eq('formateur_id', formateur_id);
   if (from) query = query.gte('date_debut', from);
   if (to) query = query.lte('date_debut', to);
+  query = applyTenantFilter(query, req);
 
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
@@ -2970,7 +3001,7 @@ app.post('/api/formations', authenticate, requireRoles('super_admin', 'admin', '
 
   const { data, error } = await supabaseAdmin
     .from('formations')
-    .insert({ titre, description: description || null, formateur_id, espace_id: espace_id || null, date_debut, date_fin, capacite_max: parseInt(capacite_max), prix_inscription: parseFloat(prix_inscription || 0), programme: programme || null, prerequis: prerequis || null, materiel: materiel || null, statut: 'planifiee' })
+    .insert({ titre, description: description || null, formateur_id, espace_id: espace_id || null, date_debut, date_fin, capacite_max: parseInt(capacite_max), prix_inscription: parseFloat(prix_inscription || 0), programme: programme || null, prerequis: prerequis || null, materiel: materiel || null, statut: 'planifiee', tenant_id: req.tenantId })
     .select(`*, profiles!formateur_id (id, nom, prenom), espaces (id, nom, type)`)
     .single();
 
