@@ -186,7 +186,7 @@ export default function TenantManagement({ session }) {
                   <td className="px-5 py-4"><span className="font-semibold text-primary">{t.space_count || 0}</span></td>
                   <td className="px-5 py-4"><span className="font-semibold text-primary">{parseFloat(t.montant_mensuel || 0).toLocaleString('fr-TN')} DT</span></td>
                   <td className="px-5 py-4 text-right">
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-1">
                       <button onClick={() => openEdit(t)} className="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant" title="Gérer"><span className="material-symbols-outlined" style={{ fontSize: 18 }}>settings</span></button>
                       {t.statut === 'actif' ? (
                         <button onClick={() => handleToggleStatut(t)} className="p-2 rounded-lg hover:bg-[#ff6f591a] text-[#ff6f59]" title="Suspendre"><span className="material-symbols-outlined" style={{ fontSize: 18 }}>block</span></button>
@@ -271,19 +271,32 @@ export default function TenantManagement({ session }) {
         document.body
       )}
 
-      {onboardModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOnboardModal(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-sora text-lg font-bold text-primary mb-1">Onboard Admin</h2>
-            <p className="text-sm text-on-surface-variant mb-4">Inviter un administrateur pour <strong>{onboardModal.nom}</strong></p>
-            <label className="text-xs font-semibold text-on-surface-variant mb-1 block">Email de l'admin</label>
-            <input type="email" value={onboardForm.email} onChange={(e) => setOnboardForm({ ...onboardForm, email: e.target.value })} placeholder="admin@coworking.tn" className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-sm focus:outline-none focus:border-secondary mb-4" />
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setOnboardModal(null)} className="px-4 py-2 rounded-xl text-sm font-semibold border border-outline-variant/30 hover:bg-surface-container-low">Annuler</button>
-              <button onClick={handleOnboard} disabled={!onboardForm.email} className="px-5 py-2 rounded-xl text-sm font-semibold bg-secondary text-white hover:bg-secondary/90 disabled:opacity-50">Envoyer l'invitation</button>
+      {typeof document !== 'undefined' && onboardModal && createPortal(
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.5)' }} onClick={() => setOnboardModal(null)}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 440, padding: 28, boxShadow: '0 25px 50px rgba(0,0,0,0.25)' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 28, color: '#0054cb' }}>person_add</span>
+              <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: 20, fontWeight: 700, color: '#000d23', margin: 0 }}>Onboard Admin</h2>
+            </div>
+            <p style={{ fontSize: 14, color: '#6b6d7b', marginBottom: 20 }}>Inviter un administrateur pour <strong style={{ color: '#000d23' }}>{onboardModal.nom}</strong></p>
+
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#44474d', marginBottom: 4, display: 'block' }}>Email de l'admin</label>
+            <input
+              type="email"
+              value={onboardForm.email}
+              onChange={(e) => setOnboardForm({ ...onboardForm, email: e.target.value })}
+              placeholder="admin@coworking.tn"
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #c5c6ce', fontSize: 14, outline: 'none', background: '#f5f3f6', boxSizing: 'border-box', marginBottom: 8 }}
+            />
+            <p style={{ fontSize: 12, color: '#8b8d97', marginBottom: 20 }}>Un email d'invitation sera envoyé avec les instructions de connexion.</p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <button onClick={() => setOnboardModal(null)} style={{ padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, border: '1px solid #c5c6ce', background: '#fff', cursor: 'pointer' }}>Annuler</button>
+              <button onClick={handleOnboard} disabled={!onboardForm.email} style={{ padding: '10px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600, background: '#0054cb', color: '#fff', border: 'none', cursor: 'pointer', opacity: !onboardForm.email ? 0.5 : 1 }}>Envoyer l'invitation</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </PortalLayout>
   );
