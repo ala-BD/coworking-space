@@ -18,6 +18,7 @@ const MemberPayments = lazy(() => import('./pages/MemberPayments'));
 const MemberSubscription = lazy(() => import('./pages/MemberSubscription'));
 const StripeVerify = lazy(() => import('./pages/StripeVerify'));
 const AdminCancellationPolicy = lazy(() => import('./pages/AdminCancellationPolicy'));
+const AdminMessages = lazy(() => import('./pages/AdminMessages'));
 const AdminAgenda = lazy(() => import('./pages/AdminAgenda'));
 const BookingStep1 = lazy(() => import('./pages/BookingStep1'));
 const BookingStep2 = lazy(() => import('./pages/BookingStep2'));
@@ -26,7 +27,15 @@ const QrCodeView = lazy(() => import('./pages/QrCodeView'));
 const AdminFormations = lazy(() => import('./pages/AdminFormations'));
 const AdminFormateurs = lazy(() => import('./pages/AdminFormateurs'));
 const MemberFormations = lazy(() => import('./pages/MemberFormations'));
+const MemberBookings = lazy(() => import('./pages/MemberBookings'));
+const MemberProfile = lazy(() => import('./pages/MemberProfile'));
+const MemberNotifications = lazy(() => import('./pages/MemberNotifications'));
+const MemberMessages = lazy(() => import('./pages/MemberMessages'));
 const TrainerPlanning = lazy(() => import('./pages/TrainerPlanning'));
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
+const TenantManagement = lazy(() => import('./pages/TenantManagement'));
+const TenantBilling = lazy(() => import('./pages/TenantBilling'));
+const SuperAdminMonitoring = lazy(() => import('./pages/SuperAdminMonitoring'));
 
 function LoadingFallback() {
   return (
@@ -153,6 +162,20 @@ export default function App() {
 
   );
 
+  const SuperAdminRoute = ({ children }) => (
+
+    <ProtectedRoute>
+
+      <RoleGuard session={session} requireAdmin>
+
+        {children}
+
+      </RoleGuard>
+
+    </ProtectedRoute>
+
+  );
+
 
 
   return (
@@ -224,6 +247,70 @@ export default function App() {
             <MemberRoute>
 
               <QrCodeView session={session} />
+
+            </MemberRoute>
+
+          }
+
+        />
+
+        <Route
+
+          path="/dashboard/bookings"
+
+          element={
+
+            <MemberRoute>
+
+              <MemberBookings session={session} />
+
+            </MemberRoute>
+
+          }
+
+        />
+
+        <Route
+
+          path="/dashboard/profile"
+
+          element={
+
+            <MemberRoute>
+
+              <MemberProfile session={session} />
+
+            </MemberRoute>
+
+          }
+
+        />
+
+        <Route
+
+          path="/dashboard/notifications"
+
+          element={
+
+            <MemberRoute>
+
+              <MemberNotifications session={session} />
+
+            </MemberRoute>
+
+          }
+
+        />
+
+        <Route
+
+          path="/dashboard/messages"
+
+          element={
+
+            <MemberRoute>
+
+              <MemberMessages session={session} />
 
             </MemberRoute>
 
@@ -429,6 +516,22 @@ export default function App() {
 
         <Route
 
+          path="/admin/messages"
+
+          element={
+
+            <AdminRoute>
+
+              <AdminMessages session={session} />
+
+            </AdminRoute>
+
+          }
+
+        />
+
+        <Route
+
           path="/admin/agenda"
 
           element={
@@ -454,6 +557,70 @@ export default function App() {
               <TrainerPlanning session={session} />
 
             </TrainerRoute>
+
+          }
+
+        />
+
+        <Route
+
+          path="/super-admin/dashboard"
+
+          element={
+
+            <SuperAdminRoute>
+
+              <SuperAdminDashboard session={session} />
+
+            </SuperAdminRoute>
+
+          }
+
+        />
+
+        <Route
+
+          path="/super-admin/tenants"
+
+          element={
+
+            <SuperAdminRoute>
+
+              <TenantManagement session={session} />
+
+            </SuperAdminRoute>
+
+          }
+
+        />
+
+        <Route
+
+          path="/super-admin/billing"
+
+          element={
+
+            <SuperAdminRoute>
+
+              <TenantBilling session={session} />
+
+            </SuperAdminRoute>
+
+          }
+
+        />
+
+        <Route
+
+          path="/super-admin/monitoring"
+
+          element={
+
+            <SuperAdminRoute>
+
+              <SuperAdminMonitoring session={session} />
+
+            </SuperAdminRoute>
 
           }
 

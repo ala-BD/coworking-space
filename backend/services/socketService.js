@@ -28,6 +28,57 @@ function initSocket(server, supabaseUrl, supabaseServiceKey) {
       console.log(`🏢 Socket ${socket.id} rejoint staff`);
     });
 
+    socket.on('join:conversation', (conversationId) => {
+      if (conversationId) {
+        socket.join(`conv:${conversationId}`);
+        console.log(`💬 Socket ${socket.id} rejoint conv:${conversationId}`);
+      }
+    });
+
+    socket.on('leave:conversation', (conversationId) => {
+      if (conversationId) {
+        socket.leave(`conv:${conversationId}`);
+      }
+    });
+
+    socket.on('message:send', async ({ conversationId, content, senderId }) => {
+      if (!conversationId || !content || !senderId) return;
+
+      const { data: message, error } = await supabaseAdmin
+        .from('messages')
+        .insert({ conversation_id: conversationId, sender_id: senderId, content: content.trim() })
+        .select('*, profiles!sender_id (id, nom, prenom, avatar_url, role)')
+        .single();
+
+      if (error) {
+        socket.emit('message:error', { error: error.message });
+        return;
+      }
+
+      await supabaseAdmin
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
+
+      io.to(`conv:${conversationId}`).emit('message:received', {
+        conversation_id: conversationId,
+        message,
+      });
+
+      const { data: members } = await supabaseAdmin
+        .from('conversation_members')
+        .select('user_id')
+        .eq('conversation_id', conversationId)
+        .neq('user_id', senderId);
+
+      (members || []).forEach(m => {
+        io.to(`user:${m.user_id}`).emit('conversation:update', {
+          conversation_id: conversationId,
+          last_message: { id: message.id, content: message.content, sender_id: senderId, created_at: message.created_at },
+        });
+      });
+    });
+
     socket.on('disconnect', () => {
       console.log(`🔌 Socket déconnecté : ${socket.id}`);
     });
@@ -73,6 +124,14 @@ function emitTimerUpdate(userId, timerData) {
   emitToUser(userId, 'session:timer', timerData);
 }
 
+function emitMessageReceived(conversationId, message) {
+  if (io) io.to(`conv:${conversationId}`).emit('message:received', { conversation_id: conversationId, message });
+}
+
+function emitConversationUpdate(userId, data) {
+  emitToUser(userId, 'conversation:update', data);
+}
+
 module.exports = {
   initSocket,
   getIO,
@@ -83,4 +142,6 @@ module.exports = {
   emitSessionOvertime,
   emitSessionAlert15Min,
   emitTimerUpdate,
+  emitMessageReceived,
+  emitConversationUpdate,
 };

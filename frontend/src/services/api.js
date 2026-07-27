@@ -111,6 +111,8 @@ export const memberApi = {
 export const subscriptionApi = {
   getMine: () => apiFetch('/api/subscriptions/me'),
   getActive: () => apiFetch('/api/subscriptions/me/active'),
+  selfSubscribe: (payload) =>
+    apiFetch('/api/subscriptions/self', { method: 'POST', body: JSON.stringify(payload) }),
 };
 
 export const sessionApi = {
@@ -237,4 +239,55 @@ export const paymentApi = {
       method: 'POST',
       body: JSON.stringify({ paymentId, session_id: sessionId || undefined }),
     }),
+};
+
+// ── MODULE E — Portail Membre ────────────────────────────────────────────
+export const memberPortalApi = {
+  getBookingsHistory: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/api/bookings/history?${qs}`);
+  },
+  getStats: () => apiFetch('/api/member/stats'),
+  getNotifications: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/api/member/notifications?${qs}`);
+  },
+  markNotificationRead: (id) =>
+    apiFetch(`/api/member/notifications/${id}/read`, { method: 'PATCH' }),
+  markAllNotificationsRead: () =>
+    apiFetch('/api/member/notifications/read-all', { method: 'POST' }),
+  updateSettings: (payload) =>
+    apiFetch('/api/members/me/settings', { method: 'PATCH', body: JSON.stringify(payload) }),
+};
+
+// ── Messagerie ──────────────────────────────────────────────────────────
+export const messagingApi = {
+  getConversations: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/api/conversations?${qs}`);
+  },
+  createConversation: (payload) =>
+    apiFetch('/api/conversations', { method: 'POST', body: JSON.stringify(payload) }),
+  getConversation: (id) => apiFetch(`/api/conversations/${id}`),
+  getMessages: (convId, params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/api/conversations/${convId}/messages?${qs}`);
+  },
+  sendMessage: (convId, content) =>
+    apiFetch(`/api/conversations/${convId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    }),
+  markAsRead: (convId) =>
+    apiFetch(`/api/conversations/${convId}/read`, { method: 'PATCH' }),
+  getUnreadCount: () => apiFetch('/api/messages/unread-count'),
+  // Admin
+  getAdminConversations: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/api/admin/conversations?${qs}`);
+  },
+  createAdminConversation: (payload) =>
+    apiFetch('/api/admin/conversations', { method: 'POST', body: JSON.stringify(payload) }),
+  searchMembers: (search) =>
+    apiFetch(`/api/admin/members?search=${encodeURIComponent(search)}`),
 };

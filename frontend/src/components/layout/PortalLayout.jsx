@@ -5,6 +5,7 @@ import {
   ADMIN_NAV,
   MEMBER_NAV,
   FORMATEUR_NAV,
+  SUPER_ADMIN_NAV,
   getHomePath,
   getRoleLabel,
   isAdminRole,
@@ -71,11 +72,12 @@ export default function PortalLayout({ children, profile, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const initials   = `${profile?.prenom?.[0] || ''}${profile?.nom?.[0] || ''}`.toUpperCase() || 'U';
+  const isSuperAdmin = profile?.role === 'super_admin';
   const adminView  = isAdminRole(profile?.role);
   const isTrainer  = profile?.role === 'formateur';
-  const navItems   = adminView ? ADMIN_NAV : (isTrainer ? FORMATEUR_NAV : MEMBER_NAV);
+  const navItems   = isSuperAdmin ? SUPER_ADMIN_NAV : (adminView ? ADMIN_NAV : (isTrainer ? FORMATEUR_NAV : MEMBER_NAV));
   const homePath   = getHomePath(profile?.role);
-  const portalLabel = adminView ? 'Administration' : (isTrainer ? 'Espace Formateur' : 'Espace membre');
+  const portalLabel = isSuperAdmin ? 'VCLOW Platform' : (adminView ? 'Administration' : (isTrainer ? 'Espace Formateur' : 'Espace membre'));
 
   const isNavActive = (to) => {
     if (to === homePath) return location.pathname === to;

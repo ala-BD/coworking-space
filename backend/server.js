@@ -288,6 +288,7 @@ async function authenticate(req, res, next) {
   req.profile = profile;
   req.token = token;
   req.db = getUserClient(token);
+  req.tenantId = profile.tenant_id || null;
   next();
 }
 
@@ -300,15 +301,247 @@ function requireRoles(...roles) {
   };
 }
 
+// =========================================================================
+// MULTI-TENANT MIDDLEWARE (S6 — VCLOW SaaS)
+// =========================================================================
+
+function requireSuperAdmin(req, res, next) {
+  if (req.profile.role !== 'super_admin') {
+    return res.status(403).json({ error: 'Réservé au Super Admin (VCLOW).' });
+  }
+  next();
+}
+
+function applyTenantFilter(query, req, tenantIdField = 'tenant_id') {
+  if (req.profile.role !== 'super_admin' && req.tenantId) {
+    return query.eq(tenantIdField, req.tenantId);
+  }
+  return query;
+}
+
+async function auditLog(supabase, userId, action, targetType, targetId, targetName, details, ipAddress, status = 'success') {
+  try {
+    await supabase.from('super_admin_audit_log').insert({
+      user_id: userId,
+      action,
+      target_type: targetType,
+      target_id: targetId,
+      target_name: targetName,
+      details: details || {},
+      ip_address: ipAddress || null,
+      status,
+    });
+  } catch (err) {
+    console.error('Audit log error:', err.message);
+  }
+}
+
+// =========================================================================
+// SUPER ADMIN — Tenant Management (S6 — VCLOW SaaS)
+// =========================================================================
+
+// GET /api/super-admin/tenants — Liste tous les coworkings
+app.get('/api/super-admin/tenants', authenticate, requireSuperAdmin, async (req, res) => {
+  const { page = 1, limit = 20, statut, search } = req.query;
+  const offset = (parseInt(page) - 1) * parseInt(limit);
+
+  let query = supabaseAdmin
+    .from('tenants')
+    .select('*', { count: 'exact' })
+    .order('created_at', { ascending: false });
+
+  if (statut) query = query.eq('statut', statut);
+  if (search) query = query.or(`nom.ilike.%${search}%,ville.ilike.%${search}%,email.ilike.%${search}%`);
+
+  const { data, error, count } = await query.range(offset, offset + parseInt(limit) - 1);
+  if (error) return res.status(500).json({ error: error.message });
+
+  const enriched = await Promise.all((data || []).map(async (t) => {
+    const { count: memberCount } = await supabaseAdmin
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', t.id)
+      .in('role', ['member', 'guest']);
+
+    const { count: spaceCount } = await supabaseAdmin
+      .from('espaces')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', t.id);
+
+    return { ...t, member_count: memberCount || 0, space_count: spaceCount || 0 };
+  }));
+
+  res.json({ tenants: enriched, pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0 } });
+});
+
+// GET /api/super-admin/tenants/:id — Détail d'un tenant
+app.get('/api/super-admin/tenants/:id', authenticate, requireSuperAdmin, async (req, res) => {
+  const { data: tenant, error } = await supabaseAdmin
+    .from('tenants')
+    .select('*')
+    .eq('id', req.params.id)
+    .single();
+
+  if (error || !tenant) return res.status(404).json({ error: 'Coworking introuvable.' });
+
+  const [{ count: memberCount }, { count: spaceCount }, { count: bookingCount }, { count: subCount }] = await Promise.all([
+    supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).in('role', ['member', 'guest']),
+    supabaseAdmin.from('espaces').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+    supabaseAdmin.from('reservations').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+    supabaseAdmin.from('abonnements').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).eq('statut', 'active'),
+  ]);
+
+  res.json({
+    tenant: {
+      ...tenant,
+      stats: { members: memberCount || 0, spaces: spaceCount || 0, bookings: bookingCount || 0, activeSubscriptions: subCount || 0 },
+    },
+  });
+});
+
+// POST /api/super-admin/tenants — Créer un coworking
+app.post('/api/super-admin/tenants', authenticate, requireSuperAdmin, async (req, res) => {
+  const { nom, slug, description, adresse, ville, pays, email, telephone, site_web, plan, tier, montant_mensuel, limite_membres, limite_espaces } = req.body;
+
+  if (!nom) return res.status(400).json({ error: 'Le nom du coworking est requis.' });
+
+  const tenantSlug = slug || nom.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+  const { data, error } = await supabaseAdmin
+    .from('tenants')
+    .insert({
+      nom,
+      slug: tenantSlug,
+      description: description || null,
+      adresse: adresse || null,
+      ville: ville || null,
+      pays: pays || 'Tunisie',
+      email: email || null,
+      telephone: telephone || null,
+      site_web: site_web || null,
+      plan: plan || 'starter',
+      tier: tier || 'C',
+      montant_mensuel: montant_mensuel || 0,
+      limite_membres: limite_membres || 100,
+      limite_espaces: limite_espaces || 10,
+    })
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+
+  await auditLog(supabaseAdmin, req.user.id, 'tenant_created', 'tenant', data.id, data.nom, { plan: data.plan, tier: data.tier }, req.ip);
+  res.status(201).json({ tenant: data });
+});
+
+// PATCH /api/super-admin/tenants/:id — Modifier un coworking
+app.patch('/api/super-admin/tenants/:id', authenticate, requireSuperAdmin, async (req, res) => {
+  const allowed = ['nom', 'description', 'adresse', 'ville', 'pays', 'email', 'telephone', 'site_web', 'logo_url', 'statut', 'plan', 'tier', 'montant_mensuel', 'derniere_facture', 'prochaine_echeance', 'limite_membres', 'limite_espaces', 'settings'];
+  const updates = { updated_at: new Date().toISOString() };
+
+  for (const field of allowed) {
+    if (req.body[field] !== undefined) updates[field] = req.body[field];
+  }
+
+  if (Object.keys(updates).length === 1) return res.status(400).json({ error: 'Aucune mise à jour fournie.' });
+
+  const { data, error } = await supabaseAdmin
+    .from('tenants')
+    .update(updates)
+    .eq('id', req.params.id)
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+
+  await auditLog(supabaseAdmin, req.user.id, 'tenant_updated', 'tenant', data.id, data.nom, { fields: Object.keys(updates) }, req.ip);
+  res.json({ tenant: data });
+});
+
+// DELETE /api/super-admin/tenants/:id — Supprimer un coworking
+app.delete('/api/super-admin/tenants/:id', authenticate, requireSuperAdmin, async (req, res) => {
+  const { data: tenant, error: fetchErr } = await supabaseAdmin
+    .from('tenants')
+    .select('id, nom')
+    .eq('id', req.params.id)
+    .single();
+
+  if (fetchErr || !tenant) return res.status(404).json({ error: 'Coworking introuvable.' });
+
+  const { error } = await supabaseAdmin.from('tenants').delete().eq('id', req.params.id);
+  if (error) return res.status(400).json({ error: error.message });
+
+  await auditLog(supabaseAdmin, req.user.id, 'tenant_deleted', 'tenant', tenant.id, tenant.nom, {}, req.ip);
+  res.json({ message: `Coworking "${tenant.nom}" supprimé.` });
+});
+
+// POST /api/super-admin/tenants/:id/onboard — Onboard admin pour un coworking
+app.post('/api/super-admin/tenants/:id/onboard', authenticate, requireSuperAdmin, async (req, res) => {
+  const { email, nom, prenom, telephone } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email de l\'admin requis.' });
+
+  const { data: tenant, error: tErr } = await supabaseAdmin.from('tenants').select('*').eq('id', req.params.id).single();
+  if (tErr || !tenant) return res.status(404).json({ error: 'Coworking introuvable.' });
+
+  const { data: authUser, error: authErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+    data: { role: 'admin', tenant_id: tenant.id, nom: nom || tenant.nom, prenom: prenom || 'Admin', telephone: telephone || '' },
+    redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`,
+  });
+
+  if (authErr) return res.status(400).json({ error: authErr.message });
+
+  await supabaseAdmin.from('tenants').update({ contact_admin_id: authUser.user.id }).eq('id', tenant.id);
+  await auditLog(supabaseAdmin, req.user.id, 'tenant_onboarded', 'tenant', tenant.id, tenant.nom, { admin_email: email }, req.ip);
+
+  res.json({ message: `Invitation envoyée à ${email} pour gérer "${tenant.nom}".`, user: { id: authUser.user.id, email } });
+});
+
+// GET /api/super-admin/stats — Statistiques globales
+app.get('/api/super-admin/stats', authenticate, requireSuperAdmin, async (_req, res) => {
+  const [{ count: totalTenants }, { count: activeTenants }, { count: suspendedTenants }, { count: totalMembers }] = await Promise.all([
+    supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }),
+    supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }).eq('statut', 'actif'),
+    supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }).eq('statut', 'suspendu'),
+    supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).in('role', ['member', 'guest']),
+  ]);
+
+  const { data: tenants } = await supabaseAdmin.from('tenants').select('montant_mensuel, statut');
+  const mrr = (tenants || []).filter(t => t.statut === 'actif').reduce((acc, t) => acc + (parseFloat(t.montant_mensuel) || 0), 0);
+
+  res.json({
+    totalTenants: totalTenants || 0,
+    activeTenants: activeTenants || 0,
+    suspendedTenants: suspendedTenants || 0,
+    totalMembers: totalMembers || 0,
+    mrr,
+  });
+});
+
+// GET /api/super-admin/audit — Journal d'audit
+app.get('/api/super-admin/audit', authenticate, requireSuperAdmin, async (req, res) => {
+  const { page = 1, limit = 50 } = req.query;
+  const offset = (parseInt(page) - 1) * parseInt(limit);
+
+  const { data, error, count } = await supabaseAdmin
+    .from('super_admin_audit_log')
+    .select('*, profiles!user_id(nom, prenom)', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + parseInt(limit) - 1);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ logs: data || [], pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0 } });
+});
+
 app.get('/', (_req, res) => {
   res.json({
-    message: 'VC LOW Coworking API — Modules A, B, C',
+    message: 'VC LOW Coworking API — Multi-Tenant SaaS',
     modules: [
       'A — Membres & Abonnements (Dev 1)',
       'B — Réservations & Disponibilité (Dev 1)',
       'C — Paiements & Encaissements (Dev 2)',
+      'S6 — Multi-Tenant (VCLOW Platform)',
     ],
-    version: '1.3.0 (S3 Dev1)',
+    version: '2.0.0 (S6 Multi-Tenant)',
   });
 });
 
@@ -456,16 +689,18 @@ app.patch('/api/members/:id', authenticate, requireRoles('super_admin', 'admin',
   res.json({ profile: data });
 });
 
-app.get('/api/members', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (_req, res) => {
-  const { data, error } = await supabaseAdmin
+app.get('/api/members', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  let query = supabaseAdmin
     .from('profiles')
     .select('*')
     .order('created_at', { ascending: false });
 
+  query = applyTenantFilter(query, req);
+
+  const { data, error } = await query;
   if (error) {
     return res.status(500).json({ error: error.message });
   }
-
   res.json({ members: data });
 });
 
@@ -617,6 +852,7 @@ app.post('/api/subscriptions', authenticate, requireRoles('super_admin', 'admin'
   const { data, error } = await supabaseAdmin
     .from('abonnements')
     .insert({
+      tenant_id: req.tenantId,
       user_id,
       type,
       date_debut,
@@ -661,6 +897,113 @@ app.post('/api/subscriptions', authenticate, requireRoles('super_admin', 'admin'
         .eq('id', promoInfo.id);
     }
   }
+
+  res.status(201).json({ subscription: data, pricing: pricingResult });
+});
+
+// POST /api/subscriptions/self — Le membre souscrit lui-même un abonnement
+app.post('/api/subscriptions/self', authenticate, async (req, res) => {
+  const { type, code_promo, renouvellement_auto } = req.body;
+  const userId = req.user.id;
+
+  if (!type) {
+    return res.status(400).json({ error: 'Le type d\'abonnement est requis.' });
+  }
+
+  if (!SUBSCRIPTION_DURATIONS[type] && type !== 'bureau_prive') {
+    return res.status(400).json({ error: 'Type d\'abonnement invalide.' });
+  }
+
+  // Vérifier si le membre a déjà un abonnement actif
+  const today = todayISO();
+  const { data: existing } = await supabaseAdmin
+    .from('abonnements')
+    .select('id, type, date_fin')
+    .eq('user_id', userId)
+    .eq('statut', 'active')
+    .gte('date_fin', today)
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    return res.status(400).json({ error: 'Vous avez déjà un abonnement actif. Il expire le ' + existing[0].date_fin + '.' });
+  }
+
+  const date_debut = today;
+  let date_fin;
+  if (type === 'bureau_prive') {
+    return res.status(400).json({ error: 'Le bureau privé doit être configuré par un admin.' });
+  }
+  date_fin = addDays(date_debut, SUBSCRIPTION_DURATIONS[type] - 1);
+
+  // Lookup plan tarifaire du membre
+  const { data: memberProfile } = await supabaseAdmin
+    .from('profiles').select('type_membre').eq('id', userId).single();
+
+  const plan = MEMBER_TYPE_TO_PLAN[memberProfile?.type_membre] || 'standard';
+  let tarifInfo = null;
+  let promoInfo = null;
+
+  try {
+    tarifInfo = await findActiveTarif(type, plan);
+    if (code_promo && tarifInfo) {
+      promoInfo = await findValidPromoCode(code_promo);
+      if (!promoInfo) {
+        return res.status(400).json({ error: 'Code promo invalide ou expiré.' });
+      }
+    }
+  } catch (e) {
+    console.warn('Tarification non disponible:', e.message);
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('abonnements')
+    .insert({
+      user_id: userId,
+      type,
+      date_debut,
+      date_fin,
+      renouvellement_auto: Boolean(renouvellement_auto),
+      statut: 'active',
+    })
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+
+  let pricingResult = null;
+  if (tarifInfo) {
+    const { prixFinal, reduction } = applyPromoDiscount(Number(tarifInfo.prix), promoInfo);
+    pricingResult = {
+      type_abonnement: type,
+      plan_tarifaire: plan,
+      prix_initial: Number(tarifInfo.prix),
+      prix_final: prixFinal,
+      reduction,
+      tva_pct: Number(tarifInfo.tva_pct),
+      code_promo: promoInfo?.code || null,
+    };
+
+    await supabaseAdmin.from('historique_tarifs').insert({
+      user_id: userId,
+      abonnement_id: data.id,
+      type_abonnement: type,
+      plan_tarifaire: plan,
+      prix_initial: Number(tarifInfo.prix),
+      prix_final: prixFinal,
+      code_promo_id: promoInfo?.id || null,
+    });
+
+    if (promoInfo) {
+      await supabaseAdmin
+        .from('codes_promo')
+        .update({ utilisations_count: promoInfo.utilisations_count + 1 })
+        .eq('id', promoInfo.id);
+    }
+  }
+
+  // Notifier le staff
+  const { emitToStaff } = require('./services/socketService');
+  emitToStaff('subscription:created', { user_id: userId, type, plan, pricing: pricingResult });
 
   res.status(201).json({ subscription: data, pricing: pricingResult });
 });
@@ -919,12 +1262,15 @@ app.get('/api/pricing/history/me', authenticate, async (req, res) => {
 // MODULE B — Réservations (S2 Dev 1)
 // =========================================================================
 
-app.get('/api/espaces', authenticate, async (_req, res) => {
-  const { data, error } = await supabaseAdmin
+app.get('/api/espaces', authenticate, async (req, res) => {
+  let query = supabaseAdmin
     .from('espaces')
     .select('*')
     .order('tarif_horaire', { ascending: true });
 
+  query = applyTenantFilter(query, req);
+
+  const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ espaces: data });
 });
@@ -943,6 +1289,8 @@ app.get('/api/bookings/calendar', authenticate, async (req, res) => {
     .lt('date_debut', to)
     .gt('date_fin', from)
     .order('date_debut', { ascending: true });
+
+  query = applyTenantFilter(query, req);
 
   if (espace_id) {
     query = query.eq('espace_id', espace_id);
@@ -980,6 +1328,7 @@ app.post('/api/bookings', authenticate, async (req, res) => {
   const { data, error } = await req.db
     .from('reservations')
     .insert({
+      tenant_id: req.tenantId,
       user_id: req.user.id,
       espace_id,
       date_debut,
@@ -2993,6 +3342,481 @@ app.get('/api/members/me/formations', authenticate, async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message });
   res.json({ inscriptions: data });
+});
+
+// =========================================================================
+// MESSAGERIE — Temps réel
+// =========================================================================
+
+// GET /api/conversations — Liste conversations de l'utilisateur
+app.get('/api/conversations', authenticate, async (req, res) => {
+  const { page = 1, limit = 20 } = req.query;
+  const offset = (parseInt(page) - 1) * parseInt(limit);
+
+  const { data: memberships, error: mErr } = await supabaseAdmin
+    .from('conversation_members')
+    .select('conversation_id, last_read_at')
+    .eq('user_id', req.user.id);
+
+  if (mErr) return res.status(500).json({ error: mErr.message });
+
+  const convIds = (memberships || []).map(m => m.conversation_id);
+  if (convIds.length === 0) return res.json({ conversations: [], total: 0 });
+
+  const { data: conversations, error, count } = await supabaseAdmin
+    .from('conversations')
+    .select('*', { count: 'exact' })
+    .in('id', convIds)
+    .order('updated_at', { ascending: false })
+    .range(offset, offset + parseInt(limit) - 1);
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  // Enrichir avec dernier message + unread count
+  const enriched = await Promise.all((conversations || []).map(async (conv) => {
+    const { data: lastMsg } = await supabaseAdmin
+      .from('messages')
+      .select('id, content, sender_id, created_at')
+      .eq('conversation_id', conv.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const membership = memberships.find(m => m.conversation_id === conv.id);
+    const lastRead = membership?.last_read_at || '1970-01-01T00:00:00Z';
+
+    const { count: unreadCount } = await supabaseAdmin
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('conversation_id', conv.id)
+      .neq('sender_id', req.user.id)
+      .gt('created_at', lastRead);
+
+    return { ...conv, last_message: lastMsg, unread_count: unreadCount || 0 };
+  }));
+
+  res.json({ conversations: enriched, pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0 } });
+});
+
+// POST /api/conversations — Créer une conversation
+app.post('/api/conversations', authenticate, async (req, res) => {
+  const { title, type = 'support' } = req.body;
+
+  const { data: conv, error } = await supabaseAdmin
+    .from('conversations')
+    .insert({ title: title || 'Support 33S', type, created_by: req.user.id })
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+
+  await supabaseAdmin.from('conversation_members').insert({
+    conversation_id: conv.id,
+    user_id: req.user.id,
+  });
+
+  res.json({ conversation: conv });
+});
+
+// GET /api/conversations/:id — Détails conversation + messages
+app.get('/api/conversations/:id', authenticate, async (req, res) => {
+  const { data: membership } = await supabaseAdmin
+    .from('conversation_members')
+    .select('*')
+    .eq('conversation_id', req.params.id)
+    .eq('user_id', req.user.id)
+    .maybeSingle();
+
+  if (!membership) return res.status(403).json({ error: 'Accès refusé.' });
+
+  const { data: conversation, error } = await supabaseAdmin
+    .from('conversations')
+    .select('*')
+    .eq('id', req.params.id)
+    .single();
+
+  if (error) return res.status(404).json({ error: 'Conversation introuvable.' });
+
+  res.json({ conversation, membership });
+});
+
+// GET /api/conversations/:id/messages — Messages d'une conversation
+app.get('/api/conversations/:id/messages', authenticate, async (req, res) => {
+  const { page = 1, limit = 50 } = req.query;
+  const offset = (parseInt(page) - 1) * parseInt(limit);
+
+  const { data: membership } = await supabaseAdmin
+    .from('conversation_members')
+    .select('*')
+    .eq('conversation_id', req.params.id)
+    .eq('user_id', req.user.id)
+    .maybeSingle();
+
+  if (!membership) return res.status(403).json({ error: 'Accès refusé.' });
+
+  const { data: messages, error, count } = await supabaseAdmin
+    .from('messages')
+    .select('*, profiles!sender_id (id, nom, prenom, avatar_url, role)', { count: 'exact' })
+    .eq('conversation_id', req.params.id)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + parseInt(limit) - 1);
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  res.json({ messages: messages || [], pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0 } });
+});
+
+// POST /api/conversations/:id/messages — Envoyer un message
+app.post('/api/conversations/:id/messages', authenticate, async (req, res) => {
+  const { content } = req.body;
+  if (!content || !content.trim()) return res.status(400).json({ error: 'Message vide.' });
+
+  const { data: membership } = await supabaseAdmin
+    .from('conversation_members')
+    .select('*')
+    .eq('conversation_id', req.params.id)
+    .eq('user_id', req.user.id)
+    .maybeSingle();
+
+  if (!membership) return res.status(403).json({ error: 'Accès refusé.' });
+
+  const { data: message, error } = await supabaseAdmin
+    .from('messages')
+    .insert({ conversation_id: req.params.id, sender_id: req.user.id, content: content.trim() })
+    .select('*, profiles!sender_id (id, nom, prenom, avatar_url, role)')
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+
+  // Mettre à jour updated_at de la conversation
+  await supabaseAdmin.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', req.params.id);
+
+  // Notifier les autres membres via Socket.io
+  const { emitToUser } = require('./services/socketService');
+  const { data: otherMembers } = await supabaseAdmin
+    .from('conversation_members')
+    .select('user_id')
+    .eq('conversation_id', req.params.id)
+    .neq('user_id', req.user.id);
+
+  (otherMembers || []).forEach(m => {
+    emitToUser(m.user_id, 'message:received', { conversation_id: req.params.id, message });
+  });
+
+  res.json({ message });
+});
+
+// PATCH /api/conversations/:id/read — Marquer conversation comme lue
+app.patch('/api/conversations/:id/read', authenticate, async (req, res) => {
+  const { error } = await supabaseAdmin
+    .from('conversation_members')
+    .update({ last_read_at: new Date().toISOString() })
+    .eq('conversation_id', req.params.id)
+    .eq('user_id', req.user.id);
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ success: true });
+});
+
+// GET /api/messages/unread-count — Nombre total de messages non lus
+app.get('/api/messages/unread-count', authenticate, async (req, res) => {
+  const { data: memberships } = await supabaseAdmin
+    .from('conversation_members')
+    .select('conversation_id, last_read_at')
+    .eq('user_id', req.user.id);
+
+  if (!memberships || memberships.length === 0) return res.json({ count: 0 });
+
+  let totalUnread = 0;
+  for (const m of memberships) {
+    const lastRead = m.last_read_at || '1970-01-01T00:00:00Z';
+    const { count } = await supabaseAdmin
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('conversation_id', m.conversation_id)
+      .neq('sender_id', req.user.id)
+      .gt('created_at', lastRead);
+    totalUnread += count || 0;
+  }
+
+  res.json({ count: totalUnread });
+});
+
+// GET /api/admin/members — Liste des membres (pour admin messagerie)
+app.get('/api/admin/members', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const { search = '' } = req.query;
+
+  let query = supabaseAdmin
+    .from('profiles')
+    .select('id, nom, prenom, email, telephone, type_membre, role, created_at')
+    .in('role', ['member', 'guest'])
+    .order('nom', { ascending: true });
+
+  query = applyTenantFilter(query, req);
+
+  if (search.trim()) {
+    query = query.or(`nom.ilike.%${search}%,prenom.ilike.%${search}%,email.ilike.%${search}%`);
+  }
+
+  const { data, error } = await query.limit(100);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ members: data || [] });
+});
+
+// POST /api/admin/conversations — Créer une conversation admin→membre
+app.post('/api/admin/conversations', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const { member_id, title } = req.body;
+  if (!member_id) return res.status(400).json({ error: 'member_id requis.' });
+
+  const { data: member } = await supabaseAdmin
+    .from('profiles')
+    .select('id, nom, prenom')
+    .eq('id', member_id)
+    .single();
+
+  if (!member) return res.status(404).json({ error: 'Membre introuvable.' });
+
+  // Vérifier si une conversation support existe déjà entre cet admin et ce membre
+  const { data: existingMemberships } = await supabaseAdmin
+    .from('conversation_members')
+    .select('conversation_id')
+    .eq('user_id', req.user.id);
+
+  if (existingMemberships && existingMemberships.length > 0) {
+    const adminConvIds = existingMemberships.map(m => m.conversation_id);
+    const { data: memberInConvs } = await supabaseAdmin
+      .from('conversation_members')
+      .select('conversation_id')
+      .in('conversation_id', adminConvIds)
+      .eq('user_id', member_id);
+
+    if (memberInConvs && memberInConvs.length > 0) {
+      // Conversation déjà existante — la retourner
+      const convId = memberInConvs[0].conversation_id;
+      const { data: conv } = await supabaseAdmin.from('conversations').select('*').eq('id', convId).single();
+      return res.json({ conversation: conv, existing: true });
+    }
+  }
+
+  // Créer nouvelle conversation
+  const convTitle = title || `${member.prenom} ${member.nom}`;
+  const { data: conv, error } = await supabaseAdmin
+    .from('conversations')
+    .insert({ title: convTitle, type: 'support', created_by: req.user.id, tenant_id: req.tenantId })
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+
+  // Ajouter admin + membre comme membres
+  await supabaseAdmin.from('conversation_members').insert([
+    { conversation_id: conv.id, user_id: req.user.id },
+    { conversation_id: conv.id, user_id: member_id },
+  ]);
+
+  // Notifier le membre via Socket.io
+  const { emitToUser } = require('./services/socketService');
+  emitToUser(member_id, 'conversation:update', {
+    conversation_id: conv.id,
+    last_message: null,
+    title: convTitle,
+  });
+
+  res.status(201).json({ conversation: conv, existing: false });
+});
+
+// GET /api/admin/conversations — Admin voit toutes les conversations
+app.get('/api/admin/conversations', authenticate, requireRoles('super_admin', 'admin', 'staff'), async (req, res) => {
+  const { page = 1, limit = 50, search = '' } = req.query;
+  const offset = (parseInt(page) - 1) * parseInt(limit);
+
+  let query = supabaseAdmin
+    .from('conversations')
+    .select('*', { count: 'exact' })
+    .order('updated_at', { ascending: false });
+
+  query = applyTenantFilter(query, req);
+
+  const { data: conversations, error, count } = await query.range(offset, offset + parseInt(limit) - 1);
+  if (error) return res.status(500).json({ error: error.message });
+
+  // Enrichir avec dernier message + membre info + unread
+  const enriched = await Promise.all((conversations || []).map(async (conv) => {
+    // Trouver le membre (non-staff) dans cette conversation
+    const { data: members } = await supabaseAdmin
+      .from('conversation_members')
+      .select('user_id')
+      .eq('conversation_id', conv.id);
+
+    const memberIds = (members || []).map(m => m.user_id);
+
+    // Récupérer les profils
+    const { data: profiles } = await supabaseAdmin
+      .from('profiles')
+      .select('id, nom, prenom, email, role, type_membre')
+      .in('id', memberIds);
+
+    const memberProfile = (profiles || []).find(p => !['super_admin', 'admin', 'staff'].includes(p.role));
+    const staffProfiles = (profiles || []).filter(p => ['super_admin', 'admin', 'staff'].includes(p.role));
+
+    // Dernier message
+    const { data: lastMsg } = await supabaseAdmin
+      .from('messages')
+      .select('id, content, sender_id, created_at')
+      .eq('conversation_id', conv.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Unread count for admin
+    const { data: adminMembership } = await supabaseAdmin
+      .from('conversation_members')
+      .select('last_read_at')
+      .eq('conversation_id', conv.id)
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+
+    const lastRead = adminMembership?.last_read_at || '1970-01-01T00:00:00Z';
+    const { count: unreadCount } = await supabaseAdmin
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('conversation_id', conv.id)
+      .neq('sender_id', req.user.id)
+      .gt('created_at', lastRead);
+
+    return {
+      ...conv,
+      member: memberProfile || null,
+      staff: staffProfiles || [],
+      last_message: lastMsg,
+      unread_count: unreadCount || 0,
+    };
+  }));
+
+  // Filtrer par recherche membre
+  let result = enriched;
+  if (search.trim()) {
+    const s = search.toLowerCase();
+    result = enriched.filter(c =>
+      c.member && (
+        (c.member.nom || '').toLowerCase().includes(s) ||
+        (c.member.prenom || '').toLowerCase().includes(s) ||
+        (c.member.email || '').toLowerCase().includes(s)
+      )
+    );
+  }
+
+  res.json({ conversations: result, pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0 } });
+});
+
+// =========================================================================
+// MODULE E — Portail Membre (S4 — CDC E)
+// =========================================================================
+
+app.get('/api/bookings/history', authenticate, async (req, res) => {
+  const { page = 1, limit = 10, statut } = req.query;
+  const offset = (parseInt(page) - 1) * parseInt(limit);
+
+  let query = supabaseAdmin
+    .from('reservations')
+    .select(`
+      *,
+      espaces (id, nom, type, tarif_horaire),
+      profiles (nom, prenom, email)
+    `, { count: 'exact' })
+    .eq('user_id', req.user.id)
+    .order('date_debut', { ascending: false });
+
+  if (statut) query = query.eq('statut', statut);
+
+  const { data, error, count } = await query.range(offset, offset + parseInt(limit) - 1);
+  if (error) return res.status(500).json({ error: error.message });
+
+  const { data: allBookings } = await supabaseAdmin
+    .from('reservations')
+    .select('id, statut, date_debut, date_fin, montant_total')
+    .eq('user_id', req.user.id);
+
+  const stats = {
+    total: allBookings?.length || 0,
+    confirmed: allBookings?.filter(b => b.statut === 'confirmed').length || 0,
+    pending: allBookings?.filter(b => b.statut === 'pending').length || 0,
+    cancelled: allBookings?.filter(b => b.statut === 'cancelled').length || 0,
+    completed: allBookings?.filter(b => b.statut === 'completed').length || 0,
+    totalHours: allBookings?.reduce((acc, b) => {
+      if (b.date_debut && b.date_fin) {
+        return acc + (new Date(b.date_fin) - new Date(b.date_debut)) / (1000 * 60 * 60);
+      }
+      return acc;
+    }, 0).toFixed(1) || 0,
+    totalSpent: allBookings?.reduce((acc, b) => acc + (parseFloat(b.montant_total) || 0), 0).toFixed(2) || '0.00',
+  };
+
+  res.json({ bookings: data || [], stats, pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0, totalPages: Math.ceil((count || 0) / parseInt(limit)) } });
+});
+
+app.get('/api/member/stats', authenticate, async (req, res) => {
+  const userId = req.user.id;
+
+  const [bookingsRes, subsRes, paymentsRes] = await Promise.all([
+    supabaseAdmin.from('reservations').select('id, statut, montant_total, date_debut, date_fin').eq('user_id', userId),
+    supabaseAdmin.from('abonnements').select('id, statut, date_debut, date_fin, type_abonnement').eq('user_id', userId),
+    supabaseAdmin.from('paiements').select('id, montant, statut, mode_paiement, created_at').eq('user_id', userId),
+  ]);
+
+  const bookings = bookingsRes.data || [];
+  const subs = subsRes.data || [];
+  const payments = paymentsRes.data || [];
+  const totalHours = bookings.reduce((acc, b) => {
+    if (b.date_debut && b.date_fin) return acc + (new Date(b.date_fin) - new Date(b.date_debut)) / (1000 * 60 * 60);
+    return acc;
+  }, 0);
+  const activeSub = subs.find(s => s.statut === 'active');
+
+  res.json({
+    bookings: { total: bookings.length, confirmed: bookings.filter(b => b.statut === 'confirmed').length, completed: bookings.filter(b => b.statut === 'completed').length, cancelled: bookings.filter(b => b.statut === 'cancelled').length, totalSpent: bookings.reduce((a, b) => a + (parseFloat(b.montant_total) || 0), 0).toFixed(2) },
+    subscription: activeSub ? { type: activeSub.type_abonnement, active: true, date_fin: activeSub.date_fin, daysLeft: Math.max(0, Math.ceil((new Date(activeSub.date_fin) - new Date()) / (1000 * 60 * 60 * 24))) } : { active: false },
+    payments: { total: payments.length, paid: payments.filter(p => p.statut === 'paid').length, pending: payments.filter(p => p.statut === 'pending').length, totalAmount: payments.filter(p => p.statut === 'paid').reduce((a, p) => a + (parseFloat(p.montant) || 0), 0).toFixed(2) },
+    totalHours: totalHours.toFixed(1),
+    memberSince: subs.length > 0 ? subs.sort((a, b) => new Date(a.date_debut) - new Date(b.date_debut))[0].date_debut : null,
+  });
+});
+
+app.get('/api/member/notifications', authenticate, async (req, res) => {
+  const { page = 1, limit = 20, unread_only } = req.query;
+  const offset = (parseInt(page) - 1) * parseInt(limit);
+
+  let query = supabaseAdmin.from('notifications').select('*', { count: 'exact' }).eq('user_id', req.user.id).order('created_at', { ascending: false });
+  if (unread_only === 'true') query = query.eq('lu', false);
+
+  const { data, error, count } = await query.range(offset, offset + parseInt(limit) - 1);
+  if (error) return res.status(500).json({ error: error.message });
+
+  const { count: unreadCount } = await supabaseAdmin.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', req.user.id).eq('lu', false);
+
+  res.json({ notifications: data || [], unreadCount: unreadCount || 0, pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0, totalPages: Math.ceil((count || 0) / parseInt(limit)) } });
+});
+
+app.patch('/api/member/notifications/:id/read', authenticate, async (req, res) => {
+  const { error } = await supabaseAdmin.from('notifications').update({ lu: true }).eq('id', req.params.id).eq('user_id', req.user.id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ success: true });
+});
+
+app.post('/api/member/notifications/read-all', authenticate, async (req, res) => {
+  const { error } = await supabaseAdmin.from('notifications').update({ lu: true }).eq('user_id', req.user.id).eq('lu', false);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ success: true });
+});
+
+app.patch('/api/members/me/settings', authenticate, async (req, res) => {
+  const allowed = ['notif_email_reservations', 'notif_email_abonnements', 'notif_email_formations'];
+  const updates = {};
+  for (const field of allowed) { if (req.body[field] !== undefined) updates[field] = req.body[field]; }
+  if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'Aucune préférence fournie.' });
+  const { data, error } = await supabaseAdmin.from('profiles').update(updates).eq('id', req.user.id).select().single();
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ profile: data });
 });
 
 // Démarrage des tâches planifiées (Cron)

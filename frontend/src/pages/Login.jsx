@@ -44,7 +44,10 @@ export default function Login() {
         .single();
       navigate(getHomePath(profile?.role));
     } catch (error) {
-      setErrorMsg(error.message || 'Erreur de connexion.');
+      const msg = typeof error?.message === 'string' ? error.message
+        : typeof error === 'string' ? error
+        : JSON.stringify(error) || 'Erreur de connexion.';
+      setErrorMsg(msg);
     } finally {
       setLoading(false);
     }
