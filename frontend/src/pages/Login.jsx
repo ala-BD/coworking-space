@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import BrandLogo from '../components/layout/BrandLogo';
-import { getHomePath } from '../utils/roles';
+import { getHomePath, getPostLoginPath } from '../utils/roles';
 
 /* ─── Icône SVG Google ─── */
 const GoogleIcon = () => (
@@ -39,10 +39,24 @@ export default function Login() {
       if (error) throw error;
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, statut_compte')
         .eq('id', data.user.id)
         .single();
-      navigate(getHomePath(profile?.role));
+
+      // Compte en attente d'approbation
+      if (profile?.statut_compte === 'en_attente') {
+        await supabase.auth.signOut();
+        setErrorMsg('pending_approval');
+        return;
+      }
+      // Compte suspendu
+      if (profile?.statut_compte && profile.statut_compte !== 'actif') {
+        await supabase.auth.signOut();
+        setErrorMsg('Votre compte a été suspendu. Contactez l\'administrateur.');
+        return;
+      }
+
+      navigate(await getPostLoginPath(supabase, data.user.id, profile?.role));
     } catch (error) {
       const msg = typeof error?.message === 'string' ? error.message
         : typeof error === 'string' ? error
@@ -214,14 +228,34 @@ export default function Login() {
               </p>
             </div>
 
-            {/* Alerte erreur */}
-            {errorMsg && (
+            {/* Alerte — En attente d'approbation */}
+            {errorMsg === 'pending_approval' && (
+              <div className="mb-6 p-4 rounded-2xl animate-fade-in border"
+                style={{ background: 'linear-gradient(135deg, #fffbeb, #fef3c7)', borderColor: 'rgba(245,158,11,0.25)' }}>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: 'rgba(245,158,11,0.15)' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#d97706' }}>schedule</span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm" style={{ color: '#92400e' }}>Compte en attente d'approbation</p>
+                    <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#b45309' }}>
+                      Votre compte a bien été créé. L'administrateur du coworking doit valider votre inscription avant que vous puissiez vous connecter.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Alerte erreur classique */}
+            {errorMsg && errorMsg !== 'pending_approval' && (
               <div className="mb-6 p-4 rounded-2xl flex items-center gap-3 text-sm animate-fade-in"
                 style={{ background: '#ffdad6', color: '#93000a', border: '1px solid rgba(186,26,26,0.15)' }}>
                 <span className="material-symbols-outlined text-[18px] shrink-0">warning</span>
                 <span>{errorMsg}</span>
               </div>
             )}
+
 
             {/* Card form */}
             <div className="glass-card rounded-3xl shadow-elevated p-6 space-y-5">

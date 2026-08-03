@@ -106,6 +106,9 @@ export const memberApi = {
   getById: (id) => apiFetch(`/api/members/${id}`),
   updateById: (id, payload) =>
     apiFetch(`/api/members/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  getPendingAccounts: () => apiFetch('/api/admin/pending-accounts'),
+  approveAccount: (id, action) =>
+    apiFetch(`/api/admin/approve-account/${id}`, { method: 'PATCH', body: JSON.stringify({ action }) }),
 };
 
 export const subscriptionApi = {
@@ -214,6 +217,8 @@ export const paymentApi = {
     return apiFetch(`/api/payments?${qs}`);
   },
   getMemberPayments: (memberId) => apiFetch(`/api/payments/member/${memberId}`),
+  createSelf: (payload) =>
+    apiFetch('/api/payments/self', { method: 'POST', body: JSON.stringify(payload) }),
   update: (id, payload) =>
     apiFetch(`/api/payments/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
   downloadReceipt: async (id) => {
@@ -290,4 +295,95 @@ export const messagingApi = {
     apiFetch('/api/admin/conversations', { method: 'POST', body: JSON.stringify(payload) }),
   searchMembers: (search) =>
     apiFetch(`/api/admin/members?search=${encodeURIComponent(search)}`),
+};
+
+// ── MODULE H — Guests ───────────────────────────────────────────────────
+export const guestApi = {
+  create: (payload) =>
+    fetch(`${API_URL}/api/guests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(r => r.json()),
+  booking: (payload) =>
+    fetch(`${API_URL}/api/guests/booking`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(r => r.json()),
+  formation: (payload) =>
+    fetch(`${API_URL}/api/guests/formation`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(r => r.json()),
+  cancelByToken: (token) =>
+    fetch(`${API_URL}/api/guests/booking/${token}`, { method: 'DELETE' }).then(r => r.json()),
+  getAll: () => apiFetch('/api/guests'),
+  convert: (id, payload) =>
+    apiFetch(`/api/guests/${id}/convert`, { method: 'POST', body: JSON.stringify(payload) }),
+};
+
+// ── MODULE J — Politique annulation avancée + Crédits ──────────────────
+export const cancellationAdvancedApi = {
+  getPoliciesByEspace: () => apiFetch('/api/cancellation-policies/espaces'),
+  upsertPolicyEspace: (payload) =>
+    apiFetch('/api/cancellation-policies/espaces', { method: 'PUT', body: JSON.stringify(payload) }),
+  markNoShow: (reservationId) =>
+    apiFetch(`/api/bookings/${reservationId}/noshow`, { method: 'POST' }),
+  getCredits: (userId) => apiFetch(`/api/members/${userId}/credits`),
+  addCredit: (userId, payload) =>
+    apiFetch(`/api/members/${userId}/credits`, { method: 'POST', body: JSON.stringify(payload) }),
+};
+
+// ── MODULE K — Documents membres ────────────────────────────────────────
+export const documentsApi = {
+  getContent: (type) =>
+    fetch(`${API_URL}/api/documents/content/${type}`).then(r => r.json()),
+  setContent: (payload) =>
+    apiFetch('/api/documents/content', { method: 'PUT', body: JSON.stringify(payload) }),
+  getMyDocuments: () => apiFetch('/api/members/me/documents-k'),
+  upload: (payload) =>
+    apiFetch('/api/members/me/documents-k', { method: 'POST', body: JSON.stringify(payload) }),
+  accept: (type_doc) =>
+    apiFetch('/api/members/me/accept', { method: 'POST', body: JSON.stringify({ type_doc }) }),
+  getSignDocument: (token) =>
+    fetch(`${API_URL}/api/documents/sign/${token}`).then(r => r.json()),
+  signDocument: (token) =>
+    fetch(`${API_URL}/api/documents/sign/${token}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }).then(r => r.json()),
+  getMemberDocuments: (userId) => apiFetch(`/api/admin/members/${userId}/documents`),
+  sendSignature: (userId, payload) =>
+    apiFetch(`/api/admin/members/${userId}/documents/send-signature`, { method: 'POST', body: JSON.stringify(payload) }),
+};
+
+// ── MODULE L — RGPD ─────────────────────────────────────────────────────
+export const rgpdApi = {
+  submitRequest: (payload) =>
+    apiFetch('/api/rgpd/request', { method: 'POST', body: JSON.stringify(payload) }),
+  getMyRequests: () => apiFetch('/api/rgpd/my-requests'),
+  updateMarketing: (payload) =>
+    apiFetch('/api/members/me/marketing', { method: 'PATCH', body: JSON.stringify(payload) }),
+  getAdminRequests: () => apiFetch('/api/admin/rgpd'),
+  processRequest: (id, payload) =>
+    apiFetch(`/api/admin/rgpd/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+};
+
+// ── Admin — Coworking setup & espaces ────────────────────────────────────
+export const tenantAdminApi = {
+  getTenant: () => apiFetch('/api/admin/tenant'),
+  updateTenant: (payload) =>
+    apiFetch('/api/admin/tenant', { method: 'PATCH', body: JSON.stringify(payload) }),
+  createEspace: (payload) =>
+    apiFetch('/api/admin/espaces', { method: 'POST', body: JSON.stringify(payload) }),
+  updateEspace: (id, payload) =>
+    apiFetch(`/api/admin/espaces/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  deleteEspace: (id) =>
+    apiFetch(`/api/admin/espaces/${id}`, { method: 'DELETE' }),
+  completeOnboarding: () =>
+    apiFetch('/api/admin/onboarding/complete', { method: 'POST' }),
+};
+
+export const sitesApi = {
+  getAll: () => apiFetch('/api/sites'),
+  create: (payload) =>
+    apiFetch('/api/sites', { method: 'POST', body: JSON.stringify(payload) }),
+  update: (id, payload) =>
+    apiFetch(`/api/sites/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  delete: (id) =>
+    apiFetch(`/api/sites/${id}`, { method: 'DELETE' }),
+  getMembers: (siteId) => apiFetch(`/api/sites/${siteId}/members`),
+  addMember: (siteId, userId) =>
+    apiFetch(`/api/sites/${siteId}/members`, { method: 'POST', body: JSON.stringify({ user_id: userId }) }),
+  removeMember: (siteId, userId) =>
+    apiFetch(`/api/sites/${siteId}/members/${userId}`, { method: 'DELETE' }),
+  getKpis: (siteId) => apiFetch(`/api/sites/${siteId}/kpis`),
+  getGlobalKpis: () => apiFetch('/api/sites/kpis/global'),
 };

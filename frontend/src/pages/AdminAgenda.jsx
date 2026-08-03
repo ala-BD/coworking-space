@@ -297,7 +297,7 @@ export default function AdminAgenda({ session }) {
         <div className="mb-md p-sm bg-secondary-fixed text-on-secondary-fixed text-body-sm rounded-xl">{success}</div>
       )}
 
-      <form onSubmit={handleQrCheckIn} className="mb-md bg-white rounded-xl p-md border border-outline-variant/10 flex flex-col sm:flex-row gap-sm items-end">
+      <form onSubmit={handleQrCheckIn} className="mb-md bg-surface-container-lowest rounded-xl p-md border border-outline-variant/10 flex flex-col sm:flex-row gap-sm items-end">
         <div className="flex-grow">
           <label className="block text-label-sm mb-xs">Check-in rapide par QR (staff)</label>
           <input
@@ -316,7 +316,7 @@ export default function AdminAgenda({ session }) {
         </button>
       </form>
 
-      <div className="bg-white rounded-xl border border-outline-variant/10 overflow-x-auto custom-shadow">
+      <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/10 overflow-x-auto custom-shadow">
         <div className="min-w-[800px]">
           <div className="grid border-b border-outline-variant/10" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)` }}>
             <div className="p-sm bg-surface-container-low" />
@@ -378,7 +378,7 @@ export default function AdminAgenda({ session }) {
 
       {selectedBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-md">
-          <div className="bg-white rounded-2xl p-lg max-w-md w-full shadow-xl space-y-md">
+          <div className="bg-surface-container-lowest rounded-3xl p-lg max-w-md w-full shadow-xl space-y-md">
             <div className="flex justify-between items-start">
               <h2 className="font-sora text-headline-sm text-primary">Détail réservation</h2>
               <button type="button" onClick={() => setSelectedBooking(null)} className="text-on-surface-variant">✕</button>

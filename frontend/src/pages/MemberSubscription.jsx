@@ -236,7 +236,7 @@ export default function MemberSubscription({ session }) {
           {/* Left — Plans */}
           <div className="lg:col-span-8 space-y-6">
             {/* Promo Code Input */}
-            <div className="bg-white rounded-2xl p-6 border border-outline-variant/10" style={{ boxShadow: '0 2px 8px rgba(16,35,63,0.04)' }}>
+            <div className="bg-white rounded-3xl p-6 border border-outline-variant/10" style={{ boxShadow: '0 2px 8px rgba(16,35,63,0.04)' }}>
               <div className="flex items-center gap-2 mb-4">
                 <span className="material-symbols-outlined text-secondary" style={{ fontSize: 20 }}>local_offer</span>
                 <h2 className="text-sm font-bold text-primary" style={{ fontFamily: 'Sora, sans-serif' }}>
@@ -280,7 +280,7 @@ export default function MemberSubscription({ session }) {
             </div>
 
             {/* Plans Grid */}
-            <div className="bg-white rounded-2xl p-6 border border-outline-variant/10" style={{ boxShadow: '0 2px 8px rgba(16,35,63,0.04)' }}>
+            <div className="bg-white rounded-3xl p-6 border border-outline-variant/10" style={{ boxShadow: '0 2px 8px rgba(16,35,63,0.04)' }}>
               <h2 className="text-sm font-bold text-primary mb-5" style={{ fontFamily: 'Sora, sans-serif' }}>
                 Choisir un abonnement
               </h2>
@@ -378,7 +378,7 @@ export default function MemberSubscription({ session }) {
 
             {/* History */}
             {history.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 border border-outline-variant/10" style={{ boxShadow: '0 2px 8px rgba(16,35,63,0.04)' }}>
+              <div className="bg-white rounded-3xl p-6 border border-outline-variant/10" style={{ boxShadow: '0 2px 8px rgba(16,35,63,0.04)' }}>
                 <h2 className="text-sm font-bold text-primary mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>
                   Historique des abonnements
                 </h2>

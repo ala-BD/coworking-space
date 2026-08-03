@@ -6,17 +6,17 @@ import BrandLogo from '../components/layout/BrandLogo';
 /* ─── SVG Icons ─── */
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
   </svg>
 );
 
 const LinkedInIcon = () => (
   <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <rect width="48" height="48" rx="8" fill="#0077B5"/>
-    <path fill="white" d="M13 18h5v17h-5V18zm2.5-7a2.9 2.9 0 1 1 0 5.8A2.9 2.9 0 0 1 15.5 11zM21 18h4.8v2.3h.1c.7-1.3 2.3-2.7 4.7-2.7C35.7 17.6 37 20 37 24.3V35h-5v-9.7c0-2.3-.8-3.9-2.7-3.9-1.5 0-2.4 1-2.8 2-.1.4-.2.9-.2 1.4V35h-5V18z"/>
+    <rect width="48" height="48" rx="8" fill="#0077B5" />
+    <path fill="white" d="M13 18h5v17h-5V18zm2.5-7a2.9 2.9 0 1 1 0 5.8A2.9 2.9 0 0 1 15.5 11zM21 18h4.8v2.3h.1c.7-1.3 2.3-2.7 4.7-2.7C35.7 17.6 37 20 37 24.3V35h-5v-9.7c0-2.3-.8-3.9-2.7-3.9-1.5 0-2.4 1-2.8 2-.1.4-.2.9-.2 1.4V35h-5V18z" />
   </svg>
 );
 
@@ -48,15 +48,19 @@ function Field({ id, label, icon, type = 'text', value, onChange, placeholder, r
 }
 
 export default function Register() {
-  const [email, setEmail]           = useState('');
-  const [password, setPassword]     = useState('');
-  const [showPwd, setShowPwd]       = useState(false);
-  const [nom, setNom]               = useState('');
-  const [prenom, setPrenom]         = useState('');
-  const [telephone, setTelephone]   = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [nom, setNom] = useState('');
+  const [prenom, setPrenom] = useState('');
+  const [telephone, setTelephone] = useState('');
   const [typeMembre, setTypeMembre] = useState('individuel');
-  const [loading, setLoading]       = useState(false);
-  const [errorMsg, setErrorMsg]     = useState('');
+  const [role, setRole] = useState('member');
+  const [specialite, setSpecialite] = useState('');
+  const [biographie, setBiographie] = useState('');
+  const [coworkingName, setCoworkingName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const navigate = useNavigate();
 
@@ -66,21 +70,43 @@ export default function Register() {
     setErrorMsg('');
     setSuccessMsg('');
     try {
+      const userData = {
+        nom,
+        prenom,
+        telephone,
+        role,
+        type_membre: ['formateur', 'admin'].includes(role) ? null : typeMembre
+      };
+
+      if (role === 'formateur') {
+        userData.specialite = specialite;
+        userData.biographie = biographie;
+      }
+
+      if (role === 'admin') {
+        userData.coworking_name = coworkingName;
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { nom, prenom, telephone, role: 'member', type_membre: typeMembre },
+          data: userData,
         },
       });
       if (error) throw error;
-      setSuccessMsg('Compte créé ! Vérifiez votre email ou connectez-vous directement.');
-      setTimeout(() => navigate('/login'), 3000);
+
+      const approvalMsg = role === 'admin'
+        ? 'Demande envoyée ! Votre compte est en attente de validation par le Super Admin de la plateforme. Vous recevrez accès une fois votre coworking approuvé.'
+        : 'Demande envoyée ! Votre compte a été créé et est en attente de validation par l\'administrateur du coworking. Vous recevrez accès une fois votre compte approuvé.';
+      setSuccessMsg(approvalMsg);
+      setTimeout(() => navigate('/login'), 5000);
     } catch (error) {
       setErrorMsg(error.message || "Erreur lors de l'inscription.");
     } finally {
       setLoading(false);
     }
+
   };
 
   const handleSocialLogin = async (provider) => {
@@ -99,7 +125,13 @@ export default function Register() {
   const memberTypes = [
     { value: 'individuel', label: 'Individuel', icon: 'person', desc: 'Freelance, consultant, indépendant' },
     { value: 'entreprise', label: 'Entreprise', icon: 'business', desc: 'Équipe ou société' },
-    { value: 'etudiant',   label: 'Étudiant',   icon: 'school',  desc: 'Tarif réduit étudiant' },
+    { value: 'etudiant', label: 'Étudiant', icon: 'school', desc: 'Tarif réduit étudiant' },
+  ];
+
+  const roleTypes = [
+    { value: 'member', label: 'Membre', icon: 'person', desc: 'Accéder aux espaces de coworking' },
+    { value: 'formateur', label: 'Formateur', icon: 'school', desc: 'Créer et animer des formations' },
+    { value: 'admin', label: 'Admin Coworking', icon: 'domain', desc: 'Gérer mon espace de coworking' }
   ];
 
   return (
@@ -161,8 +193,8 @@ export default function Register() {
             className="font-sora"
             style={{ color: '#f0f4ff', fontWeight: 700, fontSize: 'clamp(24px, 3vw, 36px)', lineHeight: 1.18, marginBottom: 12 }}
           >
-            Rejoignez<br/>
-            <span style={{ color: '#b1c5ff' }}>l&apos;élite</span><br/>
+            Rejoignez<br />
+            <span style={{ color: '#b1c5ff' }}>l&apos;élite</span><br />
             des workspace.
           </h2>
 
@@ -182,10 +214,10 @@ export default function Register() {
           {/* Avantages */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {[
-              { icon: 'bolt',           text: 'Réservation en 3 clics' },
-              { icon: 'qr_code_2',      text: 'QR Code d\'accès instantané' },
-              { icon: 'notifications',  text: 'Alertes temps réel' },
-              { icon: 'receipt_long',   text: 'Factures et historique complets' },
+              { icon: 'bolt', text: 'Réservation en 3 clics' },
+              { icon: 'qr_code_2', text: 'QR Code d\'accès instantané' },
+              { icon: 'notifications', text: 'Alertes temps réel' },
+              { icon: 'receipt_long', text: 'Factures et historique complets' },
             ].map(({ icon, text }) => (
               <div key={icon} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span
@@ -283,27 +315,107 @@ export default function Register() {
                   placeholder="+216 99 999 999" required
                 />
 
-                {/* Type de membre */}
+                {/* Type de compte */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-label-sm font-semibold text-on-surface-variant" htmlFor="reg-type">
-                    Type de membre
+                  <label className="text-label-sm font-semibold text-on-surface-variant" htmlFor="reg-role">
+                    Type de compte
                   </label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-outline pointer-events-none">
-                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>card_membership</span>
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>account_circle</span>
                     </span>
                     <select
-                      id="reg-type"
-                      value={typeMembre}
-                      onChange={(e) => setTypeMembre(e.target.value)}
+                      id="reg-role"
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
                       className="form-input appearance-none"
                     >
-                      {memberTypes.map(({ value, label }) => (
+                      {roleTypes.map(({ value, label }) => (
                         <option key={value} value={value}>{label}</option>
                       ))}
                     </select>
                   </div>
                 </div>
+
+                {/* Type de membre (uniquement pour les membres) */}
+                {role === 'member' && (
+                  <div className="flex flex-col gap-1">
+                    <label className="text-label-sm font-semibold text-on-surface-variant" htmlFor="reg-type">
+                      Type de membre
+                    </label>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-outline pointer-events-none">
+                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>card_membership</span>
+                      </span>
+                      <select
+                        id="reg-type"
+                        value={typeMembre}
+                        onChange={(e) => setTypeMembre(e.target.value)}
+                        className="form-input appearance-none"
+                      >
+                        {memberTypes.map(({ value, label }) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Nom du Coworking (uniquement pour les admins) */}
+                {role === 'admin' && (
+                  <Field
+                    id="reg-coworking" label="Nom de l'Espace Coworking" icon="domain"
+                    value={coworkingName} onChange={(e) => setCoworkingName(e.target.value)}
+                    placeholder="Ex: Encre & Cobalt Tunis" required
+                  />
+                )}
+
+
+                {/* Champs spécifiques aux formateurs */}
+                {role === 'formateur' && (
+                  <>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-label-sm font-semibold text-on-surface-variant" htmlFor="reg-specialite">
+                        Spécialité / Domaine
+                      </label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-outline pointer-events-none">
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>star</span>
+                        </span>
+                        <input
+                          id="reg-specialite"
+                          type="text"
+                          value={specialite}
+                          onChange={(e) => setSpecialite(e.target.value)}
+                          className="form-input"
+                          placeholder="Ex: UX Design, React, Marketing..."
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-label-sm font-semibold text-on-surface-variant" htmlFor="reg-biographie">
+                        Biographie courte
+                      </label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-outline pointer-events-none" style={{ top: 12 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>description</span>
+                        </span>
+                        <textarea
+                          id="reg-biographie"
+                          value={biographie}
+                          onChange={(e) => setBiographie(e.target.value)}
+                          className="form-input"
+                          rows={3}
+                          placeholder="Parcours, compétences clés, expérience..."
+                          required
+                          style={{ paddingLeft: 44 }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Mot de passe */}
                 <div className="flex flex-col gap-1">

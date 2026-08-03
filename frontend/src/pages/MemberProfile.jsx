@@ -390,7 +390,7 @@ export default function MemberProfile({ session }) {
             <div className="flex flex-col items-center shrink-0">
               <div className="relative group">
                 <div
-                  className="flex items-center justify-center rounded-2xl overflow-hidden border-2 border-outline-variant/15"
+                  className="flex items-center justify-center rounded-3xl overflow-hidden border-2 border-outline-variant/15"
                   style={{ width: 110, height: 110 }}
                 >
                   {profile?.photo_url ? (

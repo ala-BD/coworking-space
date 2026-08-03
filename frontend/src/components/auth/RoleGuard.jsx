@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
-import { getHomePath, isAdminRole, isMemberRole } from '../../utils/roles';
+import { getHomePath, isAdminRole, isMemberRole, getPostLoginPath } from '../../utils/roles';
 
 function LoadingScreen() {
   return (
@@ -61,7 +61,10 @@ export function HomeRedirect({ session }) {
       .select('role')
       .eq('id', session.user.id)
       .single()
-      .then(({ data }) => setState({ loading: false, path: getHomePath(data?.role) }))
+      .then(async ({ data }) => {
+        const path = await getPostLoginPath(supabase, session.user.id, data?.role);
+        setState({ loading: false, path });
+      })
       .catch(() => setState({ loading: false, path: '/dashboard' }));
   }, [session]);
 

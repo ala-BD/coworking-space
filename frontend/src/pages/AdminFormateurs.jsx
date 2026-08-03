@@ -42,7 +42,7 @@ function Modal({ open, onClose, title, subtitle, icon, children, footer, maxWidt
 
       {/* Panel */}
       <div
-        className={`relative w-full ${maxWidth} mx-auto bg-white rounded-[32px] shadow-[0_40px_100px_rgba(15,23,42,0.18)] flex flex-col max-h-[90vh] overflow-hidden`}
+        className={`relative w-full ${maxWidth} mx-auto bg-white rounded-4xl shadow-[0_40px_100px_rgba(15,23,42,0.18)] flex flex-col max-h-[90vh] overflow-hidden`}
         style={{ animation: 'popIn 0.25s cubic-bezier(.34,1.56,.64,1)' }}
       >
         {/* Header */}
@@ -412,7 +412,7 @@ export default function AdminFormateurs({ session }) {
                 {/* Mobile */}
                 <div className="sm:hidden space-y-3">
                   {remunerations.map((r) => (
-                    <div key={r.id} className="bg-white rounded-2xl border border-outline-variant/20 p-4 shadow-sm">
+                    <div key={r.id} className="bg-white rounded-3xl border border-outline-variant/20 p-4 shadow-sm">
                       <div className="flex justify-between items-start mb-1.5">
                         <p className="font-semibold text-primary text-sm">{r.profiles?.prenom} {r.profiles?.nom}</p>
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${r.statut === 'paye' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>

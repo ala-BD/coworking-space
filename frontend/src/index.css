@@ -113,6 +113,54 @@
 }
 
 /* ═══════════════════════════════════════════════
+   Dark Mode — overrides des tokens Material 3
+   Activé par la classe .dark sur <html>
+   ═══════════════════════════════════════════════ */
+.dark {
+  /* — Primary palette — */
+  --color-primary: #b5c7eb;
+  --color-primary-container: #1e3a6e;
+  --color-on-primary: #071b37;
+  --color-on-primary-container: #b5c7eb;
+
+  /* — Secondary palette (Cobalt) — */
+  --color-secondary: #7aaeff;
+  --color-secondary-container: #003a99;
+  --color-on-secondary: #001847;
+  --color-on-secondary-container: #dae2ff;
+
+  /* — Surface & Background — */
+  --color-background: #111318;
+  --color-on-background: #e3e2e6;
+  --color-surface: #111318;
+  --color-on-surface: #e3e2e6;
+  --color-on-surface-variant: #c4c6cf;
+  --color-surface-variant: #44474d;
+  --color-surface-dim: #111318;
+  --color-surface-bright: #37393f;
+  --color-surface-tint: #b5c7eb;
+  --color-surface-container-lowest: #0b0e13;
+  --color-surface-container-low: #191c21;
+  --color-surface-container: #1d2026;
+  --color-surface-container-high: #282b30;
+  --color-surface-container-highest: #32353b;
+
+  /* — Outline — */
+  --color-outline: #8e9099;
+  --color-outline-variant: #44474d;
+  --color-inverse-surface: #e3e2e6;
+  --color-inverse-on-surface: #303033;
+  --color-inverse-primary: #364765;
+
+  /* — State colors — */
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+  --color-success: #3ddba6;
+}
+
+/* ═══════════════════════════════════════════════
    Global base styles
    ═══════════════════════════════════════════════ */
 html {
@@ -121,12 +169,81 @@ html {
 }
 
 body {
-  background-color: #f4f6f9;
+  background-color: var(--color-background);
   color: var(--color-on-surface);
   font-family: var(--font-inter);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+/* Glass card en dark mode */
+.dark .glass-card {
+  background: rgba(29, 32, 38, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ═══════════════════════════════════════════════
+   Dark mode — Tailwind bg-white override
+   Tous les éléments bg-white passent en surface sombre
+   ═══════════════════════════════════════════════ */
+.dark .bg-white {
+  background-color: var(--color-surface-container) !important;
+}
+
+/* Modales / dialogs (bg-white avec rounded + shadow) */
+.dark [style*="background: '#fff'"],
+.dark [style*="background: #fff"],
+.dark [style*="background-color: #fff"],
+.dark [style*="background-color: white"],
+.dark [style*="background: white"] {
+  background-color: var(--color-surface-container) !important;
+}
+
+/* Inputs en dark */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: var(--color-surface-container-low);
+  color: var(--color-on-surface);
+  border-color: var(--color-outline-variant);
+  color-scheme: dark;
+}
+
+/* Tables en dark */
+.dark table th {
+  background-color: var(--color-surface-container-high) !important;
+  color: var(--color-on-surface) !important;
+}
+
+.dark table td {
+  background-color: var(--color-surface-container) !important;
+  color: var(--color-on-surface) !important;
+  border-color: var(--color-outline-variant) !important;
+}
+
+.dark table tr:hover td {
+  background-color: var(--color-surface-container-high) !important;
+}
+
+/* Bento cards / surface cards génériques */
+.dark .bento-card,
+.dark .surface-card {
+  background-color: var(--color-surface-container) !important;
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Badges, chips bg-white/10 restent transparents */
+.dark .bg-white\/10 {
+  background-color: rgba(255, 255, 255, 0.10) !important;
+}
+.dark .bg-white\/5 {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+.dark .bg-white\/20 {
+  background-color: rgba(255, 255, 255, 0.20) !important;
+}
+
 
 /* Force suppression des soulignements indésirables (spécificité plus forte) */
 *,
@@ -192,14 +309,14 @@ a:hover.hover\:underline,
 /* ── Form inputs ── */
 .form-input {
   width: 100%;
-  background-color: #ffffff;
-  border: 1.5px solid rgba(197, 198, 206, 0.4);
+  background-color: var(--color-surface-container-lowest);
+  border: 1.5px solid var(--color-outline-variant);
   border-radius: 12px;
   padding: 10px 16px 10px 42px;
   font-size: 15px;
   line-height: 24px;
   color: var(--color-on-surface);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.3s;
   outline: none;
 }
 
@@ -209,7 +326,8 @@ a:hover.hover\:underline,
 }
 
 .form-input::placeholder {
-  color: var(--color-outline-variant);
+  color: var(--color-on-surface-variant);
+  opacity: 0.6;
 }
 
 /* Legacy compat */
@@ -279,17 +397,26 @@ a:hover.hover\:underline,
 
 /* ── Stat Cards ── */
 .stat-card {
-  background: white;
-  border-radius: 24px;
+  background: var(--color-surface-container-lowest);
+  border-radius: 28px;
   padding: 24px;
-  border: 1px solid rgba(197, 198, 206, 0.15);
+  border: 1px solid var(--color-outline-variant);
   box-shadow: 0 4px 16px rgba(16, 35, 63, 0.05);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background-color 0.3s ease;
+}
+
+.dark .stat-card {
+  border-color: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 32px rgba(16, 35, 63, 0.10);
+}
+
+.dark .stat-card:hover {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 
 /* ── Portal Sidebar ── */

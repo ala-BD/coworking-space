@@ -167,7 +167,7 @@ export default function MemberFormations({ session }) {
             </h2>
 
             {formations.length === 0 ? (
-              <div className="bg-white rounded-3xl border border-outline-variant/20 p-10 text-center shadow-sm">
+              <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-10 text-center shadow-sm">
                 <span className="material-symbols-outlined text-on-surface-variant/30 block mb-3" style={{ fontSize: 48 }}>calendar_today</span>
                 <p className="font-semibold text-primary mb-1">Aucune session planifiée</p>
                 <p className="text-sm text-on-surface-variant">Revenez bientôt pour découvrir nos prochains ateliers !</p>
@@ -182,7 +182,7 @@ export default function MemberFormations({ session }) {
                   return (
                     <div
                       key={f.id}
-                      className={`bg-white rounded-3xl border flex flex-col transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${
+                      className={`bg-surface-container-lowest rounded-3xl border flex flex-col transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${
                         enrolled ? 'border-secondary/30 bg-secondary/[0.01]' : 'border-outline-variant/20'
                       }`}
                     >
@@ -278,7 +278,7 @@ export default function MemberFormations({ session }) {
 
             <div className="space-y-3">
               {activeInscriptions.length === 0 ? (
-                <div className="bg-white rounded-3xl border border-outline-variant/20 p-6 text-center shadow-sm">
+                <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-6 text-center shadow-sm">
                   <span className="material-symbols-outlined text-on-surface-variant/30 block mb-2" style={{ fontSize: 36 }}>event_busy</span>
                   <p className="text-sm text-on-surface-variant">Aucune inscription.</p>
                   <p className="text-xs text-on-surface-variant/60 mt-1">Choisissez un atelier dans le catalogue.</p>
@@ -289,7 +289,7 @@ export default function MemberFormations({ session }) {
                   if (!item) return null;
                   const isSaving = saving === item.id;
                   return (
-                    <div key={my.id} className="bg-white rounded-2xl border border-outline-variant/20 p-4 shadow-sm hover:border-secondary/20 transition-colors">
+                    <div key={my.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-4 shadow-sm hover:border-secondary/20 transition-colors">
                       <div className="flex justify-between items-start gap-2 mb-2">
                         <h4 className="font-semibold text-primary text-sm leading-snug line-clamp-2 flex-1">{item.titre}</h4>
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
@@ -353,7 +353,7 @@ export default function MemberFormations({ session }) {
       {selectedFormation && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 py-6 sm:px-6 sm:py-8">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => setSelectedFormation(null)} />
-          <div className="relative w-full max-w-3xl bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-outline-variant/10">
+          <div className="relative w-full max-w-3xl bg-surface-container-lowest rounded-4xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-outline-variant/10">
             <div className="p-5 sm:p-6 border-b border-outline-variant/20 flex justify-between items-start gap-4">
               <div className="min-w-0">
                 <span className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary bg-secondary/10 px-3 py-1 rounded-full">
@@ -366,7 +366,7 @@ export default function MemberFormations({ session }) {
               </div>
               <button
                 onClick={() => setSelectedFormation(null)}
-                className="h-10 w-10 rounded-2xl border border-outline-variant/20 bg-surface-container flex items-center justify-center text-on-surface-variant hover:bg-surface-hover transition"
+                className="h-10 w-10 rounded-3xl border border-outline-variant/20 bg-surface-container flex items-center justify-center text-on-surface-variant hover:bg-surface-hover transition"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
               </button>

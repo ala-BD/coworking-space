@@ -165,7 +165,7 @@ export default function QrCodeView({ session }) {
             ref={cardRef}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
-            className="w-full max-w-[480px] rounded-2xl overflow-hidden relative transition-transform duration-300 ease-out"
+            className="w-full max-w-[480px] rounded-3xl overflow-hidden relative transition-transform duration-300 ease-out"
             style={{
               background: 'linear-gradient(135deg, #10233f 0%, #0d1a30 50%, #0a1525 100%)',
               boxShadow: '0 25px 60px -12px rgba(0,13,35,0.45), 0 8px 24px -8px rgba(0,0,0,0.3)',

@@ -26,8 +26,6 @@ export default function TenantManagement({ session }) {
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
-  const [onboardModal, setOnboardModal] = useState(null);
-  const [onboardForm, setOnboardForm] = useState({ email: '' });
 
   const load = useCallback(async () => {
     try {
@@ -61,17 +59,12 @@ export default function TenantManagement({ session }) {
 
   const handleLogout = async () => { await supabase.auth.signOut(); navigate('/login'); };
 
-  const openCreate = () => { setForm({ nom: '', description: '', adresse: '', ville: '', email: '', telephone: '', plan: 'starter', tier: 'C', montant_mensuel: 0, limite_membres: 100, limite_espaces: 10 }); setModal('create'); };
   const openEdit = (t) => { setForm({ ...t }); setModal('edit'); };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      if (modal === 'create') {
-        await superAdminApi.createTenant(form);
-      } else {
-        await superAdminApi.updateTenant(form.id, form);
-      }
+      await superAdminApi.updateTenant(form.id, form);
       setModal(null);
       await load();
     } catch (e) { alert(e.message); }
@@ -83,16 +76,6 @@ export default function TenantManagement({ session }) {
     try {
       await superAdminApi.updateTenant(t.id, { statut: newStatut });
       await load();
-    } catch (e) { alert(e.message); }
-  };
-
-  const handleOnboard = async () => {
-    if (!onboardForm.email) return;
-    try {
-      await superAdminApi.onboardTenant(onboardModal.id, onboardForm);
-      setOnboardModal(null);
-      setOnboardForm({ email: '' });
-      alert('Invitation envoyée avec succès !');
     } catch (e) { alert(e.message); }
   };
 
@@ -119,17 +102,13 @@ export default function TenantManagement({ session }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="font-sora text-2xl font-bold text-primary">Tenant Management</h1>
-          <p className="text-on-surface-variant text-sm mt-1">Oversee globally distributed coworking spaces and subscription lifecycles.</p>
+          <p className="text-on-surface-variant text-sm mt-1">Validez les inscriptions et gérez les coworkings de la plateforme.</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 px-5 py-2.5 bg-secondary text-white rounded-full text-sm font-semibold hover:bg-secondary/90 transition-colors shadow-sm">
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
-          Créer un Coworking
-        </button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {miniStats.map((s, i) => (
-          <div key={i} className="bg-white rounded-xl p-4 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
+          <div key={i} className="bg-surface-container-lowest rounded-xl p-4 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
             <div className="flex items-center gap-2 mb-2">
               <span className="material-symbols-outlined" style={{ fontSize: 18, color: s.color }}>{s.icon}</span>
               <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">{s.label}</span>
@@ -152,25 +131,25 @@ export default function TenantManagement({ session }) {
         </select>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-[0px_8px_16px_rgba(16,35,63,0.08)] overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-3xl shadow-[0px_8px_16px_rgba(16,35,63,0.08)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-primary-container text-white">
-                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Tenant Name</th>
-                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Status</th>
-                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Tier</th>
-                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Plan</th>
-                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Membres</th>
-                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Espaces</th>
-                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Montant</th>
-                <th className="px-5 py-3.5 text-right font-semibold uppercase tracking-wider text-xs">Actions</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Tenant Name</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Status</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Tier</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Plan</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Membres</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Espaces</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Montant</th>
+                <th className="px-4 py-3 text-right font-semibold uppercase tracking-wider text-xs">Actions</th>
               </tr>
             </thead>
             <tbody>
               {tenants.map((t) => (
                 <tr key={t.id} className="border-b border-outline-variant/15 hover:bg-surface-container-low/50 transition-colors group">
-                  <td className="px-5 py-4">
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center font-sora font-bold text-secondary text-sm">{(t.nom || '?')[0]}</div>
                       <div>
@@ -179,29 +158,29 @@ export default function TenantManagement({ session }) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-5 py-4"><span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUT_STYLES[t.statut] || ''}`}><span className="w-1.5 h-1.5 rounded-full bg-current" />{t.statut === 'actif' ? 'Active' : t.statut === 'suspendu' ? 'Suspended' : 'Inactive'}</span></td>
-                  <td className="px-5 py-4"><span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${TIER_COLORS[t.tier] || ''}`}><span className="w-1.5 h-1.5 rounded-full bg-current" />Tier {t.tier}</span></td>
-                  <td className="px-5 py-4"><span className="text-xs font-semibold text-on-surface-variant">{PLAN_LABELS[t.plan] || t.plan}</span></td>
-                  <td className="px-5 py-4"><span className="font-semibold text-primary">{t.member_count || 0}</span></td>
-                  <td className="px-5 py-4"><span className="font-semibold text-primary">{t.space_count || 0}</span></td>
-                  <td className="px-5 py-4"><span className="font-semibold text-primary">{parseFloat(t.montant_mensuel || 0).toLocaleString('fr-TN')} DT</span></td>
-                  <td className="px-5 py-4 text-right">
-                    <div className="flex items-center justify-end gap-1">
+                  <td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUT_STYLES[t.statut] || ''}`}><span className="w-1.5 h-1.5 rounded-full bg-current" />{t.statut === 'actif' ? 'Active' : t.statut === 'suspendu' ? 'Suspended' : 'Inactive'}</span></td>
+                  <td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${TIER_COLORS[t.tier] || ''}`}><span className="w-1.5 h-1.5 rounded-full bg-current" />Tier {t.tier}</span></td>
+                  <td className="px-4 py-3"><span className="text-xs font-semibold text-on-surface-variant">{PLAN_LABELS[t.plan] || t.plan}</span></td>
+                  <td className="px-4 py-3"><span className="font-semibold text-primary">{t.member_count || 0}</span></td>
+                  <td className="px-4 py-3"><span className="font-semibold text-primary">{t.space_count || 0}</span></td>
+                  <td className="px-4 py-3"><span className="font-semibold text-primary">{parseFloat(t.montant_mensuel || 0).toLocaleString('fr-TN')} DT</span></td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1 whitespace-nowrap">
                       <button onClick={() => openEdit(t)} className="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant" title="Gérer"><span className="material-symbols-outlined" style={{ fontSize: 18 }}>settings</span></button>
                       {t.statut === 'actif' ? (
                         <button onClick={() => handleToggleStatut(t)} className="p-2 rounded-lg hover:bg-[#ff6f591a] text-[#ff6f59]" title="Suspendre"><span className="material-symbols-outlined" style={{ fontSize: 18 }}>block</span></button>
                       ) : (
                         <button onClick={() => handleToggleStatut(t)} className="p-2 rounded-lg hover:bg-[#2fbe8f1a] text-[#2fbe8f]" title="Activer"><span className="material-symbols-outlined" style={{ fontSize: 18 }}>check_circle</span></button>
                       )}
-                      <button onClick={() => { setOnboardModal(t); setOnboardForm({ email: '' }); }} className="p-2 rounded-lg hover:bg-secondary/10 text-secondary" title="Onboard admin"><span className="material-symbols-outlined" style={{ fontSize: 18 }}>person_add</span></button>
                       <button onClick={() => handleDelete(t)} className="p-2 rounded-lg hover:bg-[#ff6f591a] text-[#ff6f59]" title="Supprimer"><span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span></button>
                     </div>
                   </td>
                 </tr>
               ))}
               {tenants.length === 0 && (
-                <tr><td colSpan={8} className="px-5 py-12 text-center text-on-surface-variant">Aucun coworking trouvé.</td></tr>
+                <tr><td colSpan={8} className="px-4 py-12 text-center text-on-surface-variant">Aucun coworking trouvé.</td></tr>
               )}
+
             </tbody>
           </table>
         </div>
@@ -215,10 +194,10 @@ export default function TenantManagement({ session }) {
         </div>
       </div>
 
-      {typeof document !== 'undefined' && (modal === 'create' || modal === 'edit') && createPortal(
+      {typeof document !== 'undefined' && modal === 'edit' && createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.5)' }} onClick={() => setModal(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 520, padding: 28, boxShadow: '0 25px 50px rgba(0,0,0,0.25)', maxHeight: '85vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: 20, fontWeight: 700, color: '#000d23', marginBottom: 20 }}>{modal === 'create' ? 'Creer un Coworking' : 'Modifier le Coworking'}</h2>
+          <div style={{ background: 'var(--color-surface-container)', borderRadius: 16, width: '100%', maxWidth: 520, padding: 28, boxShadow: '0 25px 50px rgba(0,0,0,0.25)', maxHeight: '85vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: 20, fontWeight: 700, color: '#000d23', marginBottom: 20 }}>Modifier le Coworking</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {[
                 { key: 'nom', label: 'Nom du coworking', required: true },
@@ -263,36 +242,8 @@ export default function TenantManagement({ session }) {
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
-              <button onClick={() => setModal(null)} style={{ padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, border: '1px solid #c5c6ce', background: '#fff', cursor: 'pointer' }}>Annuler</button>
+              <button onClick={() => setModal(null)} style={{ padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, border: '1px solid #c5c6ce', background: 'var(--color-surface-container)', cursor: 'pointer' }}>Annuler</button>
               <button onClick={handleSave} disabled={saving || !form.nom} style={{ padding: '10px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600, background: '#0054cb', color: '#fff', border: 'none', cursor: 'pointer', opacity: saving || !form.nom ? 0.5 : 1 }}>{saving ? 'Enregistrement...' : 'Enregistrer'}</button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {typeof document !== 'undefined' && onboardModal && createPortal(
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.5)' }} onClick={() => setOnboardModal(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 440, padding: 28, boxShadow: '0 25px 50px rgba(0,0,0,0.25)' }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 28, color: '#0054cb' }}>person_add</span>
-              <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: 20, fontWeight: 700, color: '#000d23', margin: 0 }}>Onboard Admin</h2>
-            </div>
-            <p style={{ fontSize: 14, color: '#6b6d7b', marginBottom: 20 }}>Inviter un administrateur pour <strong style={{ color: '#000d23' }}>{onboardModal.nom}</strong></p>
-
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#44474d', marginBottom: 4, display: 'block' }}>Email de l'admin</label>
-            <input
-              type="email"
-              value={onboardForm.email}
-              onChange={(e) => setOnboardForm({ ...onboardForm, email: e.target.value })}
-              placeholder="admin@coworking.tn"
-              style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #c5c6ce', fontSize: 14, outline: 'none', background: '#f5f3f6', boxSizing: 'border-box', marginBottom: 8 }}
-            />
-            <p style={{ fontSize: 12, color: '#8b8d97', marginBottom: 20 }}>Un email d'invitation sera envoyé avec les instructions de connexion.</p>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-              <button onClick={() => setOnboardModal(null)} style={{ padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, border: '1px solid #c5c6ce', background: '#fff', cursor: 'pointer' }}>Annuler</button>
-              <button onClick={handleOnboard} disabled={!onboardForm.email} style={{ padding: '10px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600, background: '#0054cb', color: '#fff', border: 'none', cursor: 'pointer', opacity: !onboardForm.email ? 0.5 : 1 }}>Envoyer l'invitation</button>
             </div>
           </div>
         </div>,

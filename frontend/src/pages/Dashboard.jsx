@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { memberApi, subscriptionApi, bookingApi, sessionApi } from '../services/api';
+import { memberApi, subscriptionApi, bookingApi, sessionApi, formationApi } from '../services/api';
 import {
   connectSocket,
   joinUser,
@@ -111,6 +111,8 @@ export default function Dashboard({ session }) {
   const [activeSubscription, setActiveSubscription] = useState(null);
   const [subscriptionHistory, setSubscriptionHistory] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [myFormations, setMyFormations] = useState([]);
+  const [availableFormations, setAvailableFormations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -173,16 +175,20 @@ export default function Dashboard({ session }) {
     try {
       setLoading(true);
       setError('');
-      const [{ profile: prof }, { subscription }, { subscriptions }, { reservations }] = await Promise.all([
+      const [{ profile: prof }, { subscription }, { subscriptions }, { reservations }, myFormationsRes, availableFormationsRes] = await Promise.all([
         memberApi.getMe(),
         subscriptionApi.getActive(),
         subscriptionApi.getMine(),
         bookingApi.getAll(),
+        formationApi.getMesFormations(),
+        formationApi.getAll({ statut: 'planifiee' }),
       ]);
       setProfile(prof);
       setActiveSubscription(subscription);
       setSubscriptionHistory(subscriptions || []);
       setBookings(reservations || []);
+      setMyFormations(myFormationsRes.inscriptions || []);
+      setAvailableFormations(availableFormationsRes.formations || []);
       setForm({
         nom: prof.nom || '',
         prenom: prof.prenom || '',
@@ -403,7 +409,7 @@ export default function Dashboard({ session }) {
         <div className="md:col-span-8 bento-card">
           {activeSession ? (
             /* ── LIVE SESSION CARD ── */
-            <div className="bg-white rounded-2xl p-6 border border-outline-variant/10 h-full flex flex-col sm:flex-row items-center gap-6" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
+            <div className="bg-white rounded-3xl p-6 border border-outline-variant/10 h-full flex flex-col sm:flex-row items-center gap-6" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
               {/* Circular timer */}
               <div className="relative w-36 h-36 shrink-0">
                 <svg viewBox="0 0 100 100" className="w-full h-full">
@@ -470,7 +476,7 @@ export default function Dashboard({ session }) {
             </div>
           ) : todayCheckInReady.length > 0 ? (
             /* ── QUICK CHECK-IN CARD ── */
-            <div className="bg-white rounded-2xl p-6 border border-outline-variant/10 h-full" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
+            <div className="bg-white rounded-3xl p-6 border border-outline-variant/10 h-full" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
               <div className="flex items-center gap-2 mb-4">
                 <span className="material-symbols-outlined text-[#0054cb]" style={{ fontSize: 22 }}>event_available</span>
                 <h2 className="font-sora font-bold text-primary text-base">Check-in rapide</h2>
@@ -498,7 +504,7 @@ export default function Dashboard({ session }) {
             </div>
           ) : (
             /* ── NO SESSION STATE ── */
-            <div className="bg-white rounded-2xl p-6 border border-outline-variant/10 h-full flex flex-col items-center justify-center text-center min-h-[200px]" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
+            <div className="bg-white rounded-3xl p-6 border border-outline-variant/10 h-full flex flex-col items-center justify-center text-center min-h-[200px]" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
               <span className="material-symbols-outlined text-outline-variant mb-3" style={{ fontSize: 48 }}>desk</span>
               <p className="font-sora font-bold text-primary text-base mb-1">Aucune session en cours</p>
               <p className="text-sm text-on-surface-variant mb-4">Réservez un espace ou effectuez un check-in depuis vos réservations.</p>
@@ -517,7 +523,7 @@ export default function Dashboard({ session }) {
         {/* ─── ROW 1 RIGHT (4 cols): Active Subscription ─── */}
         <div className="md:col-span-4 bento-card">
           <div
-            className="rounded-2xl p-6 h-full relative overflow-hidden flex flex-col justify-between min-h-[280px]"
+            className="rounded-3xl p-6 h-full relative overflow-hidden flex flex-col justify-between min-h-[280px]"
             style={{ background: '#000d23', boxShadow: '0 8px 24px rgba(0,13,35,.18)' }}
           >
             {/* Glow */}
@@ -612,7 +618,7 @@ export default function Dashboard({ session }) {
 
         {/* ─── ROW 2 LEFT (8 cols): Upcoming Bookings ─── */}
         <div className="md:col-span-8 bento-card">
-          <div className="bg-white rounded-2xl p-6 border border-outline-variant/10 h-full" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
+          <div className="bg-white rounded-3xl p-6 border border-outline-variant/10 h-full" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
             <div className="flex justify-between items-center mb-5">
               <h3 className="font-sora font-bold text-primary text-base">Réservations à venir</h3>
               <Link to="/dashboard/bookings" className="text-sm font-semibold text-[#0054cb] hover:underline transition-colors">
@@ -683,7 +689,7 @@ export default function Dashboard({ session }) {
 
         {/* ─── ROW 2 RIGHT (4 cols): QR Code / Access Pass ─── */}
         <div className="md:col-span-4 bento-card">
-          <div className="bg-white rounded-2xl p-6 border border-outline-variant/10 h-full flex flex-col items-center text-center" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
+          <div className="bg-white rounded-3xl p-6 border border-outline-variant/10 h-full flex flex-col items-center text-center" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
             <h3 className="font-sora font-bold text-primary text-base mb-1">Mon accès</h3>
             <p className="text-xs text-on-surface-variant mb-4">Scannez au kiosk pour entrer</p>
 
@@ -710,6 +716,117 @@ export default function Dashboard({ session }) {
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>open_in_new</span>
               Mon accès
+            </Link>
+          </div>
+        </div>
+
+        {/* ─── ROW 3 LEFT (8 cols): My Registered Formations ─── */}
+        <div className="md:col-span-8 bento-card">
+          <div className="bg-white rounded-3xl p-6 border border-outline-variant/10 h-full flex flex-col justify-between" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
+            <div>
+              <div className="flex justify-between items-center mb-5">
+                <h3 className="font-sora font-bold text-primary text-base flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#2FBE8F]" style={{ fontSize: 20 }}>school</span>
+                  Mes formations à venir
+                </h3>
+                <Link to="/dashboard/formations" className="text-sm font-semibold text-[#0054cb] hover:underline transition-colors">
+                  Voir tout
+                </Link>
+              </div>
+
+              {myFormations.filter(i => i.statut !== 'annulee').length === 0 ? (
+                <div className="flex flex-col items-center py-8 text-center">
+                  <span className="material-symbols-outlined text-outline-variant mb-2" style={{ fontSize: 40 }}>school</span>
+                  <p className="text-sm text-on-surface-variant mb-3">Vous n'êtes inscrit à aucune formation.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {myFormations
+                    .filter(i => i.statut !== 'annulee')
+                    .slice(0, 3)
+                    .map((insc) => {
+                      const f = insc.formations || {};
+                      const formateurName = f.profiles ? `${f.profiles.prenom} ${f.profiles.nom}` : 'Formateur';
+                      return (
+                        <div
+                          key={insc.id}
+                          className="flex items-center gap-4 p-3 rounded-xl border border-outline-variant/10 bg-surface-container-low/30 hover:bg-surface-container-low/60 transition-all"
+                        >
+                          <div className="w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0" style={{ background: 'rgba(47,190,143,0.1)' }}>
+                            <span className="material-symbols-outlined text-[#2FBE8F]" style={{ fontSize: 22 }}>menu_book</span>
+                          </div>
+                          <div className="flex-grow min-w-0">
+                            <h4 className="font-semibold text-primary text-sm truncate">{f.titre || 'Formation'}</h4>
+                            <p className="text-xs text-on-surface-variant mt-0.5">
+                              Animé par <strong className="text-primary">{formateurName}</strong>
+                            </p>
+                            <p className="text-[11px] text-on-surface-variant/80 mt-0.5">
+                              {formatDateShort(f.date_debut)} à {formatTimeShort(f.date_debut)}
+                            </p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              insc.statut_paiement === 'paye' ? 'bg-emerald-100 text-emerald-800' :
+                              insc.statut_paiement === 'gratuit' ? 'bg-slate-100 text-slate-700' :
+                              'bg-amber-100 text-amber-800'
+                            }`}>
+                              {insc.statut_paiement === 'paye' ? 'Payé' : insc.statut_paiement === 'gratuit' ? 'Gratuit' : 'À régler'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ─── ROW 3 RIGHT (4 cols): Available Formations to Register ─── */}
+        <div className="md:col-span-4 bento-card">
+          <div className="bg-white rounded-3xl p-6 border border-outline-variant/10 h-full flex flex-col justify-between" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
+            <div>
+              <h3 className="font-sora font-bold text-primary text-base mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#8b5cf6]" style={{ fontSize: 20 }}>auto_awesome</span>
+                Ateliers recommandés
+              </h3>
+
+              {availableFormations.filter(f => !myFormations.some(m => m.formation_id === f.id && m.statut !== 'annulee')).length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <span className="material-symbols-outlined text-outline-variant mb-2" style={{ fontSize: 32 }}>celebration</span>
+                  <p className="text-xs text-on-surface-variant">Aucun nouvel atelier disponible.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {availableFormations
+                    .filter(f => !myFormations.some(m => m.formation_id === f.id && m.statut !== 'annulee'))
+                    .slice(0, 2)
+                    .map((f) => {
+                      const formateurName = f.profiles ? `${f.profiles.prenom} ${f.profiles.nom}` : 'Formateur';
+                      return (
+                        <div key={f.id} className="p-3 rounded-xl border border-outline-variant/10 bg-surface-container-low/40">
+                          <h4 className="font-semibold text-primary text-xs truncate mb-1">{f.titre}</h4>
+                          <p className="text-[10px] text-on-surface-variant">Formateur : <strong>{formateurName}</strong></p>
+                          <div className="flex justify-between items-center mt-2.5">
+                            <span className="text-[10px] font-bold text-secondary">{f.prix_inscription > 0 ? `${f.prix_inscription} DT` : 'Gratuit'}</span>
+                            <Link
+                              to="/dashboard/formations"
+                              className="px-2.5 py-1 rounded bg-[#8b5cf6] text-white text-[10px] font-bold hover:bg-[#8b5cf6]/90 transition-colors"
+                            >
+                              S'inscrire
+                            </Link>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+            <Link
+              to="/dashboard/formations"
+              className="w-full text-center py-2 mt-4 rounded-xl text-xs font-bold text-secondary border border-secondary/20 hover:bg-secondary/5 transition-all block"
+            >
+              Explorer les formations
             </Link>
           </div>
         </div>
@@ -741,7 +858,7 @@ export default function Dashboard({ session }) {
       </div>
 
       {/* ═══════ PROFILE SECTION (expandable) ═══════ */}
-      <div className="mt-6 bg-white rounded-2xl border border-outline-variant/10 overflow-hidden" style={{ boxShadow: '0 4px 16px rgba(16,35,63,.04)' }}>
+      <div className="mt-6 bg-white rounded-3xl border border-outline-variant/10 overflow-hidden" style={{ boxShadow: '0 4px 16px rgba(16,35,63,.04)' }}>
         <button
           onClick={() => setEditing((v) => !v)}
           className="w-full flex items-center justify-between px-6 py-4 hover:bg-surface-container-low/50 transition-colors"
@@ -840,7 +957,7 @@ export default function Dashboard({ session }) {
 
       {/* ═══════ SUBSCRIPTION HISTORY (compact) ═══════ */}
       {subscriptionHistory.length > 0 && (
-        <div className="mt-5 bg-white rounded-2xl border border-outline-variant/10 p-6" style={{ boxShadow: '0 4px 16px rgba(16,35,63,.04)' }}>
+        <div className="mt-5 bg-white rounded-3xl border border-outline-variant/10 p-6" style={{ boxShadow: '0 4px 16px rgba(16,35,63,.04)' }}>
           <h3 className="font-sora font-bold text-primary text-sm mb-4">Historique des abonnements</h3>
           <div className="space-y-2">
             {subscriptionHistory.map((sub) => (
