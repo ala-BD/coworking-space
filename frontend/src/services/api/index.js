@@ -1,0 +1,20 @@
+// services/api/index.js — Barrel exports for all API modules
+export { bookingApi } from './bookings';
+export { memberApi } from './members';
+export { subscriptionApi } from './subscriptions';
+export { sessionApi } from './sessions';
+export { pricingApi } from './pricing';
+export { settingsApi } from './settings';
+export { formationApi } from './formations';
+export { kpiApi } from './kpis';
+export { paymentApi } from './payments';
+export { memberPortalApi } from './memberPortal';
+export { messagingApi } from './messaging';
+export { guestApi } from './guests';
+export { cancellationAdvancedApi } from './cancellationAdvanced';
+export { documentsApi } from './documents';
+export { rgpdApi } from './rgpd';
+export { tenantAdminApi } from './tenantAdmin';
+export { sitesApi } from './sites';
+export { superAdminApi } from './superAdmin';
+export { API_URL, getAccessToken, getAuthHeaders, apiFetch } from './_core';

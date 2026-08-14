@@ -70,6 +70,8 @@ export const MEMBER_NAV = [
 export const ADMIN_NAV = [
   { id: 'admin_dashboard',    label: 'Tableau de bord',      icon: 'dashboard',              to: '/admin/dashboard' },
   { id: 'admin_agenda',       label: 'Agenda & Check-in',    icon: 'calendar_month',         to: '/admin/agenda' },
+  { id: 'admin_espaces',      label: 'Mes Espaces',          icon: 'meeting_room',           to: '/admin/espaces' },
+  { id: 'admin_coworking',    label: 'Profil Coworking',     icon: 'domain',                 to: '/admin/profile-coworking' },
   { id: 'admin_formations',   label: 'Formations',           icon: 'event_note',             to: '/admin/formations' },
   { id: 'admin_pricing',      label: 'Tarification',         icon: 'sell',                   to: '/admin/pricing' },
   { id: 'admin_payments',     label: 'Gestion paiements',    icon: 'account_balance_wallet', to: '/admin/payments' },
@@ -95,6 +97,7 @@ export const FORMATEUR_NAV = [
 
 export const SUPER_ADMIN_NAV = [
   { id: 'sa_dashboard', label: 'Dashboard', icon: 'dashboard', to: '/super-admin/dashboard' },
+  { id: 'sa_users',     label: 'Utilisateurs', icon: 'groups', to: '/super-admin/users' },
   { id: 'sa_tenants', label: 'Tenant Management', icon: 'domain', to: '/super-admin/tenants' },
   { id: 'sa_billing', label: 'Facturation B2B', icon: 'payments', to: '/super-admin/billing' },
   { id: 'sa_monitoring', label: 'Monitoring & Audit', icon: 'monitor', to: '/super-admin/monitoring' },

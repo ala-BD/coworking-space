@@ -225,6 +225,10 @@ export default function SuperAdminDashboard({ session }) {
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>domain</span>
               Gérer les Coworkings
             </button>
+            <button onClick={() => navigate('/super-admin/users')} className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 rounded-xl text-sm font-semibold hover:bg-white/20 transition-colors">
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>groups</span>
+              Gérer les Utilisateurs
+            </button>
             <button onClick={() => navigate('/super-admin/billing')} className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 rounded-xl text-sm font-semibold hover:bg-white/20 transition-colors">
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>receipt_long</span>
               Facturation B2B

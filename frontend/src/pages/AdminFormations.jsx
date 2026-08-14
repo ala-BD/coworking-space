@@ -788,7 +788,7 @@ export default function AdminFormations({ session }) {
       <Modal
         open={showFormationDrawer}
         onClose={() => setShowFormationDrawer(false)}
-        title={formationForm.id ? 'Modifier la formation' : 'Planifier une formation'}
+        title="Modifier la formation"
         subtitle="Remplissez les informations de la session"
         icon="event_note"
         footer={
@@ -807,7 +807,7 @@ export default function AdminFormations({ session }) {
               className="flex-1 py-2.5 bg-secondary text-white font-semibold rounded-xl text-sm hover:bg-secondary/90 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {formSaving ? <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" /> : null}
-              {formationForm.id ? 'Enregistrer' : 'Planifier'}
+              Enregistrer
             </button>
           </div>
         }

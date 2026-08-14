@@ -30,3 +30,9 @@ frontend/node_modules/.vite/
 backend/test-supabase.js
 backend/verify-migration.js
 backend/test-output.txt
+
+# Backup server.js
+backend/server.js.bak
+
+# Dossiers de maquettes/designs
+designs/

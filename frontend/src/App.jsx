@@ -46,6 +46,9 @@ const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
 const TenantManagement = lazy(() => import('./pages/TenantManagement'));
 const TenantBilling = lazy(() => import('./pages/TenantBilling'));
 const SuperAdminMonitoring = lazy(() => import('./pages/SuperAdminMonitoring'));
+const SuperAdminUsers = lazy(() => import('./pages/SuperAdminUsers'));
+const AdminEspaces = lazy(() => import('./pages/AdminEspaces'));
+const AdminCoworkingProfile = lazy(() => import('./pages/AdminCoworkingProfile'));
 
 function LoadingFallback() {
   return (
@@ -534,6 +537,38 @@ export default function App() {
 
           <Route
 
+            path="/admin/espaces"
+
+            element={
+
+              <AdminRoute>
+
+                <AdminEspaces session={session} />
+
+              </AdminRoute>
+
+            }
+
+          />
+
+          <Route
+
+            path="/admin/profile-coworking"
+
+            element={
+
+              <AdminRoute>
+
+                <AdminCoworkingProfile session={session} />
+
+              </AdminRoute>
+
+            }
+
+          />
+
+          <Route
+
             path="/admin/formateurs"
 
             element={
@@ -685,6 +720,22 @@ export default function App() {
               <SuperAdminRoute>
 
                 <TenantManagement session={session} />
+
+              </SuperAdminRoute>
+
+            }
+
+          />
+
+          <Route
+
+            path="/super-admin/users"
+
+            element={
+
+              <SuperAdminRoute>
+
+                <SuperAdminUsers session={session} />
 
               </SuperAdminRoute>
 
