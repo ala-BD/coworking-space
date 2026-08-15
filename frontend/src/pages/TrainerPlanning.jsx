@@ -5,26 +5,26 @@ import PortalLayout from '../components/layout/PortalLayout';
 
 const STATUT_STYLES = {
   planifiee: 'bg-amber-50 text-amber-800 border border-amber-200',
-  en_cours:  'bg-emerald-50 text-emerald-800 border border-emerald-200',
-  terminee:  'bg-sky-50 text-sky-800 border border-sky-200',
-  annulee:   'bg-red-50 text-red-800 border border-red-200',
+  en_cours: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
+  terminee: 'bg-sky-50 text-sky-800 border border-sky-200',
+  annulee: 'bg-red-50 text-red-800 border border-red-200',
 };
 const STATUT_LABELS = {
   planifiee: 'Planifiée', en_cours: 'En cours', terminee: 'Terminée', annulee: 'Annulée',
 };
 
 export default function TrainerPlanning({ session }) {
-  const [profile, setProfile]         = useState(null);
-  const [formations, setFormations]   = useState([]);
+  const [profile, setProfile] = useState(null);
+  const [formations, setFormations] = useState([]);
   const [remunerations, setRemunerations] = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState('');
-  const [success, setSuccess]         = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   /* Emargement Modal */
   const [showEmargement, setShowEmargement] = useState(false);
   const [selectedFormation, setSelectedFormation] = useState(null);
-  const [participants, setParticipants]   = useState([]);
+  const [participants, setParticipants] = useState([]);
   const [presenceSaving, setPresenceSaving] = useState(null); // userId being toggled
 
   useEffect(() => { loadUserData(); }, []);
@@ -101,11 +101,31 @@ export default function TrainerPlanning({ session }) {
     } catch (err) { alert('Erreur export : ' + err.message); }
   };
 
-  /* KPIs */
-  const totalCourses    = formations.length;
-  const doneCourses     = formations.filter(f => f.statut === 'terminee').length;
-  const pendingRemu     = remunerations.filter(r => r.statut === 'en_attente').reduce((s, r) => s + parseFloat(r.montant || 0), 0);
-  const paidRemu        = remunerations.filter(r => r.statut === 'paye').reduce((s, r) => s + parseFloat(r.montant || 0), 0);
+  const handleCancel = async (formation) => {
+    if (!window.confirm(`Annuler la formation "${formation.titre}" ?`)) return;
+    try {
+      await formationApi.update(formation.id, { statut: 'annulee' });
+      setSuccess('Formation annulée.');
+      await refreshData();
+    } catch (err) { setError(err.message); }
+  };
+
+  const handleDelete = async (formation) => {
+    const label = formation.nb_inscrits > 0
+      ? `Cette formation a ${formation.nb_inscrits} inscrit(s). Elle sera marquée "Annulée" plutôt que supprimée.\n\nContinuer ?`
+      : `Supprimer définitivement "${formation.titre}" ?`;
+    if (!window.confirm(label)) return;
+    try {
+      await formationApi.delete(formation.id);
+      setSuccess(formation.nb_inscrits > 0 ? 'Formation marquée comme annulée.' : 'Formation supprimée.');
+      await refreshData();
+    } catch (err) { setError(err.message); }
+  };
+
+  const totalCourses = formations.length;
+  const doneCourses = formations.filter(f => f.statut === 'terminee').length;
+  const pendingRemu = remunerations.filter(r => r.statut === 'en_attente').reduce((s, r) => s + parseFloat(r.montant || 0), 0);
+  const paidRemu = remunerations.filter(r => r.statut === 'paye').reduce((s, r) => s + parseFloat(r.montant || 0), 0);
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center">
@@ -151,12 +171,12 @@ export default function TrainerPlanning({ session }) {
         {/* ── KPIs ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {[
-            { label: 'Sessions assignées', value: totalCourses,              icon: 'event_note',           color: 'text-secondary bg-secondary/10' },
-            { label: 'Sessions terminées', value: doneCourses,               icon: 'task_alt',             color: 'text-emerald-600 bg-emerald-50' },
+            { label: 'Sessions assignées', value: totalCourses, icon: 'event_note', color: 'text-secondary bg-secondary/10' },
+            { label: 'Sessions terminées', value: doneCourses, icon: 'task_alt', color: 'text-emerald-600 bg-emerald-50' },
             { label: 'Honoraires attendus', value: `${pendingRemu.toFixed(0)} DT`, icon: 'pending_actions', color: 'text-amber-600 bg-amber-50' },
-            { label: 'Honoraires reçus',   value: `${paidRemu.toFixed(0)} DT`,    icon: 'payments',        color: 'text-sky-600 bg-sky-50' },
+            { label: 'Honoraires reçus', value: `${paidRemu.toFixed(0)} DT`, icon: 'payments', color: 'text-sky-600 bg-sky-50' },
           ].map(({ label, value, icon, color }) => (
-            <div key={label} className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-outline-variant/20 shadow-sm flex items-center gap-3">
+            <div key={label} className="bg-surface-container-lowest rounded-3xl sm:rounded-3xl p-4 sm:p-5 border border-outline-variant/20 shadow-sm flex items-center gap-3">
               <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${color}`}>
                 <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{icon}</span>
               </div>
@@ -178,7 +198,7 @@ export default function TrainerPlanning({ session }) {
             </h2>
 
             {formations.length === 0 ? (
-              <div className="bg-white rounded-3xl border border-outline-variant/20 p-10 text-center shadow-sm">
+              <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-10 text-center shadow-sm">
                 <span className="material-symbols-outlined text-on-surface-variant/30 block mb-3" style={{ fontSize: 48 }}>event_busy</span>
                 <p className="font-semibold text-primary mb-1">Aucune session assignée</p>
                 <p className="text-sm text-on-surface-variant">L'administrateur vous assignera vos prochaines formations.</p>
@@ -188,7 +208,7 @@ export default function TrainerPlanning({ session }) {
                 {/* Mobile Cards */}
                 <div className="sm:hidden space-y-3">
                   {formations.map((f) => (
-                    <div key={f.id} className="bg-white rounded-2xl border border-outline-variant/20 p-4 shadow-sm">
+                    <div key={f.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-4 shadow-sm">
                       <div className="flex justify-between items-start gap-2 mb-2">
                         <h3 className="font-sora font-bold text-primary text-sm leading-snug flex-1">{f.titre}</h3>
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${STATUT_STYLES[f.statut]}`}>
@@ -209,22 +229,34 @@ export default function TrainerPlanning({ session }) {
                           {f.nb_inscrits || 0} inscrits / {f.capacite_max}
                         </div>
                       </div>
-                      <div className="flex gap-2 pt-2 border-t border-outline-variant/10 flex-wrap">
+                      <div className="flex items-center gap-4 pt-2 border-t border-outline-variant/10">
                         {f.statut === 'planifiee' && (
-                          <button onClick={() => updateStatut(f.id, 'en_cours')} className="flex-1 py-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100">
-                            Démarrer
+                          <button onClick={() => updateStatut(f.id, 'en_cours')} title="Démarrer"
+                            className="text-emerald-600 hover:text-emerald-700 active:scale-90 transition-all">
+                            <span className="material-symbols-outlined" style={{ fontSize: 24 }}>play_circle</span>
                           </button>
                         )}
                         {f.statut === 'en_cours' && (
-                          <button onClick={() => updateStatut(f.id, 'terminee')} className="flex-1 py-1.5 text-xs font-semibold bg-secondary text-white rounded-xl hover:bg-secondary/90">
-                            Clôturer
+                          <button onClick={() => updateStatut(f.id, 'terminee')} title="Clôturer"
+                            className="text-secondary hover:text-secondary/70 active:scale-90 transition-all">
+                            <span className="material-symbols-outlined" style={{ fontSize: 24 }}>stop_circle</span>
                           </button>
                         )}
-                        <button onClick={() => openEmargement(f)} className="flex-1 py-1.5 text-xs font-semibold border border-outline-variant/30 text-on-surface-variant rounded-xl hover:bg-surface-container">
-                          Émargement
+                        <button onClick={() => openEmargement(f)} title="Émargement"
+                          className="text-secondary hover:text-secondary/70 active:scale-90 transition-all">
+                          <span className="material-symbols-outlined" style={{ fontSize: 24 }}>assignment</span>
                         </button>
-                        <button onClick={() => downloadEmargement(f)} className="px-3 py-1.5 text-xs text-on-surface-variant border border-outline-variant/30 rounded-xl hover:bg-surface-container">
-                          ↓
+                        <button onClick={() => downloadEmargement(f)} title="Exporter"
+                          className="text-slate-400 hover:text-slate-600 active:scale-90 transition-all">
+                          <span className="material-symbols-outlined" style={{ fontSize: 24 }}>download</span>
+                        </button>
+                        <button onClick={() => handleCancel(f)} title="Annuler la formation"
+                          className="text-amber-500 hover:text-amber-700 active:scale-90 transition-all">
+                          <span className="material-symbols-outlined" style={{ fontSize: 24 }}>cancel</span>
+                        </button>
+                        <button onClick={() => handleDelete(f)} title="Supprimer"
+                          className="text-red-400 hover:text-red-600 active:scale-90 transition-all ml-auto">
+                          <span className="material-symbols-outlined" style={{ fontSize: 24 }}>delete</span>
                         </button>
                       </div>
                     </div>
@@ -232,7 +264,7 @@ export default function TrainerPlanning({ session }) {
                 </div>
 
                 {/* Desktop Table */}
-                <div className="hidden sm:block bg-white rounded-3xl border border-outline-variant/20 overflow-hidden shadow-sm">
+                <div className="hidden sm:block bg-surface-container-lowest rounded-3xl border border-outline-variant/20 overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left border-collapse">
                       <thead>
@@ -247,15 +279,21 @@ export default function TrainerPlanning({ session }) {
                       </thead>
                       <tbody className="divide-y divide-outline-variant/10">
                         {formations.map((f) => (
-                          <tr key={f.id} className="hover:bg-surface-container-lowest transition-colors group">
-                            <td className="p-4 font-semibold text-primary max-w-[160px]">
-                              <div className="truncate">{f.titre}</div>
+                          <tr key={f.id} className="hover:bg-surface-container-lowest transition-colors">
+                            <td className="p-4 font-semibold text-primary">
+                              <div className="break-words leading-snug">{f.titre}</div>
                             </td>
                             <td className="p-4 text-xs text-on-surface-variant">{f.espaces?.nom || '—'}</td>
                             <td className="p-4 text-xs">
-                              <div className="text-on-surface-variant">{new Date(f.date_debut).toLocaleDateString('fr-FR')}</div>
-                              <div className="font-medium text-primary">
-                                {new Date(f.date_debut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} → {new Date(f.date_fin).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-1 text-on-surface-variant">
+                                  <span>{new Date(f.date_debut).toLocaleDateString('fr-FR')}</span>
+                                  <span className="font-medium text-primary">{new Date(f.date_debut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-on-surface-variant">
+                                  <span>{new Date(f.date_fin).toLocaleDateString('fr-FR')}</span>
+                                  <span className="font-medium text-primary">{new Date(f.date_fin).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
                               </div>
                             </td>
                             <td className="p-4">
@@ -273,22 +311,58 @@ export default function TrainerPlanning({ session }) {
                               </span>
                             </td>
                             <td className="p-4">
-                              <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center justify-end gap-3">
+                                {/* Démarrer */}
                                 {f.statut === 'planifiee' && (
-                                  <button onClick={() => updateStatut(f.id, 'en_cours')} className="px-2.5 py-1 text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100">
-                                    Démarrer
+                                  <button
+                                    onClick={() => updateStatut(f.id, 'en_cours')}
+                                    title="Démarrer la formation"
+                                    className="text-emerald-600 hover:text-emerald-700 active:scale-90 transition-all"
+                                  >
+                                    <span className="material-symbols-outlined" style={{ fontSize: 22 }}>play_circle</span>
                                   </button>
                                 )}
+                                {/* Clôturer */}
                                 {f.statut === 'en_cours' && (
-                                  <button onClick={() => updateStatut(f.id, 'terminee')} className="px-2.5 py-1 text-[11px] font-semibold bg-secondary text-white rounded-lg hover:bg-secondary/90">
-                                    Clôturer
+                                  <button
+                                    onClick={() => updateStatut(f.id, 'terminee')}
+                                    title="Clôturer la formation"
+                                    className="text-secondary hover:text-secondary/70 active:scale-90 transition-all"
+                                  >
+                                    <span className="material-symbols-outlined" style={{ fontSize: 22 }}>stop_circle</span>
                                   </button>
                                 )}
-                                <button onClick={() => openEmargement(f)} title="Émargement" className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-container-high text-secondary">
-                                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>assignment</span>
+                                {/* Émargement */}
+                                <button
+                                  onClick={() => openEmargement(f)}
+                                  title="Feuille d'émargement"
+                                  className="text-secondary hover:text-secondary/70 active:scale-90 transition-all"
+                                >
+                                  <span className="material-symbols-outlined" style={{ fontSize: 22 }}>assignment</span>
                                 </button>
-                                <button onClick={() => downloadEmargement(f)} title="Télécharger" className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-container-high text-on-surface-variant">
-                                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
+                                {/* Télécharger */}
+                                <button
+                                  onClick={() => downloadEmargement(f)}
+                                  title="Exporter la liste"
+                                  className="text-slate-400 hover:text-slate-600 active:scale-90 transition-all"
+                                >
+                                  <span className="material-symbols-outlined" style={{ fontSize: 22 }}>download</span>
+                                </button>
+                                {/* Annuler */}
+                                <button
+                                  onClick={() => handleCancel(f)}
+                                  title="Annuler la formation"
+                                  className="text-amber-500 hover:text-amber-700 active:scale-90 transition-all"
+                                >
+                                  <span className="material-symbols-outlined" style={{ fontSize: 22 }}>cancel</span>
+                                </button>
+                                {/* Supprimer */}
+                                <button
+                                  onClick={() => handleDelete(f)}
+                                  title="Supprimer / Annuler la formation"
+                                  className="text-red-400 hover:text-red-600 active:scale-90 transition-all"
+                                >
+                                  <span className="material-symbols-outlined" style={{ fontSize: 22 }}>delete</span>
                                 </button>
                               </div>
                             </td>
@@ -311,21 +385,20 @@ export default function TrainerPlanning({ session }) {
 
             <div className="space-y-3">
               {remunerations.length === 0 ? (
-                <div className="bg-white rounded-3xl border border-outline-variant/20 p-6 text-center shadow-sm">
+                <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-6 text-center shadow-sm">
                   <span className="material-symbols-outlined text-on-surface-variant/30 block mb-2" style={{ fontSize: 36 }}>account_balance_wallet</span>
                   <p className="text-sm text-on-surface-variant">Aucun honoraire enregistré.</p>
                   <p className="text-xs text-on-surface-variant/60 mt-1">L'admin les ajoutera après vos sessions.</p>
                 </div>
               ) : (
                 remunerations.map((r) => (
-                  <div key={r.id} className="bg-white rounded-2xl border border-outline-variant/20 p-4 shadow-sm">
+                  <div key={r.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-4 shadow-sm">
                     <div className="flex justify-between items-start gap-2 mb-1">
                       <h4 className="font-semibold text-primary text-xs leading-snug line-clamp-1 flex-1">
                         {r.formations?.titre || 'Honoraires'}
                       </h4>
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                        r.statut === 'paye' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${r.statut === 'paye' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
                         {r.statut === 'paye' ? 'Payé' : 'En attente'}
                       </span>
                     </div>
@@ -348,7 +421,7 @@ export default function TrainerPlanning({ session }) {
       {showEmargement && selectedFormation && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => setShowEmargement(false)} />
-          <div className="relative w-full sm:max-w-xl bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[90vh]"
+          <div className="relative w-full sm:max-w-xl bg-surface-container-lowest rounded-4xl shadow-2xl flex flex-col max-h-[90vh]"
             style={{ animation: 'slideUp 0.25s cubic-bezier(.4,0,.2,1)' }}>
             <div className="p-5 border-b border-outline-variant/20 flex justify-between items-start bg-gradient-to-br from-surface-container-low to-white">
               <div>
@@ -372,7 +445,7 @@ export default function TrainerPlanning({ session }) {
                   <p className="text-sm text-on-surface-variant">Aucun inscrit pour cet atelier.</p>
                 </div>
               ) : (
-                <div className="border border-outline-variant/20 rounded-2xl overflow-hidden">
+                <div className="border border-outline-variant/20 rounded-3xl overflow-hidden">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-surface-container-low text-on-surface-variant font-semibold">

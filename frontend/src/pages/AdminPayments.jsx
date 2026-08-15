@@ -170,7 +170,7 @@ export default function AdminPayments({ session }) {
 
       {/* Cartes de statistiques (KPIs) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-md mb-lg">
-        <div className="bg-surface-container-lowest p-md rounded-2xl border border-outline-variant/30 shadow-sm flex items-center gap-md">
+        <div className="bg-surface-container-lowest p-md rounded-3xl border border-outline-variant/30 shadow-sm flex items-center gap-md">
           <div className="w-12 h-12 rounded-full bg-[#D1FAE5] text-[#065F46] flex items-center justify-center">
             <span className="material-symbols-outlined filled text-[24px]">account_balance_wallet</span>
           </div>
@@ -180,7 +180,7 @@ export default function AdminPayments({ session }) {
           </div>
         </div>
 
-        <div className="bg-surface-container-lowest p-md rounded-2xl border border-outline-variant/30 shadow-sm flex items-center gap-md">
+        <div className="bg-surface-container-lowest p-md rounded-3xl border border-outline-variant/30 shadow-sm flex items-center gap-md">
           <div className="w-12 h-12 rounded-full bg-[#FEF3C7] text-[#92400E] flex items-center justify-center">
             <span className="material-symbols-outlined filled text-[24px]">pending_actions</span>
           </div>
@@ -190,7 +190,7 @@ export default function AdminPayments({ session }) {
           </div>
         </div>
 
-        <div className="bg-surface-container-lowest p-md rounded-2xl border border-outline-variant/30 shadow-sm flex items-center gap-md">
+        <div className="bg-surface-container-lowest p-md rounded-3xl border border-outline-variant/30 shadow-sm flex items-center gap-md">
           <div className="w-12 h-12 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center">
             <span className="material-symbols-outlined filled text-[24px]">monitoring</span>
           </div>
@@ -289,7 +289,7 @@ export default function AdminPayments({ session }) {
       {/* Modal d'édition */}
       {editingPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-surface-container-lowest rounded-2xl w-[400px] max-w-[90vw] overflow-hidden shadow-2xl">
+          <div className="bg-surface-container-lowest rounded-3xl w-[400px] max-w-[90vw] overflow-hidden shadow-2xl">
             <div className="px-lg py-md border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low">
               <h3 className="font-sora font-semibold text-primary">Mettre à jour le paiement</h3>
               <button onClick={handleCloseEdit} className="text-on-surface-variant hover:text-error transition-colors">

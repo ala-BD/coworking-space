@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import BrandLogo from '../components/layout/BrandLogo';
 
@@ -7,19 +7,28 @@ export default function BookingStep1() {
   const [spaces, setSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
+  const [selectedTenant, setSelectedTenant] = useState(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    const tenantId = searchParams.get('tenantId');
+    if (tenantId) {
+      setSelectedTenant(tenantId);
+    }
     fetchSpaces();
-  }, []);
+  }, [searchParams]);
 
   const fetchSpaces = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('espaces')
-        .select('*')
-        .order('tarif_horaire', { ascending: true });
+      let query = supabase.from('espaces').select('*');
+      
+      if (selectedTenant) {
+        query = query.eq('tenant_id', selectedTenant);
+      }
+      
+      const { data, error } = await query.order('tarif_horaire', { ascending: true });
 
       if (error) throw error;
       setSpaces(data);

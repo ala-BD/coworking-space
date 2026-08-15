@@ -32,10 +32,23 @@ const MemberProfile = lazy(() => import('./pages/MemberProfile'));
 const MemberNotifications = lazy(() => import('./pages/MemberNotifications'));
 const MemberMessages = lazy(() => import('./pages/MemberMessages'));
 const TrainerPlanning = lazy(() => import('./pages/TrainerPlanning'));
+const TrainerProfile = lazy(() => import('./pages/TrainerProfile'));
+const TrainerDashboard = lazy(() => import('./pages/TrainerDashboard'));
+const TrainerFormations = lazy(() => import('./pages/TrainerFormations'));
+// Modules H, J, K, L, N
+const GuestBookingPage = lazy(() => import('./pages/GuestBookingPage'));
+const SignDocumentPage = lazy(() => import('./pages/SignDocumentPage'));
+const MemberDocuments = lazy(() => import('./pages/MemberDocuments'));
+const MemberRGPD = lazy(() => import('./pages/MemberRGPD'));
+const AdminMultiSites = lazy(() => import('./pages/AdminMultiSites'));
+const AdminOnboarding = lazy(() => import('./pages/AdminOnboarding'));
 const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
 const TenantManagement = lazy(() => import('./pages/TenantManagement'));
 const TenantBilling = lazy(() => import('./pages/TenantBilling'));
 const SuperAdminMonitoring = lazy(() => import('./pages/SuperAdminMonitoring'));
+const SuperAdminUsers = lazy(() => import('./pages/SuperAdminUsers'));
+const AdminEspaces = lazy(() => import('./pages/AdminEspaces'));
+const AdminCoworkingProfile = lazy(() => import('./pages/AdminCoworkingProfile'));
 
 function LoadingFallback() {
   return (
@@ -59,17 +72,41 @@ export default function App() {
     console.log('App Mounted. URL Hash:', window.location.hash);
     console.log('hasAuthParams:', hasAuthParams);
 
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      console.log('getSession resolved. Session:', s);
+    const checkUserStatusAndSetSession = async (s) => {
+      if (s?.user?.id) {
+        try {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('statut_compte')
+            .eq('id', s.user.id)
+            .single();
+
+          if (!error && profile && profile.statut_compte && profile.statut_compte !== 'actif') {
+            console.log('Non-active account detected in App.jsx:', profile.statut_compte);
+            localStorage.setItem('pending_auth_status', profile.statut_compte);
+            await supabase.auth.signOut();
+            setSession(null);
+            return false;
+          }
+        } catch (err) {
+          console.error('Error checking account status:', err);
+        }
+      }
       setSession(s);
+      return true;
+    };
+
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+      console.log('getSession resolved. Session:', s);
+      await checkUserStatusAndSetSession(s);
       if (!hasAuthParams || s) {
         setLoading(false);
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
       console.log('onAuthStateChange Event:', event, 'Session:', s);
-      setSession(s);
+      const isValid = await checkUserStatusAndSetSession(s);
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || s) {
         setLoading(false);
       }
@@ -184,453 +221,581 @@ export default function App() {
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
 
-        <Route path="/" element={<Landing session={session} />} />
+          <Route path="/" element={<Landing session={session} />} />
 
-        <Route
+          <Route
 
-          path="/login"
+            path="/login"
 
-          element={session ? <HomeRedirect session={session} /> : <Login />}
+            element={session ? <HomeRedirect session={session} /> : <Login />}
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/register"
+            path="/register"
 
-          element={session ? <HomeRedirect session={session} /> : <Register />}
+            element={session ? <HomeRedirect session={session} /> : <Register />}
 
-        />
+          />
 
 
 
-        {/* Espace membre */}
+          {/* Espace membre */}
 
-        <Route
+          <Route
 
-          path="/dashboard"
+            path="/dashboard"
 
-          element={
+            element={
 
-            <MemberRoute>
+              <MemberRoute>
 
-              <Dashboard session={session} />
+                <Dashboard session={session} />
 
-            </MemberRoute>
+              </MemberRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/dashboard/abonnement"
+            path="/dashboard/abonnement"
 
-          element={
+            element={
 
-            <MemberRoute>
+              <MemberRoute>
 
-              <MemberSubscription session={session} />
+                <MemberSubscription session={session} />
 
-            </MemberRoute>
+              </MemberRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/dashboard/qr"
+            path="/dashboard/qr"
 
-          element={
+            element={
 
-            <MemberRoute>
+              <MemberRoute>
 
-              <QrCodeView session={session} />
+                <QrCodeView session={session} />
 
-            </MemberRoute>
+              </MemberRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/dashboard/bookings"
+            path="/dashboard/bookings"
 
-          element={
+            element={
 
-            <MemberRoute>
+              <MemberRoute>
 
-              <MemberBookings session={session} />
+                <MemberBookings session={session} />
 
-            </MemberRoute>
+              </MemberRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/dashboard/profile"
+            path="/dashboard/profile"
 
-          element={
+            element={
 
-            <MemberRoute>
+              <MemberRoute>
 
-              <MemberProfile session={session} />
+                <MemberProfile session={session} />
 
-            </MemberRoute>
+              </MemberRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/dashboard/notifications"
+            path="/dashboard/notifications"
 
-          element={
+            element={
 
-            <MemberRoute>
+              <MemberRoute>
 
-              <MemberNotifications session={session} />
+                <MemberNotifications session={session} />
 
-            </MemberRoute>
+              </MemberRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/dashboard/messages"
+            path="/dashboard/messages"
 
-          element={
+            element={
 
-            <MemberRoute>
+              <MemberRoute>
 
-              <MemberMessages session={session} />
+                <MemberMessages session={session} />
 
-            </MemberRoute>
+              </MemberRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/dashboard/formations"
+            path="/dashboard/formations"
 
-          element={
+            element={
 
-            <MemberRoute>
+              <MemberRoute>
 
-              <MemberFormations session={session} />
+                <MemberFormations session={session} />
 
-            </MemberRoute>
+              </MemberRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/member/payments"
+            path="/member/payments"
 
-          element={
+            element={
 
-            <MemberRoute>
+              <MemberRoute>
 
-              <MemberPayments session={session} />
+                <MemberPayments session={session} />
 
-            </MemberRoute>
+              </MemberRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/member/payments/verify"
+            path="/member/payments/verify"
 
-          element={
+            element={
 
-            <MemberRoute>
+              <MemberRoute>
 
-              <StripeVerify session={session} />
+                <StripeVerify session={session} />
 
-            </MemberRoute>
+              </MemberRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/book/step1"
+            path="/book/step1"
 
-          element={
+            element={
 
-            <MemberRoute>
+              <MemberRoute>
 
-              <BookingStep1 />
+                <BookingStep1 />
 
-            </MemberRoute>
+              </MemberRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/book/step2"
+            path="/book/step2"
 
-          element={
+            element={
 
-            <MemberRoute>
+              <MemberRoute>
 
-              <BookingStep2 />
+                <BookingStep2 />
 
-            </MemberRoute>
+              </MemberRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/book/step3"
+            path="/book/step3"
 
-          element={
+            element={
 
-            <MemberRoute>
+              <MemberRoute>
 
-              <BookingStep3 session={session} />
+                <BookingStep3 session={session} />
 
-            </MemberRoute>
+              </MemberRoute>
 
-          }
+            }
 
-        />
+          />
 
 
 
-        {/* Espace administration */}
+          {/* Espace administration */}
 
-        <Route
+          <Route
 
-          path="/admin/dashboard"
+            path="/admin/onboarding"
 
-          element={
+            element={
 
-            <AdminRoute>
+              <AdminRoute>
 
-              <AdminDashboard session={session} />
+                <AdminOnboarding session={session} />
 
-            </AdminRoute>
+              </AdminRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/admin/pricing"
+            path="/admin/dashboard"
 
-          element={
+            element={
 
-            <AdminRoute>
+              <AdminRoute>
 
-              <AdminPricing session={session} />
+                <AdminDashboard session={session} />
 
-            </AdminRoute>
+              </AdminRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/admin/payments"
+            path="/admin/pricing"
 
-          element={
+            element={
 
-            <AdminRoute>
+              <AdminRoute>
 
-              <AdminPayments session={session} />
+                <AdminPricing session={session} />
 
-            </AdminRoute>
+              </AdminRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/admin/formations"
+            path="/admin/payments"
 
-          element={
+            element={
 
-            <AdminRoute>
+              <AdminRoute>
 
-              <AdminFormations session={session} />
+                <AdminPayments session={session} />
 
-            </AdminRoute>
+              </AdminRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/admin/formateurs"
+            path="/admin/formations"
 
-          element={
+            element={
 
-            <AdminRoute>
+              <AdminRoute>
 
-              <AdminFormateurs session={session} />
+                <AdminFormations session={session} />
 
-            </AdminRoute>
+              </AdminRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/admin/cancellation-policy"
+            path="/admin/espaces"
 
-          element={
+            element={
 
-            <AdminRoute>
+              <AdminRoute>
 
-              <AdminCancellationPolicy session={session} />
+                <AdminEspaces session={session} />
 
-            </AdminRoute>
+              </AdminRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/admin/messages"
+            path="/admin/profile-coworking"
 
-          element={
+            element={
 
-            <AdminRoute>
+              <AdminRoute>
 
-              <AdminMessages session={session} />
+                <AdminCoworkingProfile session={session} />
 
-            </AdminRoute>
+              </AdminRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/admin/agenda"
+            path="/admin/formateurs"
 
-          element={
+            element={
 
-            <AdminRoute>
+              <AdminRoute>
 
-              <AdminAgenda session={session} />
+                <AdminFormateurs session={session} />
 
-            </AdminRoute>
+              </AdminRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/trainer/planning"
+            path="/admin/cancellation-policy"
 
-          element={
+            element={
 
-            <TrainerRoute>
+              <AdminRoute>
 
-              <TrainerPlanning session={session} />
+                <AdminCancellationPolicy session={session} />
 
-            </TrainerRoute>
+              </AdminRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/super-admin/dashboard"
+            path="/admin/messages"
 
-          element={
+            element={
 
-            <SuperAdminRoute>
+              <AdminRoute>
 
-              <SuperAdminDashboard session={session} />
+                <AdminMessages session={session} />
 
-            </SuperAdminRoute>
+              </AdminRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/super-admin/tenants"
+            path="/admin/agenda"
 
-          element={
+            element={
 
-            <SuperAdminRoute>
+              <AdminRoute>
 
-              <TenantManagement session={session} />
+                <AdminAgenda session={session} />
 
-            </SuperAdminRoute>
+              </AdminRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/super-admin/billing"
+            path="/trainer/planning"
 
-          element={
+            element={
 
-            <SuperAdminRoute>
+              <TrainerRoute>
 
-              <TenantBilling session={session} />
+                <TrainerPlanning session={session} />
 
-            </SuperAdminRoute>
+              </TrainerRoute>
 
-          }
+            }
 
-        />
+          />
 
-        <Route
+          <Route
 
-          path="/super-admin/monitoring"
+            path="/trainer/profile"
 
-          element={
+            element={
 
-            <SuperAdminRoute>
+              <TrainerRoute>
 
-              <SuperAdminMonitoring session={session} />
+                <TrainerProfile session={session} />
 
-            </SuperAdminRoute>
+              </TrainerRoute>
 
-          }
+            }
 
-        />
+          />
 
+          <Route
 
+            path="/trainer-dashboard"
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+            element={
 
-      </Routes>
+              <TrainerRoute>
+
+                <TrainerDashboard session={session} />
+
+              </TrainerRoute>
+
+            }
+
+          />
+
+          <Route
+
+            path="/trainer/formations"
+
+            element={
+
+              <TrainerRoute>
+
+                <TrainerFormations session={session} />
+
+              </TrainerRoute>
+
+            }
+
+          />
+
+          <Route
+
+            path="/super-admin/dashboard"
+
+            element={
+
+              <SuperAdminRoute>
+
+                <SuperAdminDashboard session={session} />
+
+              </SuperAdminRoute>
+
+            }
+
+          />
+
+          <Route
+
+            path="/super-admin/tenants"
+
+            element={
+
+              <SuperAdminRoute>
+
+                <TenantManagement session={session} />
+
+              </SuperAdminRoute>
+
+            }
+
+          />
+
+          <Route
+
+            path="/super-admin/users"
+
+            element={
+
+              <SuperAdminRoute>
+
+                <SuperAdminUsers session={session} />
+
+              </SuperAdminRoute>
+
+            }
+
+          />
+
+          <Route
+
+            path="/super-admin/billing"
+
+            element={
+
+              <SuperAdminRoute>
+
+                <TenantBilling session={session} />
+
+              </SuperAdminRoute>
+
+            }
+
+          />
+
+          <Route
+
+            path="/super-admin/monitoring"
+
+            element={
+
+              <SuperAdminRoute>
+
+                <SuperAdminMonitoring session={session} />
+
+              </SuperAdminRoute>
+
+            }
+
+          />
+
+
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+
+          {/* ── Modules H, K, L, N — Pages publiques & membre ── */}
+          <Route path="/book-guest" element={<GuestBookingPage />} />
+          <Route path="/sign/:token" element={<SignDocumentPage />} />
+
+          <Route path="/dashboard/documents" element={
+            <MemberRoute><MemberDocuments session={session} /></MemberRoute>
+          } />
+          <Route path="/dashboard/rgpd" element={
+            <MemberRoute><MemberRGPD session={session} /></MemberRoute>
+          } />
+
+          {/* ── Module N — Admin multi-sites ── */}
+          <Route path="/admin/sites" element={
+            <AdminRoute><AdminMultiSites session={session} /></AdminRoute>
+          } />
+
+        </Routes>
       </Suspense>
     </Router>
 

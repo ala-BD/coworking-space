@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { kpiApi } from '../services/api';
+import { kpiApi, formationApi, memberApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
 import { getRoleLabel } from '../utils/roles';
 import { exportDashboardToExcel } from '../utils/exportDashboardExcel';
@@ -9,6 +9,7 @@ import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
+
 
 // ─── Intervalles de rafraîchissement ────────────────────────────────────────
 const REFRESH_KPI_MS     = 30_000;  // KPIs généraux  : 30s
@@ -36,6 +37,11 @@ function greeting() {
   return 'Bonsoir';
 }
 
+function formatTimeShort(dateStr) {
+  if (!dateStr) return '—';
+  return new Date(dateStr).toLocaleTimeString('fr-FR', { timeStyle: 'short' });
+}
+
 // ─── Composant StatCard ──────────────────────────────────────────────────────
 function StatCard({ label, value, sub, icon, accent = '#0054cb', to, badge, pulse }) {
   const bg = accent === '#2fbe8f' ? 'rgba(47,190,143,0.1)'
@@ -46,7 +52,7 @@ function StatCard({ label, value, sub, icon, accent = '#0054cb', to, badge, puls
 
   const inner = (
     <div
-      className="bg-white rounded-3xl border border-outline-variant/10 h-full transition-all duration-300 hover:-translate-y-1 relative overflow-hidden"
+      className="bg-surface-container-lowest rounded-3xl border border-outline-variant/10 h-full transition-all duration-300 hover:-translate-y-1 relative overflow-hidden"
       style={{ padding: '18px 20px', boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}
     >
       {pulse && (
@@ -100,6 +106,9 @@ export default function AdminDashboard({ session }) {
   const [profile, setProfile]     = useState(null);
   const [kpis,    setKpis]        = useState(null);
   const [chart,   setChart]       = useState(null);
+  const [formations, setFormations] = useState([]);
+  const [pendingAccounts, setPendingAccounts] = useState([]);
+  const [approvingId, setApprovingId] = useState(null);
   const [loading, setLoading]     = useState(true);
   const [error,   setError]       = useState('');
   const [lastRefresh, setLastRefresh] = useState(null);
@@ -112,26 +121,40 @@ export default function AdminDashboard({ session }) {
   // ── Chargement initial du profil ─────────────────────────────────────────
   useEffect(() => {
     supabase.from('profiles').select('*').eq('id', session.user.id).single()
-      .then(({ data, error: e }) => {
-        if (e) setError(e.message);
-        else setProfile(data);
+      .then(async ({ data, error: e }) => {
+        if (e) { setError(e.message); return; }
+        setProfile(data);
+
+        if (data?.role === 'admin' && data?.tenant_id) {
+          const { data: tenant } = await supabase
+            .from('tenants')
+            .select('settings')
+            .eq('id', data.tenant_id)
+            .single();
+          if (tenant?.settings?.onboarding_completed !== true) {
+            navigate('/admin/onboarding', { replace: true });
+          }
+        }
       });
-  }, [session]);
+  }, [session, navigate]);
 
   // ── Fetch KPIs principal (silencieux après le 1er) ───────────────────────
   const fetchKpis = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const [kpiData, chartData] = await Promise.all([
+      const [kpiData, chartData, formationsRes, pendingRes] = await Promise.all([
         kpiApi.getAll(),
         kpiApi.getRevenueChart(),
+        formationApi.getAll({ statut: 'planifiee' }),
+        memberApi.getPendingAccounts().catch(() => ({ pending: [] })),
       ]);
       setKpis(kpiData);
       setChart(chartData);
+      setFormations(formationsRes.formations || []);
+      setPendingAccounts(pendingRes.pending || []);
       setLastRefresh(new Date());
       setError('');
     } catch (e) {
-      // En mode silencieux on n'affiche pas l'erreur pour ne pas perturber l'UI
       if (!silent) setError(e.message);
     } finally {
       if (!silent) setLoading(false);
@@ -181,6 +204,19 @@ export default function AdminDashboard({ session }) {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
+  };
+
+  // ── Approuver / Rejeter un compte ───────────────────────────────────────
+  const handleAccountAction = async (id, action) => {
+    setApprovingId(id);
+    try {
+      await memberApi.approveAccount(id, action);
+      setPendingAccounts(prev => prev.filter(p => p.id !== id));
+    } catch (e) {
+      alert('Erreur : ' + e.message);
+    } finally {
+      setApprovingId(null);
+    }
   };
 
   // ── Écran de chargement initial ──────────────────────────────────────────
@@ -331,7 +367,7 @@ export default function AdminDashboard({ session }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 animate-fade-up">
 
         {/* Graphique CA 6 mois */}
-        <div className="bg-white rounded-3xl p-5 border border-outline-variant/10"
+        <div className="bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
           style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -364,7 +400,7 @@ export default function AdminDashboard({ session }) {
         </div>
 
         {/* Graphique Taux Occupation */}
-        <div className="bg-white rounded-3xl p-5 border border-outline-variant/10"
+        <div className="bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
           style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -398,7 +434,7 @@ export default function AdminDashboard({ session }) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6 animate-fade-up">
 
         {/* Sessions en cours */}
-        <div className="lg:col-span-7 bg-white rounded-3xl p-5 border border-outline-variant/10"
+        <div className="lg:col-span-7 bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
           style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -457,7 +493,7 @@ export default function AdminDashboard({ session }) {
         </div>
 
         {/* Top 5 membres */}
-        <div className="lg:col-span-5 bg-white rounded-3xl p-5 border border-outline-variant/10"
+        <div className="lg:col-span-5 bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
           style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-sora font-bold text-primary text-base">Top membres</h2>
@@ -490,11 +526,152 @@ export default function AdminDashboard({ session }) {
         </div>
       </div>
 
+      {/* ── Section Demandes en attente ───────────────────────────────── */}
+      {pendingAccounts.length > 0 && (
+        <div className="bg-surface-container-lowest rounded-3xl p-5 border border-amber-200/60 mb-6 animate-fade-up"
+          style={{ boxShadow: '0 4px 16px rgba(245,158,11,0.08)' }}>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#d97706' }}>pending_actions</span>
+              <h2 className="font-sora font-bold text-primary text-base">Demandes de compte en attente</h2>
+            </div>
+            <span className="ml-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white animate-pulse"
+              style={{ background: '#d97706' }}>{pendingAccounts.length}</span>
+          </div>
+
+          <div className="divide-y divide-outline-variant/10">
+            {pendingAccounts.map((p) => {
+              const roleColors = { formateur: { bg: '#f5f3ff', text: '#6d28d9' }, member: { bg: '#eff6ff', text: '#1d4ed8' }, default: { bg: '#f1f5f9', text: '#475569' } };
+              const rc = roleColors[p.role] || roleColors.default;
+              const isActing = approvingId === p.id;
+              const dateInscrit = new Date(p.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+              return (
+                <div key={p.id} className="py-4 flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 font-bold text-sm text-white"
+                      style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)' }}>
+                      {(p.prenom?.[0] || '').toUpperCase()}{(p.nom?.[0] || '').toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-primary text-sm">{p.prenom} {p.nom}</p>
+                      <p className="text-xs text-on-surface-variant truncate">{p.email}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: rc.bg, color: rc.text }}>
+                          {p.role === 'formateur' ? 'Formateur' : 'Membre'}
+                          {p.specialite ? ` · ${p.specialite}` : ''}
+                        </span>
+                        <span className="text-[10px] text-on-surface-variant">Inscrit le {dateInscrit}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => handleAccountAction(p.id, 'reject')}
+                      disabled={isActing}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-colors disabled:opacity-50"
+                      style={{ borderColor: 'rgba(186,26,26,0.25)', color: '#ba1a1a', background: 'rgba(186,26,26,0.05)' }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+                      Rejeter
+                    </button>
+                    <button
+                      onClick={() => handleAccountAction(p.id, 'approve')}
+                      disabled={isActing}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 text-white"
+                      style={{ background: isActing ? '#94a3b8' : 'linear-gradient(135deg, #059669, #10b981)' }}
+                    >
+                      {isActing
+                        ? <span className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full" />
+                        : <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check</span>
+                      }
+                      {isActing ? 'En cours…' : 'Approuver'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Ligne Formations de la semaine ──────────────────────────────── */}
+      <div className="bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10 mb-6 animate-fade-up"
+        style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[#8b5cf6]" style={{ fontSize: 20 }}>school</span>
+            <h2 className="font-sora font-bold text-primary text-base">Suivi des formations programmées</h2>
+          </div>
+          <Link to="/admin/formations" className="text-xs font-semibold text-secondary hover:underline">
+            Gérer les formations
+          </Link>
+        </div>
+
+        {formations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <span className="material-symbols-outlined text-[40px] text-on-surface-variant/40 mb-2">school</span>
+            <p className="text-sm text-on-surface-variant">Aucune formation programmée à venir</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-outline-variant/10 pb-2">
+                  <th className="pb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Formation</th>
+                  <th className="pb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Formateur</th>
+                  <th className="pb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Date de début</th>
+                  <th className="pb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Espace</th>
+                  <th className="pb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant text-center">Inscriptions</th>
+                  <th className="pb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant text-right">Prix</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/10">
+                {formations.slice(0, 5).map((f) => {
+                  const formateurName = f.profiles ? `${f.profiles.prenom} ${f.profiles.nom}` : '—';
+                  const fillPct = f.capacite_max > 0 ? Math.min(100, Math.round((f.nb_inscrits / f.capacite_max) * 100)) : 0;
+                  const barColor = fillPct >= 90 ? 'bg-red-500' : fillPct >= 60 ? 'bg-amber-500' : 'bg-emerald-500';
+
+                  return (
+                    <tr key={f.id} className="hover:bg-surface-container-low/30 transition-colors">
+                      <td className="py-3 font-semibold text-primary">{f.titre}</td>
+                      <td className="py-3 text-on-surface-variant">
+                        <div>{formateurName}</div>
+                        {f.profiles?.specialite && <div className="text-[10px] text-on-surface-variant/70">{f.profiles.specialite}</div>}
+                      </td>
+                      <td className="py-3 text-on-surface-variant">
+                        <div>{new Date(f.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div>
+                        <div className="text-[10px] text-on-surface-variant/70">{formatTimeShort(f.date_debut)}</div>
+                      </td>
+                      <td className="py-3 text-on-surface-variant">{f.espaces?.nom || '—'}</td>
+                      <td className="py-3">
+                        <div className="flex flex-col items-center justify-center min-w-[100px]">
+                          <div className="flex items-center justify-between w-full text-[10px] mb-1">
+                            <span className="font-semibold text-on-surface-variant">{f.nb_inscrits} / {f.capacite_max}</span>
+                            <span className="font-bold text-on-surface-variant">{fillPct}%</span>
+                          </div>
+                          <div className="w-full h-1 rounded-full bg-outline-variant/10 overflow-hidden">
+                            <div className={`h-full rounded-full ${barColor}`} style={{ width: `${fillPct}%` }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 text-right font-bold text-secondary">
+                        {f.prix_inscription > 0 ? `${f.prix_inscription} DT` : 'Gratuit'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* ── Graphique occupation 6 mois + Actions rapides ─────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 animate-fade-up">
 
         {/* Évolution occupation 6 mois */}
-        <div className="lg:col-span-7 bg-white rounded-3xl p-5 border border-outline-variant/10"
+        <div className="lg:col-span-7 bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
           style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
           <div className="flex items-center justify-between mb-4">
             <div>

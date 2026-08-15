@@ -183,6 +183,27 @@ function TestiCard({ quote, name, role, initial }) {
    COMPOSANT PRINCIPAL
 ══════════════════════════════ */
 export default function Landing({ session }) {
+  const [tenants, setTenants] = useState([]);
+
+  useEffect(() => {
+    fetchTenants();
+  }, []);
+
+  const fetchTenants = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('statut', 'actif')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setTenants(data || []);
+    } catch (e) {
+      console.error('Error fetching tenants:', e.message);
+    }
+  };
+
   /* données */
   const features = [
     { icon:'wifi_tethering',  title:'Wi-Fi Gigabit',       desc:'Fibre symétrique dédiée avec sécurité de niveau entreprise et zéro zone morte dans tous les espaces.' },
@@ -430,50 +451,48 @@ export default function Landing({ session }) {
           <div className="text-center mb-5">
             <span className="sec-badge inv">Nos espaces</span>
             <h2 className="sora fw-bold text-white mb-3" style={{fontSize:'clamp(1.8rem,3vw,2.4rem)'}}>
-              Espaces Signature
+              Espaces de Coworking
             </h2>
             <p style={{color:EC.onNavy,maxWidth:560,margin:'0 auto',lineHeight:1.8}}>
-              L'environnement façonne le résultat. Choisissez la configuration architecturale qui correspond à votre état d'esprit.
+              Découvrez nos espaces de coworking disponibles et réservez votre place dès maintenant.
             </p>
           </div>
-          <div className="row g-4">
-            {/* Grande carte */}
-            <div className="col-lg-8">
-              <div className="space-card" style={{height:480}}>
-                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuAK2IhBFMr9iRfeyjL932e_-BDpfhpsjbHAAmsMYP8pWVUompUswy9nLWNu1o8igTnSVoUootv062bdc-CNDkBhYvX5tqM-ZT1TMTsxQz5FA-wV0IsV--_0Afumhh2_F_bka0hjVsfjkBC7XcOLsDbe0X7D7h9iue35kjtQUhym4ZTkcdwd0mXRfSGGGz60KN0i1CsPjLxlHF0BB0FlK0zXQZ52J80iS80hZcdIbC7jVomseVARgyWZdgRPZXCWgfq5XvQrgH61lzg"
-                  alt="L'Atrium Central" />
-                <div className="space-overlay" />
-                <div className="space-body">
-                  <span style={{backgroundColor:EC.cobalt,color:'white',borderRadius:8,padding:'4px 12px',fontSize:'.72rem',fontWeight:700,display:'inline-block',marginBottom:8}}>⭐ Espace Principal</span>
-                  <h3 className="sora fw-bold text-white mb-2">L'Atrium Central</h3>
-                  <p className="mb-0" style={{color:EC.onNavy,fontSize:'.9rem',maxWidth:460}}>Notre joyau — architecture grandiose, tables communales en noyer massif et la plus haute densité d'opportunités de networking.</p>
-                </div>
-              </div>
+          {tenants.length === 0 ? (
+            <div className="text-center py-5">
+              <p style={{color:EC.onNavy,fontSize:'1rem'}}>Aucun espace disponible pour le moment.</p>
             </div>
-            {/* Colonne droite */}
-            <div className="col-lg-4">
-              <div className="d-flex flex-column gap-4 h-100">
-                <div className="space-card flex-fill" style={{minHeight:225}}>
-                  <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAh3ZCgUrYvYQe_u32LptrkK0S4KXhXRjfpjtzctnEaG_PU6SJ7n1APuqbz9AvKarYYX8pG0MeW7kIUtWoZee34oTbSioQxnSF8yFYxVVBFz65gjXxP07ZobPhQtzzbG4SLqpf4Ji6ONLKl4wyCu2vf2daiaRIvURuOZs46Pe7C_mtZfGsS4jwkJNpF0rrlARiQIQSGbuk9FtMfOFh9DMmp4pTGnm_ZGs-dlOLo11qYLVVlobPee-oy94DUNgyOa8CLkSlqJugo8Q"
-                    alt="Espaces Tech" />
-                  <div className="space-overlay" />
-                  <div className="space-body">
-                    <h5 className="sora fw-bold text-white mb-1">Espaces Tech</h5>
-                    <p className="mb-0" style={{color:EC.onNavy,fontSize:'.82rem'}}>Setups dual-moniteur et équipement ergonomique haut de gamme.</p>
+          ) : (
+            <div className="row g-4">
+              {tenants.map((tenant) => (
+                <div key={tenant.id} className="col-lg-4">
+                  <div className="space-card" style={{height:320}}>
+                    <img 
+                      src={tenant.logo_url || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=600&fit=crop"} 
+                      alt={tenant.nom} 
+                    />
+                    <div className="space-overlay" />
+                    <div className="space-body">
+                      <span style={{backgroundColor:EC.cobalt,color:'white',borderRadius:8,padding:'4px 12px',fontSize:'.72rem',fontWeight:700,display:'inline-block',marginBottom:8}}>
+                        {tenant.ville || 'Tunisie'}
+                      </span>
+                      <h3 className="sora fw-bold text-white mb-2">{tenant.nom}</h3>
+                      <p className="mb-0" style={{color:EC.onNavy,fontSize:'.9rem',maxWidth:460}}>
+                        {tenant.description || 'Espace de coworking premium pour professionnels ambitieux.'}
+                      </p>
+                      <Link 
+                        to={`/book/step1?tenantId=${tenant.id}`}
+                        className="btn mt-3 d-inline-flex align-items-center gap-2"
+                        style={{backgroundColor:EC.cobalt,color:'white',borderRadius:12,padding:'10px 20px',fontWeight:700,border:'none',fontSize:'.9rem',transition:'all .25s'}}
+                      >
+                        <span className="material-symbols-outlined" style={{fontSize:18}}>event_available</span>
+                        Réserver
+                      </Link>
+                    </div>
                   </div>
                 </div>
-                <div className="space-card flex-fill" style={{minHeight:225}}>
-                  <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJrwAgC1-jOW-IV6zwN0Kp0DWkRiWOFEgSE-5UnOoUr_eG8dQXY0mqsXlSOK_0VCbhDb9x4OAyJb2GqMsy8MShSgjz4jk5D01_gx6Ry8cimT_Xoxmo2dvGIcW5u6cWW45pGBBY0xXZ51jcCguVlZWE2l_QV-SubTyIKtN56jmKlq03jEN3ULOpg3BeXA4EyYyCT0dzzPzGbDrZrRfmRM7HY1cx10WXX43WWEySbJkwZyjHMn_14iPlmVHRdnI8Y2o6pUg24YxqcfI"
-                    alt="Pods de Focus" />
-                  <div className="space-overlay" />
-                  <div className="space-body">
-                    <h5 className="sora fw-bold text-white mb-1">Pods de Focus</h5>
-                    <p className="mb-0" style={{color:EC.onNavy,fontSize:'.82rem'}}>Capsules acoustiques pour concentration maximale et travail approfondi.</p>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
-          </div>
+          )}
         </div>
       </section>
 

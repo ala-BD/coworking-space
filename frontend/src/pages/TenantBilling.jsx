@@ -78,7 +78,7 @@ export default function TenantBilling({ session }) {
           { label: 'Impayés B2B', value: `${unpaid.toLocaleString('fr-TN')} DT`, icon: 'warning', color: '#FF6F59', sub: 'Nécessite une action' },
           { label: 'Croissance MRR', value: '+12.5%', icon: 'trending_up', color: '#2FBE8F', sub: 'Objectif atteint' },
         ].map((c, i) => (
-          <div key={i} className="bg-white rounded-2xl p-5 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
+          <div key={i} className="bg-surface-container-lowest rounded-3xl p-5 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">{c.label}</span>
               <span className="material-symbols-outlined p-2 rounded-xl" style={{ fontSize: 18, color: c.color, background: `${c.color}12` }}>{c.icon}</span>
@@ -90,7 +90,7 @@ export default function TenantBilling({ session }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
+        <div className="lg:col-span-2 bg-surface-container-lowest rounded-3xl p-6 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-sora text-base font-semibold text-primary">Évolution MRR (6 mois)</h2>
             <button className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-outline-variant/30 hover:bg-surface-container-low text-on-surface-variant">Export CSV</button>
@@ -106,7 +106,7 @@ export default function TenantBilling({ session }) {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
+        <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
           <h2 className="font-sora text-base font-semibold text-primary mb-1">Relances automatiques</h2>
           <p className="text-xs text-on-surface-variant mb-5">Paramétrez les alertes automatiques pour les factures en retard.</p>
           <div className="space-y-4">
@@ -142,7 +142,7 @@ export default function TenantBilling({ session }) {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-[0px_16px_32px_rgba(16,35,63,0.12)] overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-3xl shadow-[0px_16px_32px_rgba(16,35,63,0.12)] overflow-hidden">
         <div className="px-5 py-4 border-b border-outline-variant/15">
           <h2 className="font-sora text-base font-semibold text-primary">Suivi des Facturations Tenants</h2>
         </div>

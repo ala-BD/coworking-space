@@ -80,7 +80,7 @@ export default function SuperAdminMonitoring({ session }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
+        <div className="lg:col-span-2 bg-surface-container-lowest rounded-3xl p-6 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
           <div className="flex items-center justify-between mb-4">
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">System Uptime (Overall)</span>
@@ -101,7 +101,7 @@ export default function SuperAdminMonitoring({ session }) {
         </div>
 
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl p-5 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
+          <div className="bg-surface-container-lowest rounded-3xl p-5 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
             <div className="flex items-center gap-3 mb-2">
               <span className="material-symbols-outlined p-2 rounded-xl bg-secondary/10 text-secondary" style={{ fontSize: 18 }}>speed</span>
               <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Avg Latency</span>
@@ -112,7 +112,7 @@ export default function SuperAdminMonitoring({ session }) {
               <span className="text-xs text-on-surface-variant">Real-time monitoring</span>
             </div>
           </div>
-          <div className="bg-white rounded-2xl p-5 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
+          <div className="bg-surface-container-lowest rounded-3xl p-5 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
             <div className="flex items-center gap-3 mb-2">
               <span className="material-symbols-outlined p-2 rounded-xl bg-[#FF6F59]/10 text-[#FF6F59]" style={{ fontSize: 18 }}>report_problem</span>
               <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Critical Errors</span>
@@ -127,7 +127,7 @@ export default function SuperAdminMonitoring({ session }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
-        <div className="lg:col-span-2 bg-primary-container rounded-2xl p-6 text-white min-h-[280px]">
+        <div className="lg:col-span-2 bg-primary-container rounded-3xl p-6 text-white min-h-[280px]">
           <h2 className="font-sora text-base font-semibold mb-1">Global Traffic Flow</h2>
           <p className="text-sm opacity-70 mb-4">Visualizing packets across primary CDN nodes</p>
           <div className="flex gap-6 mb-6">
@@ -141,7 +141,7 @@ export default function SuperAdminMonitoring({ session }) {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
+        <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
           <h2 className="font-sora text-base font-semibold text-primary mb-4">Server Clusters</h2>
           <div className="space-y-3">
             {CLUSTERS.map((c, i) => (
@@ -159,7 +159,7 @@ export default function SuperAdminMonitoring({ session }) {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-[0px_8px_16px_rgba(16,35,63,0.08)] overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-3xl shadow-[0px_8px_16px_rgba(16,35,63,0.08)] overflow-hidden">
         <div className="px-5 py-4 border-b border-outline-variant/15 flex items-center justify-between">
           <div>
             <h2 className="font-sora text-base font-semibold text-primary">System Audit Log</h2>

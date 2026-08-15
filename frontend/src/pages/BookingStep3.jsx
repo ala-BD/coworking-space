@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { bookingApi } from '../services/api';
+import { bookingApi, paymentApi } from '../services/api';
 import BrandLogo from '../components/layout/BrandLogo';
 
 export default function BookingStep3({ session }) {
@@ -67,15 +67,29 @@ export default function BookingStep3({ session }) {
         throw new Error('Ce créneau n\'est plus disponible.');
       }
 
-      await bookingApi.create({
+      // Créer la réservation
+      const reservation = await bookingApi.create({
         espace_id: espaceId,
         date_debut: startDateTime,
         date_fin: endDateTime,
         mode: 'online',
       });
 
-      setSuccess(true);
-      setTimeout(() => navigate('/dashboard'), 3000);
+      // Créer automatiquement un paiement pour cette réservation
+      const payment = await paymentApi.createSelf({
+        reservation_id: reservation.reservation.id,
+        montant: totalPrice,
+        mode: 'online',
+        statut: 'pending',
+      });
+
+      // Rediriger vers Stripe Checkout
+      const stripeResponse = await paymentApi.payWithStripe(payment.payment.id);
+      if (stripeResponse.link) {
+        window.location.href = stripeResponse.link;
+      } else {
+        throw new Error('Lien de paiement non reçu.');
+      }
     } catch (e) {
       setErrorMsg(e.message || 'Échec de la réservation.');
     } finally {

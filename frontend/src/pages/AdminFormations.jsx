@@ -39,7 +39,7 @@ function Modal({ open, onClose, title, subtitle, icon, children, footer, maxWidt
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6">
       <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-sm" onClick={onClose} />
       <div
-        className={`relative w-full ${maxWidth} mx-auto bg-white rounded-[32px] shadow-[0_40px_120px_rgba(15,23,42,0.18)] flex flex-col max-h-[90vh] overflow-hidden`}
+        className={`relative w-full ${maxWidth} mx-auto bg-white rounded-4xl shadow-[0_40px_120px_rgba(15,23,42,0.18)] flex flex-col max-h-[90vh] overflow-hidden`}
         style={{ animation: 'popIn 0.22s cubic-bezier(.34,1.56,.64,1)' }}
       >
         <div className="flex flex-col gap-4 p-7 border-b border-outline-variant/15 bg-slate-50 shrink-0">
@@ -94,7 +94,7 @@ function Dialog({ open, onClose, title, children, footer, maxWidth = 'max-w-xl' 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
       <div
-        className={`relative w-full ${maxWidth} mx-auto bg-white rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden min-h-0`}
+        className={`relative w-full ${maxWidth} mx-auto bg-surface-container-lowest rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden min-h-0`}
         style={{ animation: 'scaleIn 0.2s cubic-bezier(.4,0,.2,1)' }}
       >
         <div className="flex items-center justify-between gap-4 p-5 border-b border-outline-variant/20">
@@ -197,7 +197,9 @@ export default function AdminFormations({ session }) {
 
   /* ─── Formation Actions ─── */
   const openCreateFormation = () => {
-    setFormationForm({ ...emptyFormation, formateur_id: formateurs[0]?.id || '', espace_id: salles[0]?.id || '' });
+    // La création de formation est réservée aux formateurs depuis leur espace
+    // Cette fonction est conservée uniquement pour l'ouverture du drawer de modification
+    setFormationForm({ ...emptyFormation });
     setSelectedFormation(null);
     setShowFormationDrawer(true);
   };
@@ -217,6 +219,11 @@ export default function AdminFormations({ session }) {
   const saveFormation = async (e) => {
     e.preventDefault(); setError(''); setFormSaving(true);
     try {
+      if (!formationForm.id) {
+        setError('La création de formation est réservée aux formateurs depuis leur espace.');
+        setFormSaving(false);
+        return;
+      }
       const payload = {
         ...formationForm,
         capacite_max: parseInt(formationForm.capacite_max),
@@ -224,13 +231,8 @@ export default function AdminFormations({ session }) {
         date_debut: new Date(formationForm.date_debut).toISOString(),
         date_fin: new Date(formationForm.date_fin).toISOString(),
       };
-      if (formationForm.id) {
-        await formationApi.update(formationForm.id, payload);
-        setSuccess('Formation modifiée avec succès.');
-      } else {
-        await formationApi.create(payload);
-        setSuccess('Formation planifiée avec succès !');
-      }
+      await formationApi.update(formationForm.id, payload);
+      setSuccess('Formation modifiée avec succès.');
       setShowFormationDrawer(false);
       await refreshData();
     } catch (err) { setError(err.message); }
@@ -373,23 +375,16 @@ export default function AdminFormations({ session }) {
 
           {/* CTA selon l'onglet actif */}
           <div className="shrink-0 flex flex-wrap items-center gap-3">
-            {activeTab === 'formations' && (
+            {profile?.role !== 'super_admin' && (
               <button
-                onClick={openCreateFormation}
+                onClick={() => { setFormateurForm({ nom: '', prenom: '', email: '', telephone: '', specialite: '', biographie: '' }); setShowFormateurDrawer(true); }}
                 className="flex items-center gap-2 px-4 py-2.5 bg-secondary text-white font-semibold rounded-2xl text-sm hover:bg-secondary/90 shadow-sm transition-all active:scale-95"
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_circle</span>
-                Planifier une formation
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>person_add</span>
+                Créer un formateur
               </button>
             )}
-            <button
-              onClick={() => { setFormateurForm({ nom: '', prenom: '', email: '', telephone: '', specialite: '', biographie: '' }); setShowFormateurDrawer(true); }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-secondary text-white font-semibold rounded-2xl text-sm hover:bg-secondary/90 shadow-sm transition-all active:scale-95"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>person_add</span>
-              Créer un formateur
-            </button>
-            {activeTab === 'remunerations' && (
+            {activeTab === 'remunerations' && profile?.role !== 'super_admin' && (
               <button
                 onClick={() => openRemuneration()}
                 className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white font-semibold rounded-2xl text-sm hover:bg-emerald-700 shadow-sm transition-all active:scale-95"
@@ -409,7 +404,7 @@ export default function AdminFormations({ session }) {
             { label: 'Participants', value: totalInscrits, icon: 'group', color: 'text-sky-600 bg-sky-50' },
             { label: 'Honoraires dus', value: `${pendingPay.toFixed(0)} DT`, icon: 'account_balance_wallet', color: 'text-amber-600 bg-amber-50' },
           ].map(({ label, value, icon, color }) => (
-            <div key={label} className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-outline-variant/20 shadow-sm flex items-center gap-3 sm:gap-4">
+            <div key={label} className="bg-surface-container-lowest rounded-3xl sm:rounded-3xl p-4 sm:p-5 border border-outline-variant/20 shadow-sm flex items-center gap-3 sm:gap-4">
               <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center shrink-0 ${color}`}>
                 <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{icon}</span>
               </div>
@@ -467,13 +462,13 @@ export default function AdminFormations({ session }) {
         {activeTab === 'formations' && (
           <div>
             {formations.length === 0 ? (
-              <EmptyState icon="event_note" title="Aucune formation planifiée" text="Commencez par créer votre première session de formation ou atelier." action={openCreateFormation} actionLabel="Planifier une formation" />
+              <EmptyState icon="event_note" title="Aucune formation planifiée" text="Les formations créées par les formateurs depuis leur espace apparaissent ici." />
             ) : (
               <>
                 {/* Mobile Cards */}
                 <div className="sm:hidden space-y-3">
                   {formations.map((f) => (
-                    <div key={f.id} className="bg-white rounded-2xl border border-outline-variant/20 p-4 shadow-sm">
+                    <div key={f.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-4 shadow-sm">
                       <div className="flex justify-between items-start gap-2 mb-3">
                         <h3 className="font-sora font-bold text-primary text-sm leading-snug">{f.titre}</h3>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${STATUT_STYLES[f.statut]}`}>
@@ -502,9 +497,13 @@ export default function AdminFormations({ session }) {
                       </div>
                       <div className="flex gap-2 pt-2 border-t border-outline-variant/10">
                         <button onClick={() => openParticipants(f)} className="flex-1 py-1.5 text-xs font-semibold border border-secondary/30 text-secondary rounded-xl hover:bg-secondary/5">Inscrits</button>
-                        <button onClick={() => openEditFormation(f)} className="flex-1 py-1.5 text-xs font-semibold border border-outline-variant/30 text-on-surface-variant rounded-xl hover:bg-surface-container">Modifier</button>
-                        {f.statut !== 'annulee' && (
-                          <button onClick={() => cancelFormation(f.id)} className="px-3 py-1.5 text-xs font-semibold border border-error/30 text-error rounded-xl hover:bg-error/5">✕</button>
+                        {profile?.role !== 'super_admin' && (
+                          <>
+                            <button onClick={() => openEditFormation(f)} className="flex-1 py-1.5 text-xs font-semibold border border-outline-variant/30 text-on-surface-variant rounded-xl hover:bg-surface-container">Modifier</button>
+                            {f.statut !== 'annulee' && (
+                              <button onClick={() => cancelFormation(f.id)} className="px-3 py-1.5 text-xs font-semibold border border-error/30 text-error rounded-xl hover:bg-error/5">✕</button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -512,7 +511,7 @@ export default function AdminFormations({ session }) {
                 </div>
 
                 {/* Desktop Table */}
-                <div className="hidden sm:block bg-white rounded-3xl border border-outline-variant/20 overflow-hidden shadow-sm">
+                <div className="hidden sm:block bg-surface-container-lowest rounded-3xl border border-outline-variant/20 overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[1020px] text-left text-sm border-collapse">
                       <thead>
@@ -565,9 +564,13 @@ export default function AdminFormations({ session }) {
                               <div className="flex flex-wrap items-center justify-end gap-2">
                                 <ActionBtn icon="group" title="Participants" onClick={() => openParticipants(f)} color="text-secondary" />
                                 <ActionBtn icon="download" title="Export émargement" onClick={() => exportEmargement(f)} color="text-on-surface-variant" />
-                                <ActionBtn icon="edit" title="Modifier" onClick={() => openEditFormation(f)} color="text-on-surface-variant" />
-                                {f.statut !== 'annulee' && (
-                                  <ActionBtn icon="cancel" title="Annuler" onClick={() => cancelFormation(f.id)} color="text-error" />
+                                {profile?.role !== 'super_admin' && (
+                                  <>
+                                    <ActionBtn icon="edit" title="Modifier" onClick={() => openEditFormation(f)} color="text-on-surface-variant" />
+                                    {f.statut !== 'annulee' && (
+                                      <ActionBtn icon="cancel" title="Annuler" onClick={() => cancelFormation(f.id)} color="text-error" />
+                                    )}
+                                  </>
                                 )}
                               </div>
                             </td>
@@ -592,7 +595,7 @@ export default function AdminFormations({ session }) {
                 {/* Mobile Cards */}
                 <div className="sm:hidden space-y-3">
                   {formateurs.map((t) => (
-                    <div key={t.id} className="bg-white rounded-2xl border border-outline-variant/20 p-4 shadow-sm">
+                    <div key={t.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-4 shadow-sm">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center font-bold text-secondary text-sm shrink-0">
                           {(t.prenom?.[0] || '') + (t.nom?.[0] || '')}
@@ -619,7 +622,7 @@ export default function AdminFormations({ session }) {
                 {/* Desktop Grid Cards */}
                 <div className="hidden sm:grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {formateurs.map((t) => (
-                    <div key={t.id} className="bg-white rounded-3xl border border-outline-variant/20 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group">
+                    <div key={t.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-secondary/20 to-secondary/5 flex items-center justify-center font-sora font-bold text-secondary text-base shrink-0">
                           {(t.prenom?.[0] || '') + (t.nom?.[0] || '')}
@@ -652,26 +655,30 @@ export default function AdminFormations({ session }) {
                       </div>
 
                       <div className="flex gap-2 pt-3 border-t border-outline-variant/10">
-                        <button
-                          onClick={() => openRemuneration(t.id)}
-                          className="flex-1 flex items-center justify-center gap-1 py-2 text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-colors"
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>payments</span>
-                          Rémunérer
-                        </button>
-                        <button
-                          onClick={() => toggleFormateurStatus(t.id, t.statut_compte)}
-                          className={`flex items-center justify-center p-2 rounded-xl border transition-colors ${
-                            t.statut_compte === 'actif'
-                              ? 'border-red-200 text-error bg-red-50 hover:bg-red-100'
-                              : 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                          }`}
-                          title={t.statut_compte === 'actif' ? 'Suspendre' : 'Activer'}
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                            {t.statut_compte === 'actif' ? 'block' : 'check_circle'}
-                          </span>
-                        </button>
+                        {profile?.role !== 'super_admin' && (
+                          <button
+                            onClick={() => openRemuneration(t.id)}
+                            className="flex-1 flex items-center justify-center gap-1 py-2 text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-colors"
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>payments</span>
+                            Rémunérer
+                          </button>
+                        )}
+                        {profile?.role !== 'super_admin' && (
+                          <button
+                            onClick={() => toggleFormateurStatus(t.id, t.statut_compte)}
+                            className={`flex items-center justify-center p-2 rounded-xl border transition-colors ${
+                              t.statut_compte === 'actif'
+                                ? 'border-red-200 text-error bg-red-50 hover:bg-red-100'
+                                : 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                            }`}
+                            title={t.statut_compte === 'actif' ? 'Suspendre' : 'Activer'}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                              {t.statut_compte === 'actif' ? 'block' : 'check_circle'}
+                            </span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -691,7 +698,7 @@ export default function AdminFormations({ session }) {
                 {/* Mobile */}
                 <div className="sm:hidden space-y-3">
                   {remunerations.map((r) => (
-                    <div key={r.id} className="bg-white rounded-2xl border border-outline-variant/20 p-4 shadow-sm">
+                    <div key={r.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-4 shadow-sm">
                       <div className="flex justify-between items-start mb-2">
                         <p className="font-semibold text-primary text-sm">{r.profiles?.prenom} {r.profiles?.nom}</p>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.statut === 'paye' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
@@ -710,7 +717,7 @@ export default function AdminFormations({ session }) {
                 </div>
 
                 {/* Desktop Table */}
-                <div className="hidden sm:block bg-white rounded-3xl border border-outline-variant/20 overflow-hidden shadow-sm">
+                <div className="hidden sm:block bg-surface-container-lowest rounded-3xl border border-outline-variant/20 overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[980px] text-left text-sm border-collapse">
                       <thead>
@@ -743,13 +750,19 @@ export default function AdminFormations({ session }) {
                             </td>
                             <td className="p-4 text-right">
                               {r.statut === 'en_attente' ? (
-                                <button
-                                  onClick={() => markRemunerationPaid(r.id)}
-                                  className="inline-flex items-center gap-2 ml-auto px-3 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl hover:bg-emerald-700"
-                                >
-                                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check</span>
-                                  Marquer payé
-                                </button>
+                                profile?.role !== 'super_admin' ? (
+                                  <button
+                                    onClick={() => markRemunerationPaid(r.id)}
+                                    className="inline-flex items-center gap-2 ml-auto px-3 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl hover:bg-emerald-700"
+                                  >
+                                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check</span>
+                                    Marquer payé
+                                  </button>
+                                ) : (
+                                  <span className="inline-flex items-center gap-2 px-3 py-2 bg-amber-100 text-amber-800 text-xs font-semibold rounded-xl">
+                                    En attente
+                                  </span>
+                                )
                               ) : (
                                 <span className="inline-flex items-center gap-2 px-3 py-2 bg-slate-100 text-slate-600 text-xs font-semibold rounded-xl">
                                   <span className="material-symbols-outlined" style={{ fontSize: 14 }}>done</span>
@@ -775,7 +788,7 @@ export default function AdminFormations({ session }) {
       <Modal
         open={showFormationDrawer}
         onClose={() => setShowFormationDrawer(false)}
-        title={formationForm.id ? 'Modifier la formation' : 'Planifier une formation'}
+        title="Modifier la formation"
         subtitle="Remplissez les informations de la session"
         icon="event_note"
         footer={
@@ -794,7 +807,7 @@ export default function AdminFormations({ session }) {
               className="flex-1 py-2.5 bg-secondary text-white font-semibold rounded-xl text-sm hover:bg-secondary/90 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {formSaving ? <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" /> : null}
-              {formationForm.id ? 'Enregistrer' : 'Planifier'}
+              Enregistrer
             </button>
           </div>
         }
@@ -1114,7 +1127,7 @@ function ActionBtn({ icon, title, onClick, color = 'text-on-surface-variant' }) 
 
 function EmptyState({ icon, title, text, action, actionLabel }) {
   return (
-    <div className="bg-white rounded-3xl border border-outline-variant/20 p-12 text-center shadow-sm">
+    <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-12 text-center shadow-sm">
       <div className="w-16 h-16 rounded-3xl bg-surface-container-low flex items-center justify-center mx-auto mb-4">
         <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: 32 }}>{icon}</span>
       </div>

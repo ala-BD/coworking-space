@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
+import { useTheme } from '../../context/ThemeContext';
 import {
   ADMIN_NAV,
+  STAFF_NAV,
   MEMBER_NAV,
   FORMATEUR_NAV,
   SUPER_ADMIN_NAV,
@@ -17,11 +19,10 @@ function NavLink({ item, isActive, onClick }) {
     <Link
       to={item.to}
       onClick={onClick}
-      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-150 ${
-        isActive
+      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-150 ${isActive
           ? 'bg-primary-container text-on-primary-container shadow-sm'
           : 'text-on-surface-variant hover:bg-secondary/7 hover:text-secondary'
-      }`}
+        }`}
     >
       <span
         className="material-symbols-outlined shrink-0"
@@ -47,9 +48,8 @@ function BottomNavLink({ item, isActive }) {
   return (
     <Link
       to={item.to}
-      className={`flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 flex-1 transition-colors duration-150 ${
-        isActive ? 'text-secondary' : 'text-on-surface-variant'
-      }`}
+      className={`flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 flex-1 transition-colors duration-150 ${isActive ? 'text-secondary' : 'text-on-surface-variant'
+        }`}
     >
       <span
         className="material-symbols-outlined"
@@ -68,16 +68,34 @@ function BottomNavLink({ item, isActive }) {
 }
 
 export default function PortalLayout({ children, profile, onLogout }) {
-  const location   = useLocation();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { dark, toggle } = useTheme();
 
-  const initials   = `${profile?.prenom?.[0] || ''}${profile?.nom?.[0] || ''}`.toUpperCase() || 'U';
+  const initials = `${profile?.prenom?.[0] || ''}${profile?.nom?.[0] || ''}`.toUpperCase() || 'U';
   const isSuperAdmin = profile?.role === 'super_admin';
-  const adminView  = isAdminRole(profile?.role);
-  const isTrainer  = profile?.role === 'formateur';
-  const navItems   = isSuperAdmin ? SUPER_ADMIN_NAV : (adminView ? ADMIN_NAV : (isTrainer ? FORMATEUR_NAV : MEMBER_NAV));
-  const homePath   = getHomePath(profile?.role);
-  const portalLabel = isSuperAdmin ? 'VCLOW Platform' : (adminView ? 'Administration' : (isTrainer ? 'Espace Formateur' : 'Espace membre'));
+  const isStaff = profile?.role === 'staff';
+  const adminView = isAdminRole(profile?.role);
+  const isTrainer = profile?.role === 'formateur';
+  const navItems = isSuperAdmin
+    ? SUPER_ADMIN_NAV
+    : isStaff
+      ? STAFF_NAV
+      : adminView
+        ? ADMIN_NAV
+        : isTrainer
+          ? FORMATEUR_NAV
+          : MEMBER_NAV;
+  const homePath = getHomePath(profile?.role);
+  const portalLabel = isSuperAdmin
+    ? 'VCLOW Platform'
+    : isStaff
+      ? 'Réception'
+      : adminView
+        ? 'Administration'
+        : isTrainer
+          ? 'Espace Formateur'
+          : 'Espace membre';
 
   const isNavActive = (to) => {
     if (to === homePath) return location.pathname === to;
@@ -88,7 +106,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
   const bottomNavItems = navItems.slice(0, 5);
 
   return (
-    <div className="min-h-screen text-on-surface" style={{ background: '#f4f6f9' }}>
+    <div className="min-h-screen text-on-surface" style={{ background: dark ? 'var(--color-background)' : '#f4f6f9', transition: 'background 0.3s ease' }}>
 
       {/* ── Blobs décoratifs ambient ── */}
       <div className="fixed top-0 right-0 w-96 h-96 rounded-full pointer-events-none -z-10"
@@ -104,11 +122,16 @@ export default function PortalLayout({ children, profile, onLogout }) {
         style={{
           height: 64,
           padding: '0 24px',
-          background: 'rgba(251,249,251,0.88)',
+          background: dark
+            ? 'rgba(17,19,24,0.92)'
+            : 'rgba(251,249,251,0.88)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
-          borderBottom: '1px solid rgba(197,198,206,0.25)',
+          borderBottom: dark
+            ? '1px solid rgba(255,255,255,0.07)'
+            : '1px solid rgba(197,198,206,0.25)',
           boxShadow: '0 2px 12px rgba(0,13,35,0.05)',
+          transition: 'background 0.3s ease',
         }}
       >
         {/* Gauche : hamburger mobile + logo */}
@@ -137,6 +160,21 @@ export default function PortalLayout({ children, profile, onLogout }) {
               {getRoleLabel(profile?.role)}
             </span>
           </div>
+
+          {/* ── Bouton Dark / Light mode ── */}
+          <button
+            onClick={toggle}
+            title={dark ? 'Passer en mode clair' : 'Passer en mode sombre'}
+            className="flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{
+              background: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,13,35,0.07)',
+              color: dark ? '#ffd966' : '#44474d',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>
+              {dark ? 'light_mode' : 'dark_mode'}
+            </span>
+          </button>
 
           {/* Avatar initiales */}
           <div
@@ -173,11 +211,12 @@ export default function PortalLayout({ children, profile, onLogout }) {
             position: 'sticky',
             top: 64,
             alignSelf: 'flex-start',
-            background: 'rgba(255,255,255,0.7)',
+            background: dark ? 'rgba(25,28,33,0.95)' : 'rgba(255,255,255,0.7)',
             backdropFilter: 'blur(8px)',
-            borderRight: '1px solid rgba(197,198,206,0.2)',
+            borderRight: dark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(197,198,206,0.2)',
             padding: '24px 12px',
             gap: 0,
+            transition: 'background 0.3s ease',
           }}
         >
           {/* Label section */}
@@ -210,16 +249,16 @@ export default function PortalLayout({ children, profile, onLogout }) {
 
         {/* ── SIDEBAR mobile (drawer) ── */}
         <aside
-          className={`fixed top-[64px] left-0 bottom-0 z-40 md:hidden flex flex-col transition-transform duration-300 ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
+          className={`fixed top-[64px] left-0 bottom-0 z-40 md:hidden flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
           style={{
             width: 256,
-            background: 'rgba(255,255,255,0.98)',
+            background: dark ? 'rgba(17,19,24,0.98)' : 'rgba(255,255,255,0.98)',
             backdropFilter: 'blur(16px)',
-            borderRight: '1px solid rgba(197,198,206,0.3)',
+            borderRight: dark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(197,198,206,0.3)',
             padding: '20px 12px',
             overflowY: 'auto',
+            transition: 'background 0.3s ease',
           }}
         >
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant px-3 mb-3">
@@ -269,11 +308,16 @@ export default function PortalLayout({ children, profile, onLogout }) {
         className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex"
         style={{
           height: 64,
-          background: 'rgba(255,255,255,0.97)',
+          background: dark
+            ? 'rgba(17,19,24,0.97)'
+            : 'rgba(251,249,251,0.97)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
-          borderTop: '1px solid rgba(197,198,206,0.3)',
+          borderTop: dark
+            ? '1px solid rgba(255,255,255,0.07)'
+            : '1px solid rgba(197,198,206,0.3)',
           boxShadow: '0 -4px 20px rgba(0,13,35,0.07)',
+          transition: 'background 0.3s ease',
         }}
       >
         {bottomNavItems.map((item) => (

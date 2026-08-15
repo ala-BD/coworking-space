@@ -52,6 +52,18 @@ async function finalizeOnlinePayment(supabaseAdmin, paymentId, userId, reference
 
   if (error) throw error;
 
+  // Mettre à jour le statut de la réservation associée à 'confirmed'
+  if (updatedPayment.reservation_id) {
+    const { error: resError } = await supabaseAdmin
+      .from('reservations')
+      .update({ statut: 'confirmed' })
+      .eq('id', updatedPayment.reservation_id);
+
+    if (resError) {
+      console.error('Erreur lors de la mise à jour de la réservation:', resError.message);
+    }
+  }
+
   if (isEmailConfigured()) {
     try {
       const config = getCoworkingConfig();

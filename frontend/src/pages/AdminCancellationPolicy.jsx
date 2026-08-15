@@ -1,268 +1,291 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { settingsApi } from '../services/api';
+import { settingsApi, cancellationAdvancedApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
 
+const SPACE_TYPES = [
+  { key: 'open_space',          label: 'Open Space' },
+  { key: 'bureau_prive',        label: 'Bureau privé' },
+  { key: 'salle_reunion',       label: 'Salle de réunion' },
+  { key: 'salle_formation',     label: 'Salle de formation' },
+  { key: 'espace_evenementiel', label: 'Espace événementiel' },
+];
+
+function Toggle({ checked, onChange, label, sub }) {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer group">
+      <div className={`relative w-11 h-6 rounded-full transition-colors ${checked ? 'bg-secondary' : 'bg-surface-container-highest'}`}
+        onClick={onChange}>
+        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-5' : ''}`} />
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-primary">{label}</p>
+        {sub && <p className="text-xs text-on-surface-variant mt-0.5">{sub}</p>}
+      </div>
+    </label>
+  );
+}
+
+function NumInput({ label, value, onChange, min = 0, max = 100, step = 1, suffix = '' }) {
+  return (
+    <div>
+      <label className="block text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant mb-1.5">{label}</label>
+      <div className="flex items-center gap-2">
+        <input type="number" value={value} min={min} max={max} step={step}
+          onChange={e => onChange(Number(e.target.value))}
+          className="w-24 rounded-xl border border-outline-variant/30 bg-surface-container-low px-3 py-2 text-sm font-bold text-primary focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none" />
+        {suffix && <span className="text-sm text-on-surface-variant font-medium">{suffix}</span>}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminCancellationPolicy({ session }) {
-  const [profile, setProfile] = useState(null);
-  const [form, setForm] = useState({
-    delai_heures: 24,
-    penalite_pct: 0,
-    annulation_membre_autorisee: true,
-    remboursement_auto: false,
-    message_membre: '',
-  });
-  const [updatedAt, setUpdatedAt] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [profile,     setProfile]     = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [saving,      setSaving]      = useState(false);
+  const [savingSpace, setSavingSpace] = useState(null);
+  const [msg,         setMsg]         = useState(null);
+  const [tab,         setTab]         = useState('global'); // 'global' | 'espaces'
   const navigate = useNavigate();
 
+  // Politique globale
+  const [form, setForm] = useState({
+    delai_heures: 24, penalite_pct: 0,
+    annulation_membre_autorisee: true, remboursement_auto: false, message_membre: '',
+  });
+  const [updatedAt, setUpdatedAt] = useState(null);
+
+  // Politiques par espace
+  const [spacePolicies, setSpacePolicies] = useState({});
+
+  useEffect(() => { loadData(); }, [session]);
+
   useEffect(() => {
-    loadData();
-  }, [session]);
+    if (!msg) return;
+    const t = setTimeout(() => setMsg(null), 3500);
+    return () => clearTimeout(t);
+  }, [msg]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
+      const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
       setProfile(prof);
-
       const { policy } = await settingsApi.getCancellationPolicy();
       setForm({
-        delai_heures: policy.delai_heures ?? 24,
-        penalite_pct: policy.penalite_pct ?? 0,
+        delai_heures: policy.delai_heures ?? 24, penalite_pct: policy.penalite_pct ?? 0,
         annulation_membre_autorisee: policy.annulation_membre_autorisee ?? true,
         remboursement_auto: policy.remboursement_auto ?? false,
         message_membre: policy.message_membre ?? '',
       });
       setUpdatedAt(policy.updated_at);
-    } catch {
-      setMsg({ type: 'error', text: 'Erreur de chargement.' });
-    } finally {
-      setLoading(false);
-    }
+
+      // Charger les politiques par espace
+      try {
+        const { policies } = await cancellationAdvancedApi.getPoliciesByEspace();
+        const map = {};
+        (policies || []).forEach(p => { map[p.type_espace] = p; });
+        // Initialiser les valeurs par défaut pour les types manquants
+        SPACE_TYPES.forEach(({ key }) => {
+          if (!map[key]) map[key] = {
+            type_espace: key, tranche_libre_heures: 24, tranche_tardive_heures: 12,
+            penalite_tardive_pct: 50, penalite_tres_tardive_pct: 100, penalite_noshow_pct: 100,
+            noshow_note_profil: true, credit_portefeuille_auto: false, credit_portefeuille_pct: 100,
+          };
+        });
+        setSpacePolicies(map);
+      } catch { /* table pas encore créée */ }
+    } catch { setMsg({ type: 'error', text: 'Erreur de chargement.' }); }
+    finally { setLoading(false); }
   };
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm((f) => ({
-      ...f,
-      [name]: type === 'checkbox' ? checked : type === 'number' ? Number(value) : value,
-    }));
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    setMsg(null);
+  const handleSaveGlobal = async () => {
+    setSaving(true); setMsg(null);
     try {
-      const { policy: updated } = await settingsApi.updateCancellationPolicy(form);
-      setUpdatedAt(updated.updated_at);
-      setMsg({ type: 'success', text: 'Politique d\'annulation mise à jour.' });
-    } catch (err) {
-      setMsg({ type: 'error', text: err.message || 'Erreur de sauvegarde.' });
-    } finally {
-      setSaving(false);
-    }
+      const { policy } = await settingsApi.updateCancellationPolicy(form);
+      setUpdatedAt(policy.updated_at);
+      setMsg({ type: 'success', text: 'Politique globale mise à jour.' });
+    } catch (e) { setMsg({ type: 'error', text: e.message }); }
+    finally { setSaving(false); }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/');
+  const handleSaveEspace = async (typeEspace) => {
+    setSavingSpace(typeEspace);
+    try {
+      await cancellationAdvancedApi.upsertPolicyEspace(spacePolicies[typeEspace]);
+      setMsg({ type: 'success', text: `Politique ${typeEspace} sauvegardée.` });
+    } catch (e) { setMsg({ type: 'error', text: e.message }); }
+    finally { setSavingSpace(null); }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F4F6F9]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
-      </div>
-    );
-  }
+  const updateSpacePolicy = (type, key, val) => {
+    setSpacePolicies(p => ({ ...p, [type]: { ...p[type], [key]: val } }));
+  };
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
+    </div>
+  );
 
   return (
-    <PortalLayout profile={profile} onLogout={handleLogout}>
-      <div className="space-y-lg">
-        <div>
-          <h1 className="font-sora text-headline-lg text-primary">
-            Politique d'annulation
-          </h1>
-          <p className="text-body-md text-on-surface-variant mt-1">
-            Configurez les règles d'annulation et de remboursement pour les réservations.
-          </p>
+    <PortalLayout profile={profile} onLogout={() => { supabase.auth.signOut(); navigate('/'); }}>
+      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="font-sora font-bold text-primary text-2xl sm:text-3xl">Politique d'annulation</h1>
+          <p className="text-on-surface-variant text-sm mt-1">Règles globales et règles spécifiques par type d'espace.</p>
         </div>
 
         {msg && (
-          <div className={`px-4 py-3 rounded-xl text-label-md font-medium ${
-            msg.type === 'success'
-              ? 'bg-green-50 text-green-700 border border-green-200'
-              : 'bg-red-50 text-red-700 border border-red-200'
+          <div className={`mb-4 p-3 rounded-xl text-sm flex items-center gap-2 ${
+            msg.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
           }`}>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{msg.type === 'success' ? 'check_circle' : 'error'}</span>
             {msg.text}
           </div>
         )}
 
-        <div className="bg-white rounded-xl p-lg custom-shadow border border-outline-variant/10 space-y-lg">
-          <h2 className="font-sora text-headline-sm text-primary">
-            Règles d'annulation
-          </h2>
+        {/* Onglets */}
+        <div className="flex gap-1 bg-surface-container-low p-1 rounded-2xl mb-6 w-fit">
+          {[
+            { key: 'global',  label: 'Règles globales',    icon: 'policy' },
+            { key: 'espaces', label: 'Par type d\'espace',  icon: 'domain' },
+          ].map(({ key, label, icon }) => (
+            <button key={key} onClick={() => setTab(key)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                tab === key ? 'bg-white text-primary shadow-sm' : 'text-on-surface-variant hover:text-primary'
+              }`}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{icon}</span>
+              {label}
+            </button>
+          ))}
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-lg">
-            <div className="space-y-2">
-              <label className="text-label-md font-semibold text-on-surface" htmlFor="delai_heures">
-                Délai d'annulation gratuit (heures)
-              </label>
-              <input
-                id="delai_heures"
-                name="delai_heures"
-                type="number"
-                min="0"
-                max="168"
-                value={form.delai_heures}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg border border-outline-variant/50 bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"
-              />
-              <p className="text-body-sm text-on-surface-variant">
-                Le membre peut annuler gratuitement jusqu'à {form.delai_heures}h avant le début.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-label-md font-semibold text-on-surface" htmlFor="penalite_pct">
-                Pénalité (% du montant)
-              </label>
-              <input
-                id="penalite_pct"
-                name="penalite_pct"
-                type="number"
-                min="0"
-                max="100"
-                step="5"
-                value={form.penalite_pct}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg border border-outline-variant/50 bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"
-              />
-              <p className="text-body-sm text-on-surface-variant">
-                Pourcentage retenu en cas d'annulation tardive.
-              </p>
-            </div>
-          </div>
-
+        {/* ── Onglet Règles globales ── */}
+        {tab === 'global' && (
           <div className="space-y-4">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                name="annulation_membre_autorisee"
-                type="checkbox"
-                checked={form.annulation_membre_autorisee}
-                onChange={handleChange}
-                className="h-5 w-5 rounded border-outline-variant text-secondary focus:ring-secondary"
-              />
-              <div>
-                <span className="text-label-md font-semibold text-on-surface">
-                  Autoriser les annulations en ligne
-                </span>
-                <p className="text-body-sm text-on-surface-variant">
-                  Si désactivé, les membres devront contacter l'accueil pour annuler.
-                </p>
+            <div className="bg-white rounded-3xl border border-outline-variant/20 p-6 shadow-sm">
+              <h2 className="font-sora font-bold text-primary text-base mb-5 flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary" style={{ fontSize: 18 }}>schedule</span>
+                Délais et pénalités généraux
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 mb-6">
+                <NumInput label="Délai libre (heures)" value={form.delai_heures} max={168}
+                  onChange={v => setForm(f => ({ ...f, delai_heures: v }))} suffix="h" />
+                <NumInput label="Pénalité tardive" value={form.penalite_pct} step={5}
+                  onChange={v => setForm(f => ({ ...f, penalite_pct: v }))} suffix="%" />
               </div>
-            </label>
-
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                name="remboursement_auto"
-                type="checkbox"
-                checked={form.remboursement_auto}
-                onChange={handleChange}
-                className="h-5 w-5 rounded border-outline-variant text-secondary focus:ring-secondary"
-              />
-              <div>
-                <span className="text-label-md font-semibold text-on-surface">
-                  Remboursement automatique
-                </span>
-                <p className="text-body-sm text-on-surface-variant">
-                  Rembourser automatiquement en cas d'annulation conforme.
-                </p>
+              <div className="space-y-4 mb-6">
+                <Toggle checked={form.annulation_membre_autorisee}
+                  onChange={() => setForm(f => ({ ...f, annulation_membre_autorisee: !f.annulation_membre_autorisee }))}
+                  label="Annulations en ligne autorisées"
+                  sub="Si désactivé, les membres doivent contacter l'accueil." />
+                <Toggle checked={form.remboursement_auto}
+                  onChange={() => setForm(f => ({ ...f, remboursement_auto: !f.remboursement_auto }))}
+                  label="Remboursement automatique"
+                  sub="Rembourse automatiquement en cas d'annulation dans les délais." />
               </div>
-            </label>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-label-md font-semibold text-on-surface" htmlFor="message_membre">
-              Message affiché aux membres
-            </label>
-            <textarea
-              id="message_membre"
-              name="message_membre"
-              rows={3}
-              value={form.message_membre}
-              onChange={handleChange}
-              placeholder="Ex: Annulation gratuite jusqu'à 24h avant le début du créneau."
-              className="w-full px-4 py-3 rounded-lg border border-outline-variant/50 bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
-            />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-lg custom-shadow border border-outline-variant/10">
-          <h2 className="font-sora text-headline-sm text-primary mb-4">
-            Aperçu du comportement
-          </h2>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
-              <span className="material-symbols-outlined text-green-600 mt-0.5">check_circle</span>
-              <div>
-                <p className="text-label-md font-medium text-green-800">
-                  Annulation &ge; {form.delai_heures}h avant
-                </p>
-                <p className="text-body-sm text-green-700">
-                  Autorisée. {form.penalite_pct === 0 ? 'Sans pénalité.' : `Pénalité de ${form.penalite_pct}%.`}
-                </p>
+              <div className="mb-5">
+                <label className="block text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant mb-1.5">Message affiché aux membres</label>
+                <textarea rows={3} value={form.message_membre}
+                  onChange={e => setForm(f => ({ ...f, message_membre: e.target.value }))}
+                  placeholder="Ex : Annulation gratuite jusqu'à 24h avant le début."
+                  className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-low px-4 py-2.5 text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/15 resize-none" />
+              </div>
+              <div className="flex justify-between items-center">
+                {updatedAt && <p className="text-xs text-on-surface-variant">Mis à jour : {new Date(updatedAt).toLocaleString('fr-FR')}</p>}
+                <button onClick={handleSaveGlobal} disabled={saving}
+                  className="px-5 py-2.5 bg-secondary text-white rounded-xl font-bold text-sm hover:bg-secondary/90 disabled:opacity-50">
+                  {saving ? 'Sauvegarde…' : 'Sauvegarder'}
+                </button>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 border border-red-200">
-              <span className="material-symbols-outlined text-red-600 mt-0.5">cancel</span>
-              <div>
-                <p className="text-label-md font-medium text-red-800">
-                  Annulation &lt; {form.delai_heures}h avant
-                </p>
-                <p className="text-body-sm text-red-700">
-                  {!form.annulation_membre_autorisee
-                    ? 'Non autorisée. Le membre doit contacter l\'accueil.'
-                    : 'Refusée en ligne.'}
-                </p>
+
+            {/* Aperçu comportement */}
+            <div className="bg-white rounded-3xl border border-outline-variant/20 p-6 shadow-sm">
+              <h2 className="font-sora font-bold text-primary text-base mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary" style={{ fontSize: 18 }}>preview</span>
+                Aperçu du comportement
+              </h2>
+              <div className="space-y-3">
+                {[
+                  { color: 'emerald', icon: 'check_circle', title: `Annulation ≥ ${form.delai_heures}h avant`, desc: form.penalite_pct === 0 ? 'Remboursement complet, aucune pénalité.' : `Pénalité de ${form.penalite_pct}% retenue.` },
+                  { color: 'red', icon: 'cancel', title: `Annulation < ${form.delai_heures}h avant`, desc: !form.annulation_membre_autorisee ? 'Refusée — contacter l\'accueil.' : `100% retenu.` },
+                  { color: 'amber', icon: 'person_off', title: 'No-show (absent sans annulation)', desc: '100% retenu + note sur le profil.' },
+                ].map((item, i) => (
+                  <div key={i} className={`flex items-start gap-3 p-3 rounded-xl bg-${item.color}-50 border border-${item.color}-200`}>
+                    <span className={`material-symbols-outlined text-${item.color}-600 shrink-0 mt-0.5`} style={{ fontSize: 18 }}>{item.icon}</span>
+                    <div>
+                      <p className={`text-sm font-semibold text-${item.color}-800`}>{item.title}</p>
+                      <p className={`text-xs text-${item.color}-700 mt-0.5`}>{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-            {form.remboursement_auto && (
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
-                <span className="material-symbols-outlined text-blue-600 mt-0.5">autorenew</span>
-                <div>
-                  <p className="text-label-md font-medium text-blue-800">Remboursement automatique</p>
-                  <p className="text-body-sm text-blue-700">
-                    Activé — les annulations conformes déclenchent un remboursement.
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
-        </div>
+        )}
 
-        <div className="flex justify-between items-center">
-          {updatedAt && (
-            <p className="text-body-sm text-on-surface-variant">
-              Dernière mise à jour : {new Date(updatedAt).toLocaleString('fr-FR')}
+        {/* ── Onglet Par type d'espace ── */}
+        {tab === 'espaces' && (
+          <div className="space-y-4">
+            <p className="text-sm text-on-surface-variant">
+              Des règles différentes peuvent s'appliquer selon le type d'espace. Ces règles remplacent les règles globales.
             </p>
-          )}
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-6 py-3 bg-secondary text-white rounded-lg font-semibold hover:bg-secondary/90 transition-colors disabled:opacity-50"
-          >
-            {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
-          </button>
-        </div>
+            {SPACE_TYPES.map(({ key, label }) => {
+              const pol = spacePolicies[key] || {};
+              return (
+                <div key={key} className="bg-white rounded-3xl border border-outline-variant/20 p-6 shadow-sm">
+                  <h3 className="font-sora font-bold text-primary text-base mb-5 flex items-center gap-2">
+                    <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-secondary/10">
+                      <span className="material-symbols-outlined text-secondary" style={{ fontSize: 15 }}>domain</span>
+                    </span>
+                    {label}
+                  </h3>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-5">
+                    <NumInput label="Délai annulation libre" value={pol.tranche_libre_heures ?? 24} max={168}
+                      onChange={v => updateSpacePolicy(key, 'tranche_libre_heures', v)} suffix="h" />
+                    <NumInput label="Délai tardif" value={pol.tranche_tardive_heures ?? 12} max={168}
+                      onChange={v => updateSpacePolicy(key, 'tranche_tardive_heures', v)} suffix="h" />
+                    <NumInput label="Pénalité tardive" value={pol.penalite_tardive_pct ?? 50} step={5}
+                      onChange={v => updateSpacePolicy(key, 'penalite_tardive_pct', v)} suffix="%" />
+                    <NumInput label="Pénalité très tardive" value={pol.penalite_tres_tardive_pct ?? 100} step={5}
+                      onChange={v => updateSpacePolicy(key, 'penalite_tres_tardive_pct', v)} suffix="%" />
+                    <NumInput label="Pénalité no-show" value={pol.penalite_noshow_pct ?? 100} step={5}
+                      onChange={v => updateSpacePolicy(key, 'penalite_noshow_pct', v)} suffix="%" />
+                    <NumInput label="Crédit portefeuille" value={pol.credit_portefeuille_pct ?? 100} step={5}
+                      onChange={v => updateSpacePolicy(key, 'credit_portefeuille_pct', v)} suffix="%" />
+                  </div>
+
+                  <div className="space-y-3 mb-5">
+                    <Toggle checked={pol.noshow_note_profil ?? true}
+                      onChange={() => updateSpacePolicy(key, 'noshow_note_profil', !(pol.noshow_note_profil ?? true))}
+                      label="Ajouter note sur le profil en cas de no-show"
+                      sub="Note visible uniquement par l'admin." />
+                    <Toggle checked={pol.credit_portefeuille_auto ?? false}
+                      onChange={() => updateSpacePolicy(key, 'credit_portefeuille_auto', !(pol.credit_portefeuille_auto ?? false))}
+                      label="Proposer crédit portefeuille lors de l'annulation"
+                      sub="Le montant remboursé est converti en crédit pour la prochaine réservation." />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button onClick={() => handleSaveEspace(key)} disabled={savingSpace === key}
+                      className="px-4 py-2 bg-secondary text-white rounded-xl font-bold text-sm hover:bg-secondary/90 disabled:opacity-50 flex items-center gap-1.5">
+                      {savingSpace === key
+                        ? <><span className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full inline-block" />Sauvegarde…</>
+                        : <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>save</span>Sauvegarder</>}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </PortalLayout>
   );
