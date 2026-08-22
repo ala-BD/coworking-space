@@ -191,7 +191,7 @@ export default function AdminPricing({ session }) {
     <PortalLayout profile={profile} onLogout={handleLogout}>
       <header className="mb-lg">
         <h1 className="font-sora text-headline-lg text-primary">Tarification & réservations</h1>
-        <p className="text-on-surface-variant text-body-md mt-1">Module A + B — Semaine S2 Dev 1</p>
+        <p className="text-on-surface-variant text-body-md mt-1">Gérez vos formules tarifaires, promotions et réservations.</p>
       </header>
 
       {error && (

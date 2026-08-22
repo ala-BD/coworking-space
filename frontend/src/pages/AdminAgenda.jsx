@@ -256,7 +256,7 @@ export default function AdminAgenda({ session }) {
         <div>
           <h1 className="font-sora text-headline-lg text-primary">Agenda admin</h1>
           <p className="text-on-surface-variant text-body-md mt-1">
-            Module B — Semaine S3 · Calendrier interactif, check-in/out (CDC B2/B3)
+            Calendrier interactif avec check-in/check-out en temps réel
           </p>
         </div>
         <div className="flex flex-wrap gap-sm items-center">

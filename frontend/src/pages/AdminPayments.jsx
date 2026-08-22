@@ -156,7 +156,7 @@ export default function AdminPayments({ session }) {
       <div className="mb-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-sora text-headline-md font-bold text-primary mb-xs">Gestion des Paiements</h1>
-          <p className="text-body-md text-on-surface-variant">Visualisez et mettez à jour les transactions (Module C).</p>
+          <p className="text-body-md text-on-surface-variant">Visualisez et mettez à jour les transactions en temps réel.</p>
         </div>
         <button
           onClick={handleExportExcel}

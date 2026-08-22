@@ -68,9 +68,6 @@ export default function App() {
 
   useEffect(() => {
     const hasAuthParams = window.location.search.includes('code=') || window.location.hash.includes('access_token=');
-    console.log('App Mounted. URL Search:', window.location.search);
-    console.log('App Mounted. URL Hash:', window.location.hash);
-    console.log('hasAuthParams:', hasAuthParams);
 
     const checkUserStatusAndSetSession = async (s) => {
       if (s?.user?.id) {
@@ -82,7 +79,6 @@ export default function App() {
             .single();
 
           if (!error && profile && profile.statut_compte && profile.statut_compte !== 'actif') {
-            console.log('Non-active account detected in App.jsx:', profile.statut_compte);
             localStorage.setItem('pending_auth_status', profile.statut_compte);
             await supabase.auth.signOut();
             setSession(null);
@@ -97,7 +93,6 @@ export default function App() {
     };
 
     supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      console.log('getSession resolved. Session:', s);
       await checkUserStatusAndSetSession(s);
       if (!hasAuthParams || s) {
         setLoading(false);
@@ -105,8 +100,7 @@ export default function App() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
-      console.log('onAuthStateChange Event:', event, 'Session:', s);
-      const isValid = await checkUserStatusAndSetSession(s);
+      await checkUserStatusAndSetSession(s);
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || s) {
         setLoading(false);
       }
@@ -114,9 +108,7 @@ export default function App() {
 
     let fallbackTimeout;
     if (hasAuthParams) {
-      console.log('Setting OAuth fallback timeout...');
       fallbackTimeout = setTimeout(() => {
-        console.log('OAuth fallback timeout fired. Setting loading to false.');
         setLoading(false);
       }, 5000);
     }

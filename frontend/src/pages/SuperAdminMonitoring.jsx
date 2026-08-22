@@ -25,6 +25,8 @@ export default function SuperAdminMonitoring({ session }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [range, setRange] = useState('all'); // 'all' | '24h'
+  const [actionFilter, setActionFilter] = useState('all');
   const [pagination, setPagination] = useState({ total: 0 });
 
   const load = useCallback(async () => {
@@ -54,6 +56,38 @@ export default function SuperAdminMonitoring({ session }) {
 
   const handleLogout = async () => { await supabase.auth.signOut(); navigate('/login'); };
 
+  const visibleLogs = logs.filter((l) => {
+    const inRange = range === '24h'
+      ? new Date(l.created_at).getTime() >= Date.now() - 24 * 3600 * 1000
+      : true;
+    const inAction = actionFilter === 'all' || l.action === actionFilter;
+    return inRange && inAction;
+  });
+
+  const exportCsv = () => {
+    if (!visibleLogs.length) return;
+    const rows = [
+      ['Timestamp', 'User', 'Action', 'Target', 'Status'],
+      ...visibleLogs.map((l) => [
+        new Date(l.created_at).toLocaleString('fr-TN'),
+        l.profiles ? `${l.profiles.prenom || ''} ${l.profiles.nom || ''}`.trim() : 'System',
+        l.action,
+        l.target_name || l.target_type || '',
+        l.status,
+      ]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (loading || !profile) {
     return <div className="flex h-screen items-center justify-center" style={{ background: '#f4f6f9' }}><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" /></div>;
   }
@@ -68,11 +102,15 @@ export default function SuperAdminMonitoring({ session }) {
           <p className="text-on-surface-variant text-sm mt-1">Real-time infrastructure performance analytics and comprehensive audit tracking.</p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-outline-variant/30 hover:bg-surface-container-low">
+          <button onClick={() => setRange((r) => (r === '24h' ? 'all' : '24h'))}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+              range === '24h' ? 'bg-secondary text-white border-secondary' : 'border-outline-variant/30 hover:bg-surface-container-low'
+            }`}>
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>calendar_today</span>
-            Dernières 24h
+            {range === '24h' ? 'Toutes les dates' : 'Dernières 24h'}
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-outline-variant/30 hover:bg-surface-container-low">
+          <button onClick={exportCsv} disabled={visibleLogs.length === 0}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-outline-variant/30 hover:bg-surface-container-low disabled:opacity-40">
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
             Export CSV
           </button>
@@ -155,7 +193,6 @@ export default function SuperAdminMonitoring({ session }) {
               </div>
             ))}
           </div>
-          <button className="w-full mt-3 text-sm font-semibold text-secondary hover:underline">View All Clusters</button>
         </div>
       </div>
 
@@ -165,10 +202,14 @@ export default function SuperAdminMonitoring({ session }) {
             <h2 className="font-sora text-base font-semibold text-primary">System Audit Log</h2>
             <p className="text-xs text-on-surface-variant mt-0.5">Immutable history of all administrative and tenant actions.</p>
           </div>
-          <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-surface-container-low text-on-surface-variant flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-surface-container-low text-on-surface-variant">
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>filter_list</span>
-            Toutes les actions
-          </span>
+            <select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}
+              className="bg-transparent outline-none cursor-pointer text-on-surface-variant font-semibold">
+              <option value="all">Toutes les actions</option>
+              {Object.keys(ACTION_COLORS).map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -182,7 +223,7 @@ export default function SuperAdminMonitoring({ session }) {
               </tr>
             </thead>
             <tbody>
-              {logs.map((log) => {
+              {visibleLogs.map((log) => {
                 const userName = log.profiles ? `${log.profiles.prenom || ''} ${log.profiles.nom || ''}`.trim() : 'System';
                 const initials = userName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
                 return (
@@ -200,8 +241,8 @@ export default function SuperAdminMonitoring({ session }) {
                   </tr>
                 );
               })}
-              {logs.length === 0 && (
-                <tr><td colSpan={5} className="px-5 py-12 text-center text-on-surface-variant">Aucune action enregistrée.</td></tr>
+              {visibleLogs.length === 0 && (
+                <tr><td colSpan={5} className="px-5 py-12 text-center text-on-surface-variant">Aucune action enregistrée sur cette période.</td></tr>
               )}
             </tbody>
           </table>
