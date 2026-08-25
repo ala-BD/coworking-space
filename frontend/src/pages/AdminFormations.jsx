@@ -367,7 +367,7 @@ export default function AdminFormations({ session }) {
               <span className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center">
                 <span className="material-symbols-outlined text-secondary" style={{ fontSize: 16 }}>school</span>
               </span>
-              <span className="text-xs font-bold uppercase tracking-widest text-secondary">Module G</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-secondary">Formations</span>
             </div>
             <h1 className="font-sora font-bold text-primary text-2xl sm:text-3xl">Formations & Formateurs</h1>
             <p className="text-sm text-on-surface-variant mt-0.5">Gérer les sessions, les intervenants et les rémunérations.</p>
@@ -1132,7 +1132,7 @@ function EmptyState({ icon, title, text, action, actionLabel }) {
         <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: 32 }}>{icon}</span>
       </div>
       <h3 className="font-sora font-bold text-primary text-xl sm:text-2xl mb-3">{title}</h3>
-      <p className="text-base leading-7 text-on-surface-variant mb-6 max-w-none mx-auto whitespace-nowrap overflow-x-auto">{text}</p>
+      <p className="text-base leading-7 text-on-surface-variant mb-6 max-w-none mx-auto">{text}</p>
       {action && (
         <button onClick={action} className="inline-flex items-center gap-2 px-5 py-2.5 bg-secondary text-white font-semibold rounded-2xl text-sm hover:bg-secondary/90 shadow-sm transition-all active:scale-95">
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>

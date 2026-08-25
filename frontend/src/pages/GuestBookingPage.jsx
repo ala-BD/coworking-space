@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { guestApi } from '../services/api';
 
 const SPACE_LABELS = {
-  open_space: 'Open Space', bureau_prive: 'Bureau privé',
-  salle_reunion: 'Salle de réunion', salle_formation: 'Salle de formation',
-  espace_evenementiel: 'Espace événementiel',
+  open_space: 'Open Space', private_office: 'Bureau privé',
+  meeting_room: 'Salle de réunion', training_room: 'Salle de formation',
+  event_space: 'Espace événementiel',
 };
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';

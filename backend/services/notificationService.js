@@ -56,53 +56,65 @@ async function sendNotification(supabase, options) {
     return { success: false, error: 'email, userId et type sont requis' };
   }
 
-  // Vérifier la config SMTP
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn('⚠️  SMTP non configuré, notification non envoyée.');
-    return { success: false, error: 'SMTP non configuré' };
+  const config = getCoworkingConfig();
+
+  // 1. Générer le sujet + HTML (indépendant du SMTP)
+  let html = null;
+  let autoSubject = type;
+  try {
+    const gen = generateEmailFromType(type, data, config);
+    html = gen.html;
+    autoSubject = gen.autoSubject;
+  } catch (genErr) {
+    console.error(`❌ Erreur génération template (${type}) :`, genErr.message);
   }
 
-  const config = getCoworkingConfig();
-  const transporter = createTransporter();
+  const message = subject || autoSubject || type;
 
+  // 2. Toujours enregistrer la notification en base (traçabilité + portail membre)
   try {
-    // 1. Sélectionner le template et générer l'HTML
-    const { html, autoSubject } = generateEmailFromType(type, data, config);
-    
-    if (!html) {
-      throw new Error(`Template introuvable pour le type : ${type}`);
-    }
-
-    // 2. Envoyer l'email
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || `"${config.coworkingName}" <${config.coworkingEmail}>`,
-      to: email,
-      subject: subject || autoSubject,
-      html: html,
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✉️  Notification envoyée à ${email} — Type: ${type} — MessageId: ${info.messageId}`);
-
-    // 3. Enregistrer la notification dans la base de données
     const { error: dbError } = await supabase
       .from('notifications')
       .insert({
         user_id: userId,
         type: type,
         canal: 'Email',
-        message: subject || autoSubject,
+        message: message,
       });
 
     if (dbError) {
       console.error('❌ Erreur enregistrement notification dans DB:', dbError.message);
     }
+  } catch (dbErr) {
+    console.error('❌ Erreur enregistrement notification dans DB:', dbErr.message);
+  }
 
-    return { success: true, messageId: info.messageId };
+  // 3. Envoyer l'email (échec non bloquant — la notification est déjà en base)
+  if (!html) {
+    console.warn(`⚠️ Template introuvable pour le type : ${type} — notification enregistrée en base.`);
+    return { success: false, error: `Template introuvable : ${type}`, dbRecorded: true };
+  }
 
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn('⚠️ SMTP non configuré, email non envoyé — notification enregistrée en base.');
+    return { success: false, error: 'SMTP non configuré', dbRecorded: true };
+  }
+
+  const transporter = createTransporter();
+  const mailOptions = {
+    from: process.env.EMAIL_FROM || `"${config.coworkingName}" <${config.coworkingEmail}>`,
+    to: email,
+    subject: subject || autoSubject,
+    html: html,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✉️  Notification envoyée à ${email} — Type: ${type} — MessageId: ${info.messageId}`);
+    return { success: true, messageId: info.messageId, dbRecorded: true };
   } catch (err) {
-    console.error(`❌ Erreur envoi notification (${type}) à ${email}:`, err.message);
-    return { success: false, error: err.message };
+    console.error(`❌ Erreur envoi email (${type}) à ${email}:`, err.message);
+    return { success: false, error: err.message, dbRecorded: true };
   }
 }
 

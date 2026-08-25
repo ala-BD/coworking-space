@@ -127,7 +127,7 @@ export default function BookingStep3({ session }) {
             </div>
             <h1 className="font-sora text-headline-sm font-semibold text-primary">Réservation enregistrée</h1>
             <p className="text-body-sm text-on-surface-variant max-w-xs mx-auto">
-              Votre demande est en attente de confirmation. Le paiement sera géré par l'équipe réception (Module C — Dev 2).
+              Votre demande est en attente de confirmation. L'équipe de réception vous contactera pour finaliser le paiement.
             </p>
             <p className="text-label-sm text-secondary font-semibold animate-pulse">Redirection vers le portail...</p>
           </div>
@@ -173,7 +173,7 @@ export default function BookingStep3({ session }) {
             </div>
 
             <p className="text-body-xs text-on-surface-variant bg-surface-container-low p-sm rounded-xl">
-              Le paiement et la facturation seront intégrés par Dev 2 (Module C). Cette étape crée uniquement la réservation en statut « pending ».
+              Cette réservation crée une demande en attente de confirmation. Le règlement s'effectuera à l'accueil ou en ligne avant votre arrivée.
             </p>
 
             <button

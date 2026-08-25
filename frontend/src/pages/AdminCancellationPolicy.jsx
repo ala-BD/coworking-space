@@ -6,10 +6,10 @@ import PortalLayout from '../components/layout/PortalLayout';
 
 const SPACE_TYPES = [
   { key: 'open_space',          label: 'Open Space' },
-  { key: 'bureau_prive',        label: 'Bureau privé' },
-  { key: 'salle_reunion',       label: 'Salle de réunion' },
-  { key: 'salle_formation',     label: 'Salle de formation' },
-  { key: 'espace_evenementiel', label: 'Espace événementiel' },
+  { key: 'private_office',      label: 'Bureau privé' },
+  { key: 'meeting_room',        label: 'Salle de réunion' },
+  { key: 'training_room',       label: 'Salle de formation' },
+  { key: 'event_space',         label: 'Espace événementiel' },
 ];
 
 function Toggle({ checked, onChange, label, sub }) {

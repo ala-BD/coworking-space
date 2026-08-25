@@ -24,6 +24,7 @@ export default function TenantBilling({ session }) {
   const [pagination, setPagination] = useState({ total: 0 });
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [smsAlerts, setSmsAlerts] = useState(false);
+  const [notice, setNotice] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -53,6 +54,23 @@ export default function TenantBilling({ session }) {
   useEffect(() => { if (profile) load(); }, [load, profile]);
 
   const handleLogout = async () => { await supabase.auth.signOut(); navigate('/login'); };
+
+  const exportMrrCsv = () => {
+    const rows = [
+      ['Mois', 'MRR (DT)'],
+      ...MONTHS.map((m, i) => [m, barData[i]]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mrr-6-mois-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const mrr = (tenants || []).filter(t => t.statut === 'actif').reduce((acc, t) => acc + (parseFloat(t.montant_mensuel) || 0), 0);
   const unpaid = (tenants || []).filter(t => t.statut === 'suspendu').reduce((acc, t) => acc + (parseFloat(t.montant_mensuel) || 0), 0);
@@ -93,7 +111,7 @@ export default function TenantBilling({ session }) {
         <div className="lg:col-span-2 bg-surface-container-lowest rounded-3xl p-6 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-sora text-base font-semibold text-primary">Évolution MRR (6 mois)</h2>
-            <button className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-outline-variant/30 hover:bg-surface-container-low text-on-surface-variant">Export CSV</button>
+            <button onClick={exportMrrCsv} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-outline-variant/30 hover:bg-surface-container-low text-on-surface-variant">Export CSV</button>
           </div>
           <div className="flex items-end gap-3 h-48">
             {barData.map((val, i) => (
@@ -135,10 +153,14 @@ export default function TenantBilling({ session }) {
               </button>
             </div>
           </div>
-          <button className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 border-secondary text-secondary hover:bg-secondary/5 transition-colors">
+          <button onClick={() => setNotice('La personnalisation des templates d\'email sera disponible dans une prochaine version.')}
+            className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 border-secondary text-secondary hover:bg-secondary/5 transition-colors">
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit_note</span>
             Personnaliser les templates
           </button>
+          {notice && (
+            <p className="mt-3 text-xs text-on-surface-variant bg-surface-container-low p-3 rounded-xl">{notice}</p>
+          )}
         </div>
       </div>
 

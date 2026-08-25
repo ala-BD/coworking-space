@@ -25,7 +25,7 @@ const SUBSCRIPTION_LABELS = {
   mensuel: 'Mensuel',
   trimestriel: 'Trimestriel',
   annuel: 'Annuel',
-  bureau_prive: 'Bureau prive',
+  bureau_prive: 'Bureau privé',
 };
 
 function SectionHeader({ icon, title, subtitle }) {
