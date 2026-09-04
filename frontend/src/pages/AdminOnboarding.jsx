@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { tenantAdminApi, bookingApi } from '../services/api';
@@ -12,13 +12,34 @@ const ESPACE_TYPES = [
   { value: 'event_space', label: 'Espace événementiel' },
 ];
 
-const EMPTY_ESPACE = { nom: '', type: 'open_space', capacite: 10, tarif_horaire: 15 };
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = error => reject(error);
+  });
+}
+
+async function uploadImageToBackend(file, folder = 'espaces') {
+  const base64Data = await fileToBase64(file);
+  const res = await tenantAdminApi.uploadPhoto({
+    base64Data,
+    fileName: file.name,
+    fileType: file.type,
+    folder,
+  });
+  return res.publicUrl;
+}
+
+const EMPTY_ESPACE = { nom: '', type: 'open_space', capacite: 10, tarif_horaire: 15, photo_url: '' };
 
 export default function AdminOnboarding({ session }) {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [tenant, setTenant] = useState(null);
   const [tenantForm, setTenantForm] = useState({
@@ -26,6 +47,20 @@ export default function AdminOnboarding({ session }) {
   });
   const [espaces, setEspaces] = useState([]);
   const [newEspace, setNewEspace] = useState({ ...EMPTY_ESPACE });
+  const fileRef = useRef(null);
+
+  const handlePhotoUpload = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setError('Fichier invalide. Veuillez sélectionner une image.'); return; }
+    if (file.size > 5 * 1024 * 1024) { setError('Image trop grande. Maximum 5 MB.'); return; }
+    setUploading(true);
+    setError('');
+    try {
+      const url = await uploadImageToBackend(file, 'espaces');
+      setNewEspace(f => ({ ...f, photo_url: url }));
+    } catch (e) { setError(e.message); }
+    finally { setUploading(false); }
+  };
 
   useEffect(() => { loadData(); }, [session]);
 
@@ -247,17 +282,26 @@ export default function AdminOnboarding({ session }) {
               {espaces.length > 0 && (
                 <div className="divide-y divide-outline-variant/15 rounded-xl border border-outline-variant/20 overflow-hidden">
                   {espaces.map((e) => (
-                    <div key={e.id} className="flex items-center justify-between px-4 py-3 bg-surface-container-low/50">
-                      <div>
-                        <p className="font-semibold text-primary text-sm">{e.nom}</p>
-                        <p className="text-xs text-on-surface-variant">
-                          {ESPACE_TYPES.find((t) => t.value === e.type)?.label || e.type}
-                          {' · '}{e.capacite} places · {e.tarif_horaire} DT/h
-                        </p>
+                    <div key={e.id} className="flex items-center justify-between px-4 py-3 bg-surface-container-low/50 gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {e.photo_url ? (
+                          <img src={e.photo_url} alt={e.nom} className="w-11 h-11 rounded-lg object-cover border border-outline-variant/20 shrink-0" />
+                        ) : (
+                          <div className="w-11 h-11 rounded-lg bg-secondary/10 flex items-center justify-center shrink-0">
+                            <span className="material-symbols-outlined text-secondary" style={{ fontSize: 20 }}>meeting_room</span>
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-semibold text-primary text-sm truncate">{e.nom}</p>
+                          <p className="text-xs text-on-surface-variant truncate">
+                            {ESPACE_TYPES.find((t) => t.value === e.type)?.label || e.type}
+                            {' · '}{e.capacite} places · {e.tarif_horaire} DT/h
+                          </p>
+                        </div>
                       </div>
                       <button
                         onClick={() => handleRemoveEspace(e.id)}
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-600"
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 shrink-0"
                         title="Supprimer"
                       >
                         <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
@@ -303,10 +347,61 @@ export default function AdminOnboarding({ session }) {
                     placeholder="Tarif horaire (DT)"
                   />
                 </div>
+
+                {/* Upload photo espace */}
+                <div className="pt-1">
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    Photo de l'espace (recommandé)
+                  </label>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handlePhotoUpload(e.target.files?.[0])}
+                  />
+
+                  {newEspace.photo_url ? (
+                    <div className="relative rounded-xl overflow-hidden border border-outline-variant/30 h-32 group">
+                      <img src={newEspace.photo_url} alt="Aperçu" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => fileRef.current?.click()}
+                          className="px-3 py-1.5 bg-white/90 text-primary text-xs font-semibold rounded-lg hover:bg-white"
+                        >
+                          Changer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewEspace(f => ({ ...f, photo_url: '' }))}
+                          className="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={uploading}
+                      onClick={() => fileRef.current?.click()}
+                      className="w-full py-3 px-4 border-2 border-dashed border-outline-variant/40 hover:border-secondary rounded-xl flex items-center justify-center gap-2 text-sm text-on-surface-variant hover:text-secondary transition-all bg-white"
+                    >
+                      {uploading ? (
+                        <span className="animate-spin h-4 w-4 border-2 border-secondary border-t-transparent rounded-full" />
+                      ) : (
+                        <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add_photo_alternate</span>
+                      )}
+                      <span>{uploading ? 'Téléversement de la photo…' : 'Ajouter une photo pour cet espace'}</span>
+                    </button>
+                  )}
+                </div>
+
                 <button
                   onClick={handleAddEspace}
-                  disabled={saving}
-                  className="flex items-center gap-2 px-4 py-2 bg-secondary/10 text-secondary rounded-full text-sm font-semibold hover:bg-secondary/20 transition-colors"
+                  disabled={saving || uploading}
+                  className="flex items-center gap-2 px-4 py-2 bg-secondary/10 text-secondary rounded-full text-sm font-semibold hover:bg-secondary/20 transition-colors disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
                   Ajouter cet espace

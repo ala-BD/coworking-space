@@ -14,6 +14,7 @@ import {
 import PortalLayout from '../components/layout/PortalLayout';
 import { ROLE_LABELS } from '../utils/roles';
 import { QRCodeSVG } from 'qrcode.react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 /* ─── Constants ─── */
 const TIMER_RING_RADIUS = 42;
@@ -169,6 +170,31 @@ export default function Dashboard({ session }) {
     const diff = new Date(activeSubscription.date_fin).getTime() - Date.now();
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   }, [activeSubscription]);
+
+  /* ── Derived: member activity chart ── */
+  const memberActivityChart = useMemo(() => {
+    const months = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = d.toLocaleDateString('fr-FR', { month: 'short' });
+      const year = d.getFullYear();
+      const month = d.getMonth();
+
+      const countRes = (bookings || []).filter(b => {
+        const db = new Date(b.date_debut);
+        return db.getFullYear() === year && db.getMonth() === month && b.statut !== 'cancelled';
+      }).length;
+
+      const countForm = (myFormations || []).filter(f => {
+        const db = new Date(f.formations?.date_debut || f.created_at);
+        return db.getFullYear() === year && db.getMonth() === month && f.statut !== 'annulee';
+      }).length;
+
+      months.push({ mois: label, reservations: countRes, formations: countForm });
+    }
+    return months;
+  }, [bookings, myFormations]);
 
   /* ── Load all data ── */
   const loadData = async () => {
@@ -349,7 +375,7 @@ export default function Dashboard({ session }) {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: '#f4f6f9' }}>
-        <div className="w-14 h-14 rounded-full border-4 border-[#0054cb]/20 border-t-[#0054cb] animate-spin mb-4" />
+        <div className="w-14 h-14 rounded-full border-4 border-[#f95d00]/20 border-t-[#f95d00] animate-spin mb-4" />
         <p className="text-sm text-on-surface-variant font-medium">Chargement…</p>
       </div>
     );
@@ -380,7 +406,7 @@ export default function Dashboard({ session }) {
           <Link
             to="/book/step1"
             className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-white px-5 py-2.5 rounded-xl shrink-0 transition-all hover:-translate-y-0.5 active:scale-[.97]"
-            style={{ background: '#0054cb', boxShadow: '0 4px 14px rgba(0,84,203,.3)' }}
+            style={{ background: '#f95d00', boxShadow: '0 4px 14px rgba(249,93,0,.3)' }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_circle</span>
             Réserver
@@ -478,7 +504,7 @@ export default function Dashboard({ session }) {
             /* ── QUICK CHECK-IN CARD ── */
             <div className="bg-white rounded-3xl p-6 border border-outline-variant/10 h-full" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
               <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-[#0054cb]" style={{ fontSize: 22 }}>event_available</span>
+                <span className="material-symbols-outlined text-[#f95d00]" style={{ fontSize: 22 }}>event_available</span>
                 <h2 className="font-sora font-bold text-primary text-base">Check-in rapide</h2>
               </div>
               <div className="space-y-3">
@@ -511,7 +537,7 @@ export default function Dashboard({ session }) {
               <Link
                 to="/book/step1"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:-translate-y-0.5"
-                style={{ background: '#0054cb', boxShadow: '0 4px 14px rgba(0,84,203,.25)' }}
+                style={{ background: '#f95d00', boxShadow: '0 4px 14px rgba(249,93,0,.25)' }}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 17 }}>add_circle</span>
                 Réserver un espace
@@ -532,7 +558,7 @@ export default function Dashboard({ session }) {
 
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-4">
-                <div className="px-3 py-1 rounded-full" style={{ background: '#0054cb' }}>
+                <div className="px-3 py-1 rounded-full" style={{ background: '#f95d00' }}>
                   <span className="text-[11px] uppercase tracking-[.16em] text-white font-semibold">
                     {activeSubscription ? SUBSCRIPTION_LABELS[activeSubscription.type] || 'Abonnement' : 'Sans abonnement'}
                   </span>
@@ -607,7 +633,7 @@ export default function Dashboard({ session }) {
                 <Link
                   to="/dashboard/abonnement"
                   className="block w-full text-center py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[.98]"
-                  style={{ background: '#0054cb', boxShadow: '0 4px 14px rgba(0,84,203,.35)' }}
+                  style={{ background: '#f95d00', boxShadow: '0 4px 14px rgba(249,93,0,.35)' }}
                 >
                   Découvrir les offres
                 </Link>
@@ -621,7 +647,7 @@ export default function Dashboard({ session }) {
           <div className="bg-white rounded-3xl p-6 border border-outline-variant/10 h-full" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
             <div className="flex justify-between items-center mb-5">
               <h3 className="font-sora font-bold text-primary text-base">Réservations à venir</h3>
-              <Link to="/dashboard/bookings" className="text-sm font-semibold text-[#0054cb] hover:underline transition-colors">
+              <Link to="/dashboard/bookings" className="text-sm font-semibold text-[#f95d00] hover:underline transition-colors">
                 Voir tout
               </Link>
             </div>
@@ -632,7 +658,7 @@ export default function Dashboard({ session }) {
                 <p className="text-sm text-on-surface-variant mb-3">Aucune réservation à venir.</p>
                 <Link
                   to="/book/step1"
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0054cb] hover:underline"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#f95d00] hover:underline"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
                   Réserver un espace
@@ -647,7 +673,7 @@ export default function Dashboard({ session }) {
                   >
                     {/* Date badge */}
                     <div className="w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0" style={{ background: '#eef2ff' }}>
-                      <span className="text-[10px] font-bold uppercase text-[#0054cb] leading-none">
+                      <span className="text-[10px] font-bold uppercase text-[#f95d00] leading-none">
                         {new Date(b.date_debut).toLocaleDateString('fr-FR', { month: 'short' })}
                       </span>
                       <span className="font-sora font-bold text-lg text-primary leading-none mt-0.5">
@@ -696,7 +722,7 @@ export default function Dashboard({ session }) {
             {/* QR preview */}
             <div className="p-4 rounded-xl border border-outline-variant/20 bg-surface-container-low/60 hover:bg-surface-container-low transition-colors cursor-pointer relative group mb-4 w-full flex items-center justify-center">
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-xl" style={{ background: 'rgba(0,84,203,.06)' }}>
-                <span className="material-symbols-outlined text-[#0054cb] text-3xl">fullscreen</span>
+                <span className="material-symbols-outlined text-[#f95d00] text-3xl">fullscreen</span>
               </div>
               <div className="w-40 h-40 flex items-center justify-center">
                 <QRCodeSVG
@@ -720,6 +746,41 @@ export default function Dashboard({ session }) {
           </div>
         </div>
 
+        {/* ─── GRAPH : Mon activité mensuelle ─── */}
+        <div className="md:col-span-12 bento-card">
+          <div className="bg-white rounded-3xl p-6 border border-outline-variant/10" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="font-sora font-bold text-primary text-base">Mon activité (6 derniers mois)</h3>
+                <p className="text-xs text-on-surface-variant">Réservations d'espaces et participations aux formations</p>
+              </div>
+              <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-orange-50 text-[#f95d00]">
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>show_chart</span>
+              </span>
+            </div>
+            <ResponsiveContainer width="100%" height={160}>
+              <AreaChart data={memberActivityChart} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRes" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f95d00" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#f95d00" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorForm" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2FBE8F" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#2FBE8F" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+                <XAxis dataKey="mois" tick={{ fontSize: 11, fill: '#64748b' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} width={30} allowDecimals={false} />
+                <Tooltip />
+                <Area type="monotone" dataKey="reservations" name="Réservations" stroke="#f95d00" strokeWidth={2} fillOpacity={1} fill="url(#colorRes)" />
+                <Area type="monotone" dataKey="formations" name="Formations" stroke="#2FBE8F" strokeWidth={2} fillOpacity={1} fill="url(#colorForm)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
         {/* ─── ROW 3 LEFT (8 cols): My Registered Formations ─── */}
         <div className="md:col-span-8 bento-card">
           <div className="bg-white rounded-3xl p-6 border border-outline-variant/10 h-full flex flex-col justify-between" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
@@ -729,7 +790,7 @@ export default function Dashboard({ session }) {
                   <span className="material-symbols-outlined text-[#2FBE8F]" style={{ fontSize: 20 }}>school</span>
                   Mes formations à venir
                 </h3>
-                <Link to="/dashboard/formations" className="text-sm font-semibold text-[#0054cb] hover:underline transition-colors">
+                <Link to="/dashboard/formations" className="text-sm font-semibold text-[#f95d00] hover:underline transition-colors">
                   Voir tout
                 </Link>
               </div>
@@ -835,7 +896,7 @@ export default function Dashboard({ session }) {
       {/* ═══════ QUICK LINKS GRID ═══════ */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
         {[
-          { icon: 'person', label: 'Profil', to: '/dashboard/profile', color: '#0054cb' },
+          { icon: 'person', label: 'Profil', to: '/dashboard/profile', color: '#f95d00' },
           { icon: 'notifications', label: 'Notifications', to: '/dashboard/notifications', color: '#FF6F59' },
           { icon: 'school', label: 'Formations', to: '/dashboard/formations', color: '#2FBE8F' },
           { icon: 'receipt_long', label: 'Factures', to: '/member/payments', color: '#8b5cf6' },
@@ -864,7 +925,7 @@ export default function Dashboard({ session }) {
           className="w-full flex items-center justify-between px-6 py-4 hover:bg-surface-container-low/50 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-[#0054cb]" style={{ fontSize: 20 }}>person</span>
+            <span className="material-symbols-outlined text-[#f95d00]" style={{ fontSize: 20 }}>person</span>
             <span className="font-sora font-bold text-primary text-sm">Mon profil</span>
           </div>
           <div className="flex items-center gap-2">
@@ -893,7 +954,7 @@ export default function Dashboard({ session }) {
                       id={field.id}
                       value={form[field.key]}
                       onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-                      className="w-full border border-outline-variant/30 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0054cb]/30 focus:border-[#0054cb] transition-all"
+                      className="w-full border border-outline-variant/30 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f95d00]/30 focus:border-[#f95d00] transition-all"
                       required={field.required}
                     />
                   </div>
@@ -904,7 +965,7 @@ export default function Dashboard({ session }) {
                     id="type_membre"
                     value={form.type_membre}
                     onChange={(e) => setForm({ ...form, type_membre: e.target.value })}
-                    className="w-full border border-outline-variant/30 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0054cb]/30 focus:border-[#0054cb] transition-all"
+                    className="w-full border border-outline-variant/30 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f95d00]/30 focus:border-[#f95d00] transition-all"
                   >
                     <option value="individuel">Individuel</option>
                     <option value="entreprise">Entreprise</option>
@@ -917,7 +978,7 @@ export default function Dashboard({ session }) {
                   type="submit"
                   disabled={saving}
                   className="px-5 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50"
-                  style={{ background: '#0054cb' }}
+                  style={{ background: '#f95d00' }}
                 >
                   {saving ? 'Enregistrement…' : 'Enregistrer'}
                 </button>
@@ -943,7 +1004,7 @@ export default function Dashboard({ session }) {
                 { label: 'CIN', value: profile?.cin || 'Non renseigné', icon: 'id_card' },
               ].map((item) => (
                 <div key={item.label} className="flex items-start gap-2.5 p-3 rounded-xl bg-surface-container-low/50">
-                  <span className="material-symbols-outlined text-[#0054cb] shrink-0 mt-0.5" style={{ fontSize: 16 }}>{item.icon}</span>
+                  <span className="material-symbols-outlined text-[#f95d00] shrink-0 mt-0.5" style={{ fontSize: 16 }}>{item.icon}</span>
                   <div className="min-w-0">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">{item.label}</p>
                     <p className="text-sm font-medium text-primary truncate">{item.value}</p>

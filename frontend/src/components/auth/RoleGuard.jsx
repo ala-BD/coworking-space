@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
-import { getHomePath, isAdminRole, isMemberRole, getPostLoginPath } from '../../utils/roles';
+import { getHomePath, isAdminRole, isMemberRole, canBookSpaces, getPostLoginPath } from '../../utils/roles';
 
 function LoadingScreen() {
   return (
@@ -11,7 +11,7 @@ function LoadingScreen() {
   );
 }
 
-export function RoleGuard({ session, requireAdmin = false, requireMember = false, requireTrainer = false, children }) {
+export function RoleGuard({ session, requireAdmin = false, requireMember = false, requireTrainer = false, requireBooker = false, children }) {
   const [state, setState] = useState({ loading: true, role: null });
 
   useEffect(() => {
@@ -40,6 +40,10 @@ export function RoleGuard({ session, requireAdmin = false, requireMember = false
   }
 
   if (requireTrainer && state.role !== 'formateur') {
+    return <Navigate to={getHomePath(state.role)} replace />;
+  }
+
+  if (requireBooker && !canBookSpaces(state.role)) {
     return <Navigate to={getHomePath(state.role)} replace />;
   }
 

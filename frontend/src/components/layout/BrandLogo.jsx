@@ -1,53 +1,59 @@
 import { Link } from 'react-router-dom';
+import { useTheme } from '../../context/ThemeContext';
 
 /**
- * BrandLogo — Encre & Cobalt
- * Icône hub + nom + sous-titre "Coworking"
+ * BrandLogo — DeskyWork
+ * Logo image officiel (mode clair / sombre) + fallback texte
  * Props:
  *   to       — lien (défaut: '/')
- *   compact  — affiche uniquement l'icône
- *   light    — variante claire pour fonds sombres
+ *   compact  — affiche uniquement l'icône logo
+ *   light    — force variante claire (sur fonds sombres)
+ *   height   — hauteur du logo en px (défaut: 36)
  */
-export default function BrandLogo({ to = '/', className = '', compact = false, light = false }) {
-  return (
-    <Link to={to} className={`inline-flex items-center gap-2.5 group shrink-0 ${className}`} style={{ textDecoration: 'none' }}>
-      {/* Icône carrée avec gradient primaire → secondaire */}
-      <span
-        className="flex items-center justify-center rounded-[11px] shadow-md group-hover:scale-105 transition-transform duration-200 shrink-0"
-        style={{
-          width: 38,
-          height: 38,
-          background: 'linear-gradient(135deg, #000d23, #0054cb)',
-        }}
-      >
-        <span className="material-symbols-outlined" style={{ color: 'white', fontSize: 18 }}>
-          hub
-        </span>
-      </span>
+export default function BrandLogo({ to = '/', className = '', compact = false, light, height = 48 }) {
+  const { dark } = useTheme();
+  const isDark = light !== undefined ? light : dark;
 
-      {/* Nom + sous-titre */}
+  /* Logo PNG transparent : mode sombre = "logo 2.png", mode clair = "logo 1.png" */
+  const logoSrc = isDark ? '/logo 2.png' : '/logo 1.png';
+
+  return (
+    <Link
+      to={to}
+      className={`inline-flex items-center gap-2 group shrink-0 ${className}`}
+      style={{ textDecoration: 'none' }}
+    >
+      <img
+        src={logoSrc}
+        alt="DeskyWork"
+        style={{
+          height: compact ? height * 0.85 : height,
+          width: 'auto',
+          maxHeight: 'none',
+          objectFit: 'contain',
+          transform: 'scale(2.2)',
+          transformOrigin: 'left center',
+          transition: 'transform 0.2s ease, opacity 0.2s ease',
+          display: 'block',
+        }}
+        className="group-hover:scale-110"
+      />
+
+      {/* Nom textuel visible uniquement si compact=false ET logo non chargé (fallback) */}
       {!compact && (
-        <span className="flex flex-col leading-none">
+        <noscript>
           <span
-            className="font-sora font-bold tracking-tight"
             style={{
+              fontFamily: 'Sora, sans-serif',
+              fontWeight: 700,
               fontSize: '1.05rem',
-              lineHeight: '1.2',
-              color: light ? '#ffffff' : '#000d23',
+              color: isDark ? '#fbffff' : '#100f0d',
+              letterSpacing: '-0.01em',
             }}
           >
-            Encre &amp; Cobalt
+            DeskyWork
           </span>
-          <span
-            className="font-inter font-semibold uppercase tracking-[0.16em]"
-            style={{
-              fontSize: '0.62rem',
-              color: light ? 'rgba(255,255,255,0.65)' : '#44474d',
-            }}
-          >
-            Coworking
-          </span>
-        </span>
+        </noscript>
       )}
     </Link>
   );

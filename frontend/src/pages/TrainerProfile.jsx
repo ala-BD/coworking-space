@@ -98,16 +98,55 @@ export default function TrainerProfile({ session }) {
     setPhotoUpl(true);
     setError('');
     try {
-      const ext  = file.name.split('.').pop();
-      const path = `avatars/${session.user.id}_${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
-      if (upErr) throw upErr;
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
+      let publicUrl = null;
+      // 1. Essayer l'upload sécurisé via le Backend (service role, contourne RLS)
+      try {
+        const reader = new FileReader();
+        const base64Promise = new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = reject;
+        });
+        reader.readAsDataURL(file);
+        const base64Data = await base64Promise;
+
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+        const res = await fetch(`${API_URL}/api/upload`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            base64Data,
+            fileName: file.name,
+            fileType: file.type,
+            folder: 'avatars',
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok && data.publicUrl) {
+          publicUrl = data.publicUrl;
+        }
+      } catch (_) { }
+
+      // 2. Fallback vers le client Supabase direct si l'API backend n'est pas dispo
+      if (!publicUrl) {
+        const ext = file.name.split('.').pop();
+        const path = `${session.user.id}_${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
+        if (upErr) throw upErr;
+        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
+        publicUrl = urlData.publicUrl;
+      }
+
       const { error: updErr } = await supabase.from('profiles')
-        .update({ photo_url: urlData.publicUrl, updated_at: new Date().toISOString() })
+        .update({ photo_url: publicUrl, updated_at: new Date().toISOString() })
         .eq('id', session.user.id);
       if (updErr) throw updErr;
-      setProfile((p) => ({ ...p, photo_url: urlData.publicUrl }));
+      setProfile((p) => ({ ...p, photo_url: publicUrl }));
       setSuccess('Photo mise à jour.');
     } catch (e) { setError("Erreur upload : " + e.message); }
     finally     { setPhotoUpl(false); }
@@ -179,7 +218,7 @@ export default function TrainerProfile({ session }) {
                 />
               ) : (
                 <div className="w-20 h-20 rounded-2xl flex items-center justify-center font-sora font-bold text-2xl shadow"
-                  style={{ background: 'linear-gradient(135deg, #10233f, #0054cb)', color: '#dae2ff' }}>
+                  style={{ background: 'linear-gradient(135deg, #100f0d, #f95d00)', color: '#fbffff' }}>
                   {initials}
                 </div>
               )}

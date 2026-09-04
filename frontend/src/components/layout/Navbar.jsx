@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 
 /**
- * Navbar principale — Encre & Cobalt
+ * Navbar principale — DeskyWork
  * Utilisable sur toutes les pages publiques.
  * Props:
  *   session        — objet session Supabase (ou null)
@@ -55,29 +55,18 @@ export default function Navbar({ session, activeLink = '', transparent = false }
         .ec-navbar.transparent-nav {
           background: transparent;
         }
-        .ec-navbar .brand-icon {
-          width: 38px; height: 38px;
-          border-radius: 11px;
-          background: linear-gradient(135deg, #000d23, #0054cb);
-          display: flex; align-items: center; justify-content: center;
+        .ec-navbar .brand-logo-img {
+          height: 60px;
+          width: auto;
+          max-height: 60px;
+          object-fit: contain;
+          transform: scale(2.4);
+          transform-origin: left center;
+          transition: transform .2s ease, opacity .2s ease;
+          display: block;
           flex-shrink: 0;
-          transition: transform .2s;
         }
-        .ec-navbar .brand-icon:hover { transform: scale(1.05); }
-        .ec-navbar .brand-name {
-          font-family: 'Sora', sans-serif;
-          font-weight: 700;
-          font-size: 1.1rem;
-          color: #000d23;
-          line-height: 1.2;
-        }
-        .ec-navbar .brand-sub {
-          font-size: .68rem;
-          font-weight: 600;
-          letter-spacing: .14em;
-          text-transform: uppercase;
-          color: #44474d;
-        }
+        .ec-navbar .brand-logo-img:hover { transform: scale(2.52); }
         .ec-navbar .nav-link-item {
           font-size: .92rem;
           font-weight: 500;
@@ -93,13 +82,13 @@ export default function Navbar({ session, activeLink = '', transparent = false }
           position: absolute;
           bottom: -2px; left: 0;
           width: 0; height: 2px;
-          background: #0054cb;
+          background: #f95d00;
           border-radius: 2px;
           transition: width .25s ease;
         }
         .ec-navbar .nav-link-item:hover,
         .ec-navbar .nav-link-item.active {
-          color: #0054cb;
+          color: #f95d00;
         }
         .ec-navbar .nav-link-item:hover::after,
         .ec-navbar .nav-link-item.active::after {
@@ -107,8 +96,8 @@ export default function Navbar({ session, activeLink = '', transparent = false }
         }
         .ec-navbar .btn-login {
           background: transparent;
-          color: #000d23;
-          border: 1.5px solid #10233f;
+          color: #100f0d;
+          border: 1.5px solid #100f0d;
           border-radius: 10px;
           padding: 8px 18px;
           font-size: .875rem;
@@ -119,12 +108,12 @@ export default function Navbar({ session, activeLink = '', transparent = false }
           white-space: nowrap;
         }
         .ec-navbar .btn-login:hover {
-          background: #000d23;
-          color: white;
+          background: #100f0d;
+          color: #fbffff;
         }
         .ec-navbar .btn-cta {
-          background: #0054cb;
-          color: white;
+          background: #f95d00;
+          color: #fbffff;
           border: none;
           border-radius: 10px;
           padding: 9px 20px;
@@ -137,12 +126,12 @@ export default function Navbar({ session, activeLink = '', transparent = false }
         }
         .ec-navbar .btn-cta:hover {
           transform: translateY(-1px);
-          box-shadow: 0 6px 20px rgba(0,84,203,.35);
+          box-shadow: 0 6px 20px rgba(249,93,0,.35);
         }
         .ec-navbar .btn-portal {
           background: transparent;
-          color: #0054cb;
-          border: 1.5px solid #0054cb;
+          color: #f95d00;
+          border: 1.5px solid #f95d00;
           border-radius: 10px;
           padding: 8px 18px;
           font-size: .875rem;
@@ -153,8 +142,8 @@ export default function Navbar({ session, activeLink = '', transparent = false }
           white-space: nowrap;
         }
         .ec-navbar .btn-portal:hover {
-          background: #0054cb;
-          color: white;
+          background: #f95d00;
+          color: #fbffff;
         }
         .ec-navbar .btn-logout {
           background: transparent;
@@ -200,7 +189,7 @@ export default function Navbar({ session, activeLink = '', transparent = false }
           border-bottom: 1px solid rgba(0,13,35,.05);
           transition: color .2s;
         }
-        .ec-mobile-menu .mob-link:hover { color: #0054cb; }
+        .ec-mobile-menu .mob-link:hover { color: #f95d00; }
         .ec-mobile-menu .mob-actions {
           display: flex;
           gap: 10px;
@@ -224,17 +213,15 @@ export default function Navbar({ session, activeLink = '', transparent = false }
       <nav className={`ec-navbar ${isScrolledOrSolid ? 'solid' : 'transparent-nav'}`}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px' }}>
           {/* ── Main bar ── */}
-          <div style={{ display: 'flex', alignItems: 'center', height: 72, gap: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'center', height: 76, gap: 32 }}>
 
-            {/* Brand */}
-            <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              <div className="brand-icon">
-                <span className="material-symbols-outlined" style={{ color: 'white', fontSize: 18 }}>hub</span>
-              </div>
-              <div>
-                <div className="brand-name">Encre &amp; Cobalt</div>
-                <div className="brand-sub">Coworking</div>
-              </div>
+            {/* Brand — DeskyWork */}
+            <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              <img
+                src="/logo 1.png"
+                alt="DeskyWork"
+                className="brand-logo-img"
+              />
             </Link>
 
             {/* Desktop links */}

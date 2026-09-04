@@ -179,7 +179,7 @@ export default function AdminCoworkingProfile({ session }) {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="font-sora font-bold text-primary text-2xl sm:text-3xl">Profil du Coworking</h1>
+          <h1 className="font-sora font-bold text-2xl sm:text-3xl" style={{ color: '#100f0d' }}>Profil du Coworking</h1>
           <p className="text-on-surface-variant text-sm mt-1">Personnalisez les informations et les visuels de votre espace</p>
         </div>
 
@@ -199,7 +199,7 @@ export default function AdminCoworkingProfile({ session }) {
               )}
             </div>
             <div className="px-5 py-4">
-              <h3 className="font-sora font-bold text-primary text-lg">{form.nom || 'Nom du coworking'}</h3>
+              <h3 className="font-sora font-bold text-lg" style={{ color: '#100f0d' }}>{form.nom || 'Nom du coworking'}</h3>
               {form.ville && <p className="text-xs text-on-surface-variant mt-0.5">{form.ville}{form.pays ? `, ${form.pays}` : ''}</p>}
             </div>
           </div>

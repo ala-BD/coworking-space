@@ -22,12 +22,12 @@ const STATUTS = [
 ];
 
 const ROLE_COLORS = {
-  member:      { bg: 'rgba(0,84,203,0.08)',  text: '#0054cb',  label: 'Membre' },
-  admin:       { bg: 'rgba(47,190,143,0.10)', text: '#1a7a5a',  label: 'Admin' },
-  staff:       { bg: 'rgba(245,158,11,0.10)', text: '#b45309',  label: 'Staff' },
-  formateur:   { bg: 'rgba(139,92,246,0.10)', text: '#6d28d9',  label: 'Formateur' },
-  super_admin: { bg: 'rgba(220,38,38,0.09)',  text: '#b91c1c',  label: 'Super Admin' },
-  guest:       { bg: 'rgba(100,116,139,0.10)',text: '#475569',  label: 'Invité' },
+  member:      { bg: 'rgba(249,93,0,0.10)',  text: '#f95d00',  label: 'Membre' },
+  admin:       { bg: 'rgba(16,15,13,0.10)',  text: '#100f0d',  label: 'Admin' },
+  staff:       { bg: 'rgba(249,93,0,0.10)',  text: '#f95d00',  label: 'Staff' },
+  formateur:   { bg: 'rgba(249,93,0,0.12)',  text: '#f95d00',  label: 'Formateur' },
+  super_admin: { bg: 'rgba(16,15,13,0.15)',  text: '#100f0d',  label: 'Super Admin' },
+  guest:       { bg: 'rgba(16,15,13,0.06)',  text: '#100f0d',  label: 'Invité' },
 };
 
 const STATUT_COLORS = {

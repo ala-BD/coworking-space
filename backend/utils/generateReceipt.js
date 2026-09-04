@@ -2,19 +2,21 @@
 // Génération de reçus PDF pour les paiements — Module C Dev 2
 // Utilise pdfkit pour créer un PDF professionnel
 
+const fs = require('fs');
+const path = require('path');
 const PDFDocument = require('pdfkit');
 
-// ── Palette de couleurs (Encre Cobalt — charte VC LOW) ──────────────────────
+// ── Palette de couleurs DeskyWork (Noir, Orange, Blanc) ──────────────────────
 const COLORS = {
-  primary:    '#1B2A6B', // Encre Cobalt foncé
-  secondary:  '#2D4CC8', // Cobalt moyen
-  accent:     '#4F6EF7', // Cobalt vif
-  light:      '#EEF1FF', // Cobalt très clair
-  text:       '#1A1A2E', // Texte principal
-  muted:      '#6B7280', // Texte secondaire
-  border:     '#D1D5DB', // Bordures
-  success:    '#059669', // Vert pour "Payé"
-  warning:    '#D97706', // Orange pour "En attente"
+  primary:    '#100F0D', // Noir profond DeskyWork
+  secondary:  '#F95D00', // Orange Vif DeskyWork
+  accent:     '#F95D00', // Orange Accent
+  light:      '#FFF7ED', // Orange/Crème soft
+  text:       '#100F0D', // Texte principal
+  muted:      '#64748B', // Texte secondaire
+  border:     '#FED7AA', // Bordure orangée
+  success:    '#10B981', // Vert pour "Payé"
+  warning:    '#F59E0B', // Ambre pour "En attente"
   white:      '#FFFFFF',
 };
 
@@ -35,23 +37,15 @@ const STATUT_LABELS = {
 };
 
 /**
- * Génère un reçu PDF pour un paiement donné.
- *
- * @param {Object} payment  - Objet paiement (depuis Supabase, avec jointures profiles + reservations + abonnements)
- * @param {Object} options
- * @param {string} options.coworkingName  - Nom de l'espace coworking (défaut: "Thirty Three Space")
- * @param {string} options.coworkingEmail - Email de contact (défaut: "contact@33space.tn")
- * @param {string} options.coworkingTel   - Téléphone (défaut: "")
- * @param {string} options.coworkingAdresse - Adresse physique
- * @returns {Promise<Buffer>} - Buffer contenant le PDF généré
+ * Génère un reçu PDF pour un paiement donné aux couleurs DeskyWork.
  */
 function generateReceiptPDF(payment, options = {}) {
   return new Promise((resolve, reject) => {
     try {
       const config = {
-        coworkingName:    options.coworkingName    || 'Thirty Three Space',
-        coworkingEmail:   options.coworkingEmail   || 'contact@33space.tn',
-        coworkingTel:     options.coworkingTel     || '+216 XX XXX XXX',
+        coworkingName:    options.coworkingName    || 'DeskyWork',
+        coworkingEmail:   options.coworkingEmail   || 'contact@deskywork.tn',
+        coworkingTel:     options.coworkingTel     || '+216 71 000 000',
         coworkingAdresse: options.coworkingAdresse || 'Tunis, Tunisie',
       };
 
@@ -81,15 +75,15 @@ function generateReceiptPDF(payment, options = {}) {
       const montant = parseFloat(payment.montant || 0).toFixed(3);
       const statut  = payment.statut || 'pending';
 
-      // ── Création du document PDF ─────────────────────────────────────────────
+      // ── Document PDF ────────────────────────────────────────────────────────
       const doc = new PDFDocument({
         size: 'A4',
         margin: 50,
         info: {
           Title:    `Reçu ${payment.numero_recu || payment.id}`,
           Author:   config.coworkingName,
-          Subject:  'Reçu de paiement',
-          Keywords: 'reçu paiement coworking',
+          Subject:  'Reçu de paiement DeskyWork',
+          Keywords: 'reçu paiement coworking deskywork',
         },
       });
 
@@ -104,76 +98,90 @@ function generateReceiptPDF(payment, options = {}) {
       const contentW   = pageWidth - margin * 2;
 
       // ════════════════════════════════════════════════════════════════════════
-      // EN-TÊTE — Bandeau coloré
+      // EN-TÊTE — Bandeau Noir & Orange DeskyWork
       // ════════════════════════════════════════════════════════════════════════
       doc.rect(0, 0, pageWidth, 120).fill(COLORS.primary);
 
-      // Nom du coworking
+      // Logo Image DeskyWork si disponible sur disque, sinon Texte
+      const logoPath = path.join(__dirname, '../../frontend/public/logo 2.png');
+      let hasLogoImage = false;
+      if (fs.existsSync(logoPath)) {
+        try {
+          doc.image(logoPath, margin, 22, { height: 48 });
+          hasLogoImage = true;
+        } catch (_) {}
+      }
+
+      if (!hasLogoImage) {
+        doc.fillColor(COLORS.secondary)
+           .font('Helvetica-Bold')
+           .fontSize(24)
+           .text(config.coworkingName, margin, 30, { width: contentW * 0.6 });
+        doc.fillColor(COLORS.white)
+           .font('Helvetica')
+           .fontSize(9)
+           .text('Espace de Coworking & Flex Office', margin, 58);
+      } else {
+        doc.fillColor(COLORS.secondary)
+           .font('Helvetica-Bold')
+           .fontSize(9)
+           .text('COWORKING & FLEX OFFICE', margin, 74);
+      }
+
+      // Informations de contact DeskyWork (droite)
       doc.fillColor(COLORS.white)
          .font('Helvetica-Bold')
-         .fontSize(22)
-         .text(config.coworkingName, margin, 30, { width: contentW * 0.6 });
-
-      // Sous-titre
-      doc.fillColor(COLORS.accent)
-         .font('Helvetica')
          .fontSize(10)
-         .text('Espace de Coworking', margin, 58);
-
-      // Contact (côté droit)
-      doc.fillColor(COLORS.white)
-         .font('Helvetica')
-         .fontSize(9)
-         .text(config.coworkingEmail, margin + contentW * 0.6, 32, {
-           width: contentW * 0.4, align: 'right',
-         })
-         .text(config.coworkingTel, margin + contentW * 0.6, 46, {
-           width: contentW * 0.4, align: 'right',
-         })
-         .text(config.coworkingAdresse, margin + contentW * 0.6, 60, {
-           width: contentW * 0.4, align: 'right',
-         });
-
-      // Titre REÇU DE PAIEMENT
-      doc.fillColor(COLORS.light)
-         .font('Helvetica-Bold')
-         .fontSize(13)
-         .text('REÇU DE PAIEMENT', margin, 90, { width: contentW });
-
-      // ════════════════════════════════════════════════════════════════════════
-      // NUMÉRO DE REÇU + STATUT
-      // ════════════════════════════════════════════════════════════════════════
-      const yAfterHeader = 140;
-
-      // Fond léger
-      doc.rect(margin, yAfterHeader, contentW, 55)
-         .fill(COLORS.light);
-
-      doc.fillColor(COLORS.primary)
-         .font('Helvetica-Bold')
-         .fontSize(16)
-         .text(payment.numero_recu || `PAY-${payment.id.slice(0, 8).toUpperCase()}`, margin + 15, yAfterHeader + 10);
+         .text(config.coworkingName, margin + contentW * 0.5, 28, { width: contentW * 0.5, align: 'right' });
 
       doc.fillColor(COLORS.muted)
          .font('Helvetica')
-         .fontSize(9)
-         .text(`Émis le : ${dateEmission}`, margin + 15, yAfterHeader + 32);
+         .fontSize(8.5)
+         .text(config.coworkingEmail, margin + contentW * 0.5, 42, { width: contentW * 0.5, align: 'right' })
+         .text(config.coworkingTel, margin + contentW * 0.5, 54, { width: contentW * 0.5, align: 'right' })
+         .text(config.coworkingAdresse, margin + contentW * 0.5, 66, { width: contentW * 0.5, align: 'right' });
 
-      // Badge statut (côté droit)
+      // Barre d'accent orange séparatrice
+      doc.rect(0, 116, pageWidth, 4).fill(COLORS.secondary);
+
+      // ════════════════════════════════════════════════════════════════════════
+      // TITRE REÇU DE PAIEMENT + NUMÉRO & STATUT
+      // ════════════════════════════════════════════════════════════════════════
+      const yAfterHeader = 135;
+
+      // Card Résumé Reçu (fond crème/orange)
+      doc.rect(margin, yAfterHeader, contentW, 58)
+         .fillAndStroke(COLORS.light, COLORS.border);
+
+      doc.fillColor(COLORS.secondary)
+         .font('Helvetica-Bold')
+         .fontSize(9)
+         .text('REÇU OFFICIEL DE PAIEMENT', margin + 15, yAfterHeader + 10);
+
+      doc.fillColor(COLORS.primary)
+         .font('Helvetica-Bold')
+         .fontSize(15)
+         .text(payment.numero_recu || `PAY-${payment.id.slice(0, 8).toUpperCase()}`, margin + 15, yAfterHeader + 24);
+
+      doc.fillColor(COLORS.muted)
+         .font('Helvetica')
+         .fontSize(8.5)
+         .text(`Émis le : ${dateEmission}`, margin + 15, yAfterHeader + 42);
+
+      // Badge Statut
       const statutColor = statut === 'paid' ? COLORS.success : COLORS.warning;
       const statutLabel = STATUT_LABELS[statut] || statut;
       const badgeX      = margin + contentW - 120;
-      const badgeY      = yAfterHeader + 15;
+      const badgeY      = yAfterHeader + 16;
 
-      doc.rect(badgeX, badgeY, 110, 24)
-         .fill(statutColor);
+      doc.rect(badgeX, badgeY, 105, 26).fill(statutColor);
       doc.fillColor(COLORS.white)
          .font('Helvetica-Bold')
          .fontSize(10)
-         .text(statutLabel.toUpperCase(), badgeX, badgeY + 7, { width: 110, align: 'center' });
+         .text(statutLabel.toUpperCase(), badgeX, badgeY + 8, { width: 105, align: 'center' });
 
       // ════════════════════════════════════════════════════════════════════════
-      // SECTION : INFORMATIONS CLIENT
+      // INFORMATIONS CLIENT
       // ════════════════════════════════════════════════════════════════════════
       const yClient = yAfterHeader + 75;
 
@@ -182,69 +190,66 @@ function generateReceiptPDF(payment, options = {}) {
          .fontSize(11)
          .text('INFORMATIONS CLIENT', margin, yClient);
 
-      // Ligne séparatrice
       doc.moveTo(margin, yClient + 16)
          .lineTo(margin + contentW, yClient + 16)
          .strokeColor(COLORS.secondary)
-         .lineWidth(1.5)
+         .lineWidth(2)
          .stroke();
 
       const col1X = margin;
       const col2X = margin + contentW / 2;
       const yData = yClient + 26;
 
-      // Colonne gauche
       _field(doc, 'Nom & Prénom', nomMembre,      col1X, yData);
       _field(doc, 'Email',        emailMembre,    col1X, yData + 36);
-      _field(doc, 'Date paiement', datePaiement,  col1X, yData + 72);
+      _field(doc, 'Date de règlement', datePaiement, col1X, yData + 72);
 
-      // Colonne droite
-      _field(doc, 'Mode de paiement', MODE_LABELS[payment.mode] || payment.mode, col2X, yData);
+      _field(doc, 'Mode de règlement', MODE_LABELS[payment.mode] || payment.mode, col2X, yData);
       if (payment.reference_externe) {
-        _field(doc, 'Référence', payment.reference_externe, col2X, yData + 36);
+        _field(doc, 'Référence transaction', payment.reference_externe, col2X, yData + 36);
       }
 
       // ════════════════════════════════════════════════════════════════════════
-      // SECTION : DÉTAIL DU SERVICE
+      // DÉTAIL DU SERVICE
       // ════════════════════════════════════════════════════════════════════════
-      const yDetail = yData + 120;
+      const yDetail = yData + 115;
 
       doc.fillColor(COLORS.primary)
          .font('Helvetica-Bold')
          .fontSize(11)
-         .text('DÉTAIL DU SERVICE', margin, yDetail);
+         .text('DÉTAIL DE LA FACTURATION', margin, yDetail);
 
       doc.moveTo(margin, yDetail + 16)
          .lineTo(margin + contentW, yDetail + 16)
          .strokeColor(COLORS.secondary)
-         .lineWidth(1.5)
+         .lineWidth(2)
          .stroke();
 
-      // En-têtes tableau
+      // En-têtes Tableau
       const tableY     = yDetail + 26;
       const col_desc   = margin;
       const col_detail = margin + contentW * 0.5;
       const col_prix   = margin + contentW * 0.82;
 
-      doc.rect(col_desc, tableY, contentW, 22).fill(COLORS.primary);
+      doc.rect(col_desc, tableY, contentW, 24).fill(COLORS.primary);
       doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(9);
-      doc.text('DESCRIPTION',   col_desc   + 8, tableY + 7, { width: contentW * 0.48 });
-      doc.text('DÉTAIL',        col_detail + 8, tableY + 7, { width: contentW * 0.3  });
-      doc.text('MONTANT (DT)',  col_prix,        tableY + 7, { width: contentW * 0.18, align: 'right' });
+      doc.text('DESCRIPTION',   col_desc   + 8, tableY + 8, { width: contentW * 0.48 });
+      doc.text('PÉRIODE / DÉTAIL', col_detail + 8, tableY + 8, { width: contentW * 0.3  });
+      doc.text('MONTANT (DT)',  col_prix,        tableY + 8, { width: contentW * 0.18, align: 'right' });
 
       // Ligne de données
       const rowY = tableY + 30;
-      doc.rect(col_desc, rowY, contentW, 28).fill(COLORS.light);
+      doc.rect(col_desc, rowY, contentW, 30).fill(COLORS.light);
 
-      let description = 'Service coworking';
+      let description = 'Service DeskyWork';
       let detail      = '—';
 
       if (reservation) {
-        description = `Réservation — ${reservation.espaces?.nom || 'Espace'}`;
+        description = `Réservation d'Espace — ${reservation.espaces?.nom || 'Espace'}`;
         const d1 = new Date(reservation.date_debut).toLocaleDateString('fr-FR');
         const h1 = new Date(reservation.date_debut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const h2 = new Date(reservation.date_fin).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        detail = `${d1} · ${h1}→${h2}`;
+        detail = `${d1} (${h1} - ${h2})`;
       } else if (abonnement) {
         const LABELS = { day_pass: 'Day Pass', week_pass: 'Week Pass', mensuel: 'Mensuel', trimestriel: 'Trimestriel', annuel: 'Annuel', bureau_prive: 'Bureau Privé' };
         description = `Abonnement — ${LABELS[abonnement.type] || abonnement.type}`;
@@ -253,56 +258,56 @@ function generateReceiptPDF(payment, options = {}) {
         detail = `${d1} → ${d2}`;
       }
 
-      doc.fillColor(COLORS.text).font('Helvetica').fontSize(9);
-      doc.text(description, col_desc   + 8, rowY + 9, { width: contentW * 0.48 });
-      doc.text(detail,      col_detail + 8, rowY + 9, { width: contentW * 0.3  });
-      doc.font('Helvetica-Bold')
+      doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(9);
+      doc.text(description, col_desc + 8, rowY + 10, { width: contentW * 0.48 });
+      doc.font('Helvetica').fontSize(8.5);
+      doc.text(detail, col_detail + 8, rowY + 10, { width: contentW * 0.3 });
+      doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(10)
          .text(`${montant} DT`, col_prix, rowY + 9, { width: contentW * 0.18, align: 'right' });
 
       // ════════════════════════════════════════════════════════════════════════
-      // TOTAL
+      // BLOC TOTAL HIGHLIGHTED ORANGE
       // ════════════════════════════════════════════════════════════════════════
-      const totalY = rowY + 45;
+      const totalY = rowY + 48;
 
-      doc.rect(col_prix - 60, totalY, 60 + contentW * 0.18, 32).fill(COLORS.primary);
+      doc.rect(col_prix - 70, totalY, 70 + contentW * 0.18, 34).fill(COLORS.secondary);
       doc.fillColor(COLORS.white)
          .font('Helvetica-Bold')
          .fontSize(10)
-         .text('TOTAL TTC', col_prix - 58, totalY + 11, { width: 56, align: 'left' });
-      doc.fillColor(COLORS.accent)
+         .text('TOTAL TTC', col_prix - 65, totalY + 11, { width: 60, align: 'left' });
+      doc.fillColor(COLORS.white)
          .font('Helvetica-Bold')
-         .fontSize(13)
+         .fontSize(14)
          .text(`${montant} DT`, col_prix, totalY + 9, { width: contentW * 0.18, align: 'right' });
 
       // ════════════════════════════════════════════════════════════════════════
-      // MESSAGE DE BAS DE PAGE
+      // NOTE BAS DE PAGE
       // ════════════════════════════════════════════════════════════════════════
       const yNote = totalY + 60;
 
-      doc.rect(margin, yNote, contentW, 50).fill(COLORS.light);
+      doc.rect(margin, yNote, contentW, 46).fill(COLORS.light);
       doc.fillColor(COLORS.muted)
          .font('Helvetica')
          .fontSize(8)
          .text(
-           'Ce reçu est généré automatiquement par le système VC LOW. Conservez ce document comme justificatif de paiement. ' +
-           'Pour toute réclamation, contactez-nous à ' + config.coworkingEmail,
+           'Ce reçu est généré automatiquement par la plateforme DeskyWork. Conservez ce document comme justificatif officiel. ' +
+           'Pour toute assistance, contactez notre équipe support : ' + config.coworkingEmail,
            margin + 10, yNote + 10,
            { width: contentW - 20, align: 'center' }
          );
 
       // ════════════════════════════════════════════════════════════════════════
-      // PIED DE PAGE
+      // FOOTER NOIR DESKYWORK
       // ════════════════════════════════════════════════════════════════════════
-      doc.rect(0, pageHeight - 40, pageWidth, 40).fill(COLORS.primary);
-      doc.fillColor(COLORS.light)
+      doc.rect(0, pageHeight - 38, pageWidth, 38).fill(COLORS.primary);
+      doc.fillColor(COLORS.white)
+         .font('Helvetica-Bold')
+         .fontSize(8)
+         .text('DeskyWork', margin, pageHeight - 24, { width: contentW, align: 'center' });
+      doc.fillColor(COLORS.muted)
          .font('Helvetica')
          .fontSize(8)
-         .text(
-           `${config.coworkingName}  ·  Propulsé par VC LOW  ·  contact@vclow.tn`,
-           margin,
-           pageHeight - 26,
-           { width: contentW, align: 'center' }
-         );
+         .text('  ·  Espace de Coworking & Flex Office  ·  www.deskywork.tn', margin + 60, pageHeight - 24, { width: contentW - 120, align: 'center' });
 
       doc.end();
 

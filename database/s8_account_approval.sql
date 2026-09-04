@@ -16,21 +16,35 @@ ALTER TABLE public.profiles
   ADD CONSTRAINT profiles_statut_compte_check
     CHECK (statut_compte IN ('actif', 'suspendu', 'expire', 'en_attente'));
 
--- 3. Changer le DEFAULT pour que tout nouveau compte soit 'en_attente'
+-- 3. Le DEFAULT reste 'actif' pour les membres standards et formateurs
 ALTER TABLE public.profiles
-  ALTER COLUMN statut_compte SET DEFAULT 'en_attente';
+  ALTER COLUMN statut_compte SET DEFAULT 'actif';
 
--- 4. Mettre à jour le trigger handle_new_user pour inclure specialite & biographie, ainsi que la création de tenant si le rôle est 'admin'
+-- 4. Mettre à jour le trigger handle_new_user :
+-- Seuls les comptes avec rôle 'admin' (Admin Coworking) sont placés 'en_attente' d'approbation Super Admin.
+-- Tous les autres comptes (membres, formateurs) sont créés 'actif' immédiatement.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
     new_tenant_id UUID := NULL;
     coworking_name TEXT;
+    user_role TEXT;
+    initial_statut TEXT;
 BEGIN
+    user_role := COALESCE(new.raw_user_meta_data->>'role', 'member');
     coworking_name := new.raw_user_meta_data->>'coworking_name';
 
+    -- Règle d'approbation :
+    -- Seul le compte Admin Coworking nécessite l'approbation du Super Admin ('en_attente').
+    -- Les autres rôles (membres, formateurs, etc.) sont activés immédiatement ('actif').
+    IF user_role = 'admin' THEN
+        initial_statut := 'en_attente';
+    ELSE
+        initial_statut := 'actif';
+    END IF;
+
     -- Si c'est un nouvel admin et qu'un nom de coworking est fourni, créer le tenant (espace de coworking)
-    IF COALESCE(new.raw_user_meta_data->>'role', 'member') = 'admin' AND coworking_name IS NOT NULL THEN
+    IF user_role = 'admin' AND coworking_name IS NOT NULL THEN
         INSERT INTO public.tenants (nom, slug, email, telephone, statut, settings)
         VALUES (
             coworking_name,
@@ -49,12 +63,12 @@ BEGIN
         COALESCE(new.raw_user_meta_data->>'nom', ''),
         COALESCE(new.raw_user_meta_data->>'prenom', ''),
         new.email,
-        COALESCE(new.raw_user_meta_data->>'role', 'member'),
+        user_role,
         COALESCE(new.raw_user_meta_data->>'telephone', ''),
         COALESCE(new.raw_user_meta_data->>'type_membre', 'individuel'),
         COALESCE(new.raw_user_meta_data->>'specialite', NULL),
         COALESCE(new.raw_user_meta_data->>'biographie', NULL),
-        'en_attente', -- Le compte commence en attente d'approbation
+        initial_statut,
         new_tenant_id
     );
 

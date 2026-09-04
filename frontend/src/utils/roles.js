@@ -17,6 +17,25 @@ export function isMemberRole(role) {
   return !isAdminRole(role) && role !== 'formateur';
 }
 
+export function canBookSpaces(role) {
+  return isMemberRole(role) || role === 'formateur';
+}
+
+export function getBookerNav(role) {
+  if (role === 'formateur') {
+    return {
+      home: '/trainer-dashboard',
+      bookings: '/trainer/bookings',
+      payments: '/trainer/payments',
+    };
+  }
+  return {
+    home: '/dashboard',
+    bookings: '/dashboard/bookings',
+    payments: '/member/payments',
+  };
+}
+
 export function getHomePath(role) {
   if (role === 'super_admin') return '/super-admin/dashboard';
   if (isAdminRole(role)) return '/admin/dashboard';
@@ -64,15 +83,13 @@ export const MEMBER_NAV = [
   { id: 'member_notifications',label: 'Notifications',     icon: 'notifications',    to: '/dashboard/notifications' },
   { id: 'member_documents',    label: 'Mes documents',     icon: 'folder',           to: '/dashboard/documents' },
   { id: 'member_rgpd',         label: 'Données & RGPD',    icon: 'privacy_tip',      to: '/dashboard/rgpd' },
-  { id: 'member_profile',      label: 'Mon profil',        icon: 'person',           to: '/dashboard/profile' },
 ];
 
 export const ADMIN_NAV = [
   { id: 'admin_dashboard',    label: 'Tableau de bord',      icon: 'dashboard',              to: '/admin/dashboard' },
   { id: 'admin_agenda',       label: 'Agenda & Check-in',    icon: 'calendar_month',         to: '/admin/agenda' },
+  { id: 'admin_reservations', label: 'Réservations',         icon: 'event_available',        to: '/admin/reservations' },
   { id: 'admin_espaces',      label: 'Mes Espaces',          icon: 'meeting_room',           to: '/admin/espaces' },
-  { id: 'admin_coworking',    label: 'Profil Coworking',     icon: 'domain',                 to: '/admin/profile-coworking' },
-  { id: 'admin_formations',   label: 'Formations',           icon: 'event_note',             to: '/admin/formations' },
   { id: 'admin_pricing',      label: 'Tarification',         icon: 'sell',                   to: '/admin/pricing' },
   { id: 'admin_payments',     label: 'Gestion paiements',    icon: 'account_balance_wallet', to: '/admin/payments' },
   { id: 'admin_sites',        label: 'Multi-sites',          icon: 'location_city',          to: '/admin/sites' },
@@ -89,17 +106,20 @@ export const STAFF_NAV = [
 ];
 
 export const FORMATEUR_NAV = [
-  { id: 'trainer_dashboard',   label: 'Mon Dashboard',   icon: 'dashboard',  to: '/trainer-dashboard' },
-  { id: 'trainer_formations',  label: 'Mes Formations',  icon: 'school',     to: '/trainer/formations' },
-  { id: 'trainer_planning',    label: 'Mon Planning',    icon: 'event_note', to: '/trainer/planning' },
-  { id: 'trainer_profile',     label: 'Mon Profil',      icon: 'person',     to: '/trainer/profile' },
+  { id: 'trainer_dashboard',   label: 'Tableau de bord', icon: 'dashboard',              to: '/trainer-dashboard' },
+  { id: 'trainer_formations',  label: 'Mes Formations',  icon: 'school',                 to: '/trainer/formations' },
+  { id: 'trainer_planning',    label: 'Mon Planning',    icon: 'event_note',             to: '/trainer/planning' },
+  { id: 'trainer_bookings',    label: 'Mes Réservations', icon: 'calendar_month',        to: '/trainer/bookings' },
+  { id: 'book',                label: 'Réserver un espace', icon: 'calendar_today',     to: '/book/step1' },
+  { id: 'trainer_payments',    label: 'Mes factures',    icon: 'receipt_long',           to: '/trainer/payments' },
+  { id: 'trainer_profile',     label: 'Mon Profil',      icon: 'person',                 to: '/trainer/profile' },
 ];
 
 export const SUPER_ADMIN_NAV = [
-  { id: 'sa_dashboard', label: 'Dashboard', icon: 'dashboard', to: '/super-admin/dashboard' },
+  { id: 'sa_dashboard', label: 'Tableau de bord', icon: 'dashboard', to: '/super-admin/dashboard' },
   { id: 'sa_users',     label: 'Utilisateurs', icon: 'groups', to: '/super-admin/users' },
-  { id: 'sa_tenants', label: 'Tenant Management', icon: 'domain', to: '/super-admin/tenants' },
+  { id: 'sa_tenants', label: 'Gestion Coworkings', icon: 'domain', to: '/super-admin/tenants' },
   { id: 'sa_billing', label: 'Facturation B2B', icon: 'payments', to: '/super-admin/billing' },
-  { id: 'sa_monitoring', label: 'Monitoring & Audit', icon: 'monitor', to: '/super-admin/monitoring' },
+  { id: 'sa_monitoring', label: 'Surveillance & Audit', icon: 'monitor', to: '/super-admin/monitoring' },
 ];
 

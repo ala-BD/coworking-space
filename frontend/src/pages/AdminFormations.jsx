@@ -6,9 +6,9 @@ import PortalLayout from '../components/layout/PortalLayout';
 /* ─── Constants ─────────────────────────────────────────────────────────── */
 const STATUT_STYLES = {
   planifiee: 'bg-amber-50 text-amber-800 border border-amber-200',
-  en_cours:  'bg-emerald-50 text-emerald-800 border border-emerald-200',
-  terminee:  'bg-sky-50 text-sky-800 border border-sky-200',
-  annulee:   'bg-red-50 text-red-800 border border-red-200',
+  en_cours: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
+  terminee: 'bg-sky-50 text-sky-800 border border-sky-200',
+  annulee: 'bg-red-50 text-red-800 border border-red-200',
 };
 const STATUT_LABELS = {
   planifiee: 'Planifiée', en_cours: 'En cours', terminee: 'Terminée', annulee: 'Annulée',
@@ -67,7 +67,7 @@ function Modal({ open, onClose, title, subtitle, icon, children, footer, maxWidt
         <div className="flex-1 overflow-y-auto p-7 space-y-7">{children}</div>
 
         {footer && (
-          <div className="p-6 border-t border-outline-variant/15 bg-[#F8F9FF] rounded-b-[32px] shrink-0">{footer}</div>
+          <div className="p-6 border-t border-outline-variant/15 bg-surface-container-low rounded-b-[32px] shrink-0">{footer}</div>
         )}
       </div>
 
@@ -121,15 +121,15 @@ function Dialog({ open, onClose, title, children, footer, maxWidth = 'max-w-xl' 
 ═══════════════════════════════════════════════════════════════════════════ */
 export default function AdminFormations({ session }) {
   /* ─── State ─── */
-  const [profile, setProfile]       = useState(null);
+  const [profile, setProfile] = useState(null);
   const [formations, setFormations] = useState([]);
   const [formateurs, setFormateurs] = useState([]);
-  const [salles, setSalles]         = useState([]);
+  const [salles, setSalles] = useState([]);
   const [remunerations, setRemunerations] = useState([]);
-  const [activeTab, setActiveTab]   = useState('formations');
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState('');
-  const [success, setSuccess]       = useState('');
+  const [activeTab, setActiveTab] = useState('formations');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   /* ─── Modals ─── */
   const [showFormationDrawer, setShowFormationDrawer] = useState(false);
@@ -148,8 +148,8 @@ export default function AdminFormations({ session }) {
     date_debut: '', date_fin: '', capacite_max: 15, prix_inscription: 0,
     programme: '', prerequis: '', materiel: '', statut: 'planifiee',
   };
-  const [formationForm, setFormationForm]     = useState(emptyFormation);
-  const [formateurForm, setFormateurForm]     = useState({ nom: '', prenom: '', email: '', telephone: '', specialite: '', biographie: '' });
+  const [formationForm, setFormationForm] = useState(emptyFormation);
+  const [formateurForm, setFormateurForm] = useState({ nom: '', prenom: '', email: '', telephone: '', specialite: '', biographie: '' });
   const [remunerationForm, setRemunerationForm] = useState({ formateur_id: '', formation_id: '', montant: '', statut: 'en_attente', note: '' });
   const [formSaving, setFormSaving] = useState(false);
 
@@ -344,7 +344,7 @@ export default function AdminFormations({ session }) {
 
   /* ─── KPIs ─── */
   const totalInscrits = formations.reduce((s, f) => s + (f.nb_inscrits || 0), 0);
-  const pendingPay    = remunerations.filter(r => r.statut === 'en_attente').reduce((s, r) => s + parseFloat(r.montant || 0), 0);
+  const pendingPay = remunerations.filter(r => r.statut === 'en_attente').reduce((s, r) => s + parseFloat(r.montant || 0), 0);
 
   /* ─── Loading ─── */
   if (loading) return (
@@ -426,17 +426,15 @@ export default function AdminFormations({ session }) {
             <button
               key={key}
               onClick={() => setActiveTab(key)}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition-all ${
-                activeTab === key
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition-all ${activeTab === key
                   ? 'bg-white text-secondary shadow-sm'
                   : 'text-on-surface-variant hover:text-primary'
-              }`}
+                }`}
             >
               <span className="material-symbols-outlined hidden sm:block" style={{ fontSize: 16 }}>{icon}</span>
               <span className="truncate">{label}</span>
-              <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                activeTab === key ? 'bg-secondary/10 text-secondary' : 'bg-outline-variant/20 text-on-surface-variant'
-              }`}>{count}</span>
+              <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === key ? 'bg-secondary/10 text-secondary' : 'bg-outline-variant/20 text-on-surface-variant'
+                }`}>{count}</span>
             </button>
           ))}
         </div>
@@ -667,11 +665,10 @@ export default function AdminFormations({ session }) {
                         {profile?.role !== 'super_admin' && (
                           <button
                             onClick={() => toggleFormateurStatus(t.id, t.statut_compte)}
-                            className={`flex items-center justify-center p-2 rounded-xl border transition-colors ${
-                              t.statut_compte === 'actif'
+                            className={`flex items-center justify-center p-2 rounded-xl border transition-colors ${t.statut_compte === 'actif'
                                 ? 'border-red-200 text-error bg-red-50 hover:bg-red-100'
                                 : 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                            }`}
+                              }`}
                             title={t.statut_compte === 'actif' ? 'Suspendre' : 'Activer'}
                           >
                             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>

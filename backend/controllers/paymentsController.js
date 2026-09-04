@@ -112,8 +112,10 @@ async function createPayment(req, res) {
 
 async function createPaymentSelf(req, res) {
   try {
-    const { reservation_id, abonnement_id, montant, mode, statut } = req.body;
+    const { reservation_id, abonnement_id, montant, statut } = req.body;
     const userId = req.user.id;
+    // 'sur_place' est le mode frontend → correspond à 'cash' en DB
+    let mode = req.body.mode;
 
     if (!montant || !mode) {
       return res.status(400).json({ error: 'montant et mode sont requis.' });
@@ -123,9 +125,12 @@ async function createPaymentSelf(req, res) {
       return res.status(400).json({ error: 'Un paiement doit être lié à une réservation ou un abonnement.' });
     }
 
+    // Normaliser 'sur_place' / 'on_site' → 'cash' pour la base de données
+    if (mode === 'sur_place' || mode === 'on_site') mode = 'cash';
+
     const validModes = ['cash', 'bank_transfer', 'check', 'online'];
     if (!validModes.includes(mode)) {
-      return res.status(400).json({ error: 'Mode de paiement invalide. Valeurs acceptées : cash, bank_transfer, check, online.' });
+      return res.status(400).json({ error: `Mode de paiement invalide: '${mode}'. Valeurs acceptées : sur_place, on_site, cash, bank_transfer, check, online.` });
     }
 
     const validStatuts = ['pending', 'paid', 'failed', 'refunded'];
@@ -153,6 +158,20 @@ async function createPaymentSelf(req, res) {
       }
 
       req.tenantId = reservation.tenant_id;
+
+      const { data: existing } = await supabaseAdmin
+        .from('paiements')
+        .select('*')
+        .eq('reservation_id', reservation_id)
+        .eq('user_id', userId)
+        .in('statut', ['pending', 'paid'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        return res.status(200).json({ payment: existing, message: 'Paiement déjà existant.' });
+      }
     }
 
     if (abonnement_id) {
@@ -399,14 +418,14 @@ async function updatePayment(req, res) {
 
         if (isEmailConfigured()) {
           const pdfBuffer = await generateReceiptPDF(data, {
-            coworkingName: process.env.COWORKING_NAME || 'Thirty Three Space',
+            coworkingName: process.env.COWORKING_NAME || 'DeskyWork',
             coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
             coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
             coworkingAdresse: process.env.COWORKING_ADRESSE || 'Tunis, Tunisie',
           });
 
           await sendReceiptEmail(data, pdfBuffer, {
-            coworkingName: process.env.COWORKING_NAME || 'Thirty Three Space',
+            coworkingName: process.env.COWORKING_NAME || 'DeskyWork',
             coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
             coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
           });
@@ -424,7 +443,7 @@ async function updatePayment(req, res) {
 
 async function getPaymentReceipt(req, res) {
   const { id } = req.params;
-  const isSelf = req.profile.role === 'member';
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
 
   try {
     const { data: payment, error } = await supabaseAdmin
@@ -442,12 +461,12 @@ async function getPaymentReceipt(req, res) {
       return res.status(404).json({ error: 'Paiement introuvable.' });
     }
 
-    if (isSelf && payment.user_id !== req.user.id) {
+    if (!isStaff && payment.user_id !== req.user.id) {
       return res.status(403).json({ error: 'Accès refusé. Ce reçu ne vous appartient pas.' });
     }
 
     const pdfBuffer = await generateReceiptPDF(payment, {
-      coworkingName: process.env.COWORKING_NAME || 'Thirty Three Space',
+      coworkingName: process.env.COWORKING_NAME || 'DeskyWork',
       coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
       coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
       coworkingAdresse: process.env.COWORKING_ADRESSE || 'Tunis, Tunisie',
@@ -482,7 +501,8 @@ async function stripePay(req, res) {
     if (error || !payment) return res.status(404).json({ error: 'Paiement introuvable.' });
     if (payment.statut === 'paid') return res.status(400).json({ error: 'Ce paiement est déjà réglé.' });
 
-    const session = await createCheckoutSession(payment, req.user.id);
+    const paymentsPath = req.profile.role === 'formateur' ? '/trainer/payments' : '/member/payments';
+    const session = await createCheckoutSession(payment, req.user.id, { paymentsPath });
 
     if (session.id) {
       await supabaseAdmin

@@ -129,15 +129,46 @@ async function onboardTenant(req, res) {
 
 // GET /api/super-admin/stats
 async function getStats(_req, res) {
-  const [{ count: totalTenants }, { count: activeTenants }, { count: suspendedTenants }, { count: totalMembers }] = await Promise.all([
-    supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }),
-    supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }).eq('statut', 'actif'),
-    supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }).eq('statut', 'suspendu'),
-    supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).in('role', ['member', 'guest']),
-  ]);
-  const { data: tenants } = await supabaseAdmin.from('tenants').select('montant_mensuel, statut');
-  const mrr = (tenants || []).filter(t => t.statut === 'actif').reduce((acc, t) => acc + (parseFloat(t.montant_mensuel) || 0), 0);
-  res.json({ totalTenants: totalTenants || 0, activeTenants: activeTenants || 0, suspendedTenants: suspendedTenants || 0, totalMembers: totalMembers || 0, mrr });
+  try {
+    const [{ count: totalTenants }, { count: activeTenants }, { count: suspendedTenants }, { count: totalMembers }] = await Promise.all([
+      supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }),
+      supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }).eq('statut', 'actif'),
+      supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }).eq('statut', 'suspendu'),
+      supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).in('role', ['member', 'guest']),
+    ]);
+
+    const { data: tenants } = await supabaseAdmin.from('tenants').select('id, nom, montant_mensuel, statut, plan, created_at');
+    const mrr = (tenants || []).filter(t => t.statut === 'actif').reduce((acc, t) => acc + (parseFloat(t.montant_mensuel) || 0), 0);
+
+    // Evolution mensuelle des coworkings et du MRR (6 derniers mois)
+    const now = new Date();
+    const monthlyGrowth = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+
+      const activeInMonth = (tenants || []).filter(t => new Date(t.created_at || '2020-01-01') <= monthEnd && t.statut === 'actif');
+      const monthMrr = activeInMonth.reduce((acc, t) => acc + (parseFloat(t.montant_mensuel) || 0), 0);
+
+      monthlyGrowth.push({
+        mois: label,
+        coworkings: activeInMonth.length,
+        mrr: Math.round(monthMrr * 100) / 100,
+      });
+    }
+
+    res.json({
+      totalTenants: totalTenants || 0,
+      activeTenants: activeTenants || 0,
+      suspendedTenants: suspendedTenants || 0,
+      totalMembers: totalMembers || 0,
+      mrr: Math.round(mrr * 100) / 100,
+      monthlyGrowth,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 }
 
 // GET /api/super-admin/audit
@@ -188,6 +219,15 @@ async function updateUser(req, res) {
 
   const { data, error } = await supabaseAdmin.from('profiles').update(updates).eq('id', req.params.id).select().single();
   if (error) return res.status(400).json({ error: error.message });
+
+  // Si le statut passe à actif, confirmer automatiquement l'email dans Supabase Auth
+  if (updates.statut_compte === 'actif') {
+    try {
+      await supabaseAdmin.auth.admin.updateUserById(req.params.id, { email_confirm: true });
+    } catch (e) {
+      console.warn('⚠️ Erreur confirmation email Supabase Auth:', e.message);
+    }
+  }
 
   await auditLog(req.user.id, 'user_updated', 'user', req.params.id, `${target.prenom} ${target.nom}`, { fields: Object.keys(updates) }, req.ip);
   res.json({ user: data });

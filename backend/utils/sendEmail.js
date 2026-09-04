@@ -6,13 +6,26 @@ const nodemailer = require('nodemailer');
 
 // ── Configuration du transporteur SMTP ──────────────────────────────────────
 function createTransporter() {
+  const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
+  const isGmail = (process.env.SMTP_HOST || '').includes('gmail') || (process.env.SMTP_USER || '').endsWith('@gmail.com');
+
+  if (isGmail) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: pass,
+      },
+    });
+  }
+
   return nodemailer.createTransport({
     host:   process.env.SMTP_HOST || 'smtp.gmail.com',
     port:   parseInt(process.env.SMTP_PORT) || 587,
     secure: false, // true pour port 465, false pour 587
     auth: {
       user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      pass: pass,
     },
     tls: {
       rejectUnauthorized: false,
@@ -20,11 +33,11 @@ function createTransporter() {
   });
 }
 
-// ── Palette couleurs (Encre Cobalt) ──────────────────────────────────────────
-const PRIMARY   = '#1B2A6B';
-const SECONDARY = '#2D4CC8';
-const ACCENT    = '#4F6EF7';
-const LIGHT     = '#EEF1FF';
+// ── Palette couleurs (DeskyWork : Noir, Orange, Blanc) ───────────────────────
+const PRIMARY   = '#100F0D';
+const SECONDARY = '#F95D00';
+const ACCENT    = '#F95D00';
+const LIGHT     = '#FFF7ED';
 const MUTED     = '#6B7280';
 const SUCCESS   = '#059669';
 const WARNING   = '#D97706';

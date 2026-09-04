@@ -11,20 +11,49 @@ async function bookingsHistory(req, res) {
     .select(`
       *,
       espaces (id, nom, type, tarif_horaire),
-      profiles (nom, prenom, email)
+      profiles (nom, prenom, email),
+      paiements (id, statut, mode, montant)
     `, { count: 'exact' })
     .eq('user_id', req.user.id)
-    .order('date_debut', { ascending: false });
+    .order('created_at', { ascending: false });
 
   if (statut) query = query.eq('statut', statut);
 
-  const { data, error, count } = await query.range(offset, offset + parseInt(limit) - 1);
+  const { data: rawData, error, count } = await query.range(offset, offset + parseInt(limit) - 1);
   if (error) return res.status(500).json({ error: error.message });
 
   const { data: allBookings } = await supabaseAdmin
     .from('reservations')
-    .select('id, statut, date_debut, date_fin, montant_total')
+    .select('id, statut, date_debut, date_fin, espaces(tarif_horaire)')
     .eq('user_id', req.user.id);
+
+  let totalHours = 0;
+  let totalSpent = 0;
+
+  (allBookings || []).forEach(b => {
+    let hours = 0;
+    if (b.date_debut && b.date_fin) {
+      hours = Math.max(0, (new Date(b.date_fin) - new Date(b.date_debut)) / (1000 * 60 * 60));
+    }
+    if (b.statut !== 'cancelled') {
+      totalHours += hours;
+      const tarif = parseFloat(b.espaces?.tarif_horaire) || 0;
+      totalSpent += (hours * tarif);
+    }
+  });
+
+  const enrichedBookings = (rawData || []).map(b => {
+    let hours = 0;
+    if (b.date_debut && b.date_fin) {
+      hours = Math.max(0, (new Date(b.date_fin) - new Date(b.date_debut)) / (1000 * 60 * 60));
+    }
+    const tarif = parseFloat(b.espaces?.tarif_horaire) || 0;
+    const computedCost = parseFloat((hours * tarif).toFixed(2));
+    return {
+      ...b,
+      montant_total: computedCost,
+    };
+  });
 
   const stats = {
     total: allBookings?.length || 0,
@@ -32,17 +61,12 @@ async function bookingsHistory(req, res) {
     pending: allBookings?.filter(b => b.statut === 'pending').length || 0,
     cancelled: allBookings?.filter(b => b.statut === 'cancelled').length || 0,
     completed: allBookings?.filter(b => b.statut === 'completed').length || 0,
-    totalHours: allBookings?.reduce((acc, b) => {
-      if (b.date_debut && b.date_fin) {
-        return acc + (new Date(b.date_fin) - new Date(b.date_debut)) / (1000 * 60 * 60);
-      }
-      return acc;
-    }, 0).toFixed(1) || 0,
-    totalSpent: allBookings?.reduce((acc, b) => acc + (parseFloat(b.montant_total) || 0), 0).toFixed(2) || '0.00',
+    totalHours: totalHours.toFixed(1),
+    totalSpent: totalSpent.toFixed(2),
   };
 
   res.json({
-    bookings: data || [],
+    bookings: enrichedBookings,
     stats,
     pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0, totalPages: Math.ceil((count || 0) / parseInt(limit)) },
   });
@@ -53,7 +77,7 @@ async function memberStats(req, res) {
   const userId = req.user.id;
 
   const [bookingsRes, subsRes, paymentsRes] = await Promise.all([
-    supabaseAdmin.from('reservations').select('id, statut, montant_total, date_debut, date_fin').eq('user_id', userId),
+    supabaseAdmin.from('reservations').select('id, statut, date_debut, date_fin, espaces(tarif_horaire)').eq('user_id', userId),
     supabaseAdmin.from('abonnements').select('id, statut, date_debut, date_fin, type_abonnement').eq('user_id', userId),
     supabaseAdmin.from('paiements').select('id, montant, statut, mode_paiement, created_at').eq('user_id', userId),
   ]);
@@ -61,10 +85,19 @@ async function memberStats(req, res) {
   const bookings = bookingsRes.data || [];
   const subs = subsRes.data || [];
   const payments = paymentsRes.data || [];
-  const totalHours = bookings.reduce((acc, b) => {
-    if (b.date_debut && b.date_fin) return acc + (new Date(b.date_fin) - new Date(b.date_debut)) / (1000 * 60 * 60);
-    return acc;
-  }, 0);
+  let totalHours = 0;
+  let totalSpent = 0;
+
+  bookings.forEach(b => {
+    if (b.date_debut && b.date_fin) {
+      const h = Math.max(0, (new Date(b.date_fin) - new Date(b.date_debut)) / (1000 * 60 * 60));
+      if (b.statut !== 'cancelled') {
+        totalHours += h;
+        totalSpent += h * (parseFloat(b.espaces?.tarif_horaire) || 0);
+      }
+    }
+  });
+
   const activeSub = subs.find(s => s.statut === 'active');
 
   res.json({
@@ -73,7 +106,7 @@ async function memberStats(req, res) {
       confirmed: bookings.filter(b => b.statut === 'confirmed').length,
       completed: bookings.filter(b => b.statut === 'completed').length,
       cancelled: bookings.filter(b => b.statut === 'cancelled').length,
-      totalSpent: bookings.reduce((a, b) => a + (parseFloat(b.montant_total) || 0), 0).toFixed(2),
+      totalSpent: totalSpent.toFixed(2),
     },
     subscription: activeSub
       ? { type: activeSub.type_abonnement, active: true, date_fin: activeSub.date_fin, daysLeft: Math.max(0, Math.ceil((new Date(activeSub.date_fin) - new Date()) / (1000 * 60 * 60 * 24))) }

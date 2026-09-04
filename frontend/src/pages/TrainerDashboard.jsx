@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { formationApi } from '../services/api';
+import { formationApi, bookingApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const STATUT_STYLES = {
   planifiee: 'bg-amber-50 text-amber-800 border border-amber-200',
@@ -53,9 +54,53 @@ export default function TrainerDashboard({ session }) {
     prix_inscription: 0, date_debut: '', date_fin: '', programme: '', prerequis: '', materiel: ''
   });
   const [bookingForm, setBookingForm] = useState({
-    espace_id: '', date_debut: '', date_fin: ''
+    espace_id: '', date_debut: '', date_fin: '', mode: 'online',
   });
   const [selectedEspace, setSelectedEspace] = useState(null);
+  const [formationSpaceCheck, setFormationSpaceCheck] = useState({ status: 'idle', message: '' });
+
+  useEffect(() => {
+    if (!showCreateFormation || !formationForm.espace_id || !formationForm.date_debut || !formationForm.date_fin) {
+      setFormationSpaceCheck({ status: 'idle', message: '' });
+      return;
+    }
+    const start = new Date(formationForm.date_debut);
+    const end = new Date(formationForm.date_fin);
+    if (!(start < end)) {
+      setFormationSpaceCheck({ status: 'idle', message: '' });
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setFormationSpaceCheck({ status: 'checking', message: 'Vérification de la salle…' });
+      try {
+        const res = await bookingApi.checkAvailability({
+          espace_id: formationForm.espace_id,
+          date_debut: start.toISOString(),
+          date_fin: end.toISOString(),
+          exclusive: true,
+        });
+        if (cancelled) return;
+        if (res.isAvailable) {
+          setFormationSpaceCheck({
+            status: 'ok',
+            message: 'Salle disponible. Une réservation d’espace sera créée avec la formation.',
+          });
+        } else {
+          setFormationSpaceCheck({
+            status: 'conflict',
+            message: res.message || "Cette salle n'est pas disponible à cette date. Changez la date de la formation ou choisissez une autre salle.",
+          });
+        }
+      } catch (err) {
+        if (!cancelled) setFormationSpaceCheck({ status: 'conflict', message: err.message });
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [showCreateFormation, formationForm.espace_id, formationForm.date_debut, formationForm.date_fin]);
 
   useEffect(() => { loadUserData(); }, []);
 
@@ -81,15 +126,12 @@ export default function TrainerDashboard({ session }) {
       const id = trainerId || profile?.id;
       const [fList, rList, eList] = await Promise.all([
         formationApi.getAll({ formateur_id: id }),
-        supabase.from('reservations')
-          .select('*, espaces(*)')
-          .eq('user_id', id)
-          .order('date_debut', { ascending: true }),
+        bookingApi.getAll(),
         supabase.from('espaces').select('*').order('nom'),
       ]);
       const fData = fList.formations || [];
       setFormations(fData);
-      setReservations(rList.data || []);
+      setReservations(rList.reservations || []);
       setEspaces(eList.data || []);
 
       // Charger les inscriptions pour toutes les formations du formateur
@@ -116,15 +158,19 @@ export default function TrainerDashboard({ session }) {
 
   const handleCreateFormation = async (e) => {
     e.preventDefault();
+    if (formationSpaceCheck.status === 'conflict') return;
     setError('');
     setSuccess('');
     try {
-      await formationApi.create({
+      const created = await formationApi.create({
         ...formationForm,
         formateur_id: profile.id,
         statut: 'planifiee',
+        espace_id: formationForm.espace_id || null,
+        date_debut: new Date(formationForm.date_debut).toISOString(),
+        date_fin: new Date(formationForm.date_fin).toISOString(),
       });
-      setSuccess('Formation créée avec succès !');
+      setSuccess(created.message || 'Formation créée avec succès !');
       setFormationForm({
         titre: '', description: '', espace_id: '', capacite_max: 10,
         prix_inscription: 0, date_debut: '', date_fin: '', programme: '', prerequis: '', materiel: ''
@@ -139,17 +185,14 @@ export default function TrainerDashboard({ session }) {
     setError('');
     setSuccess('');
     try {
-      const { error } = await supabase.from('reservations').insert({
-        user_id: profile.id,
+      await bookingApi.create({
         espace_id: bookingForm.espace_id,
         date_debut: new Date(bookingForm.date_debut).toISOString(),
         date_fin: new Date(bookingForm.date_fin).toISOString(),
-        statut: 'pending',
-        mode: 'online',
+        mode: bookingForm.mode || 'online',
       });
-      if (error) throw error;
-      setSuccess('Réservation créée avec succès !');
-      setBookingForm({ espace_id: '', date_debut: '', date_fin: '' });
+      setSuccess('Demande envoyée. Une facture a été créée — l’admin doit confirmer, puis vous pourrez payer.');
+      setBookingForm({ espace_id: '', date_debut: '', date_fin: '', mode: 'online' });
       setSelectedEspace(null);
       setShowBookingModal(false);
       await refreshData();
@@ -189,7 +232,7 @@ export default function TrainerDashboard({ session }) {
             </span>
             <span className="text-xs font-bold uppercase tracking-widest text-secondary">Espace Formateur</span>
           </div>
-          <h1 className="font-sora font-bold text-primary text-2xl sm:text-3xl">Mon Dashboard</h1>
+          <h1 className="font-sora font-bold text-primary text-2xl sm:text-3xl">Tableau de bord</h1>
           <p className="text-sm text-on-surface-variant mt-0.5">
             Bonjour {profile?.prenom} — Gérez vos formations et vos réservations d'espaces.
           </p>
@@ -258,9 +301,37 @@ export default function TrainerDashboard({ session }) {
               <p className="text-xs text-on-surface-variant mt-1">Louer un espace dans un coworking space</p>
             </div>
           </button>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Graphique de fréquentation des formations */}
+        {formations.length > 0 && (
+          <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-5 mb-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-sora font-bold text-primary text-base">Inscriptions par formation</h2>
+                <p className="text-xs text-on-surface-variant">Taux de remplissage de vos sessions</p>
+              </div>
+              <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-violet-50 text-violet-600">
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>bar_chart</span>
+              </span>
+            </div>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart
+                data={formations.map(f => ({
+                  name: f.titre.length > 15 ? f.titre.slice(0, 15) + '…' : f.titre,
+                  inscrits: (inscriptions[f.id] || []).filter(i => i.statut !== 'annulee').length,
+                  capacite: f.capacite_max || 10,
+                }))}
+                margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} width={35} />
+                <Tooltip formatter={(val, name) => [val, name === 'inscrits' ? 'Inscrits' : 'Capacité max']} />
+                <Bar dataKey="inscrits" name="inscrits" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="capacite" name="capacite" fill="#e2e8f0" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
           {/* Formations */}
           <div>
             <h2 className="font-sora font-semibold text-primary text-base mb-4 flex items-center gap-2">
@@ -348,6 +419,9 @@ export default function TrainerDashboard({ session }) {
             <h2 className="font-sora font-semibold text-primary text-base mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 18 }}>chair</span>
               Mes réservations d'espaces
+              <Link to="/trainer/bookings" className="ml-auto text-xs font-semibold text-secondary hover:underline">
+                Voir / payer →
+              </Link>
             </h2>
             {reservations.length === 0 ? (
               <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-8 text-center shadow-sm">
@@ -454,6 +528,9 @@ export default function TrainerDashboard({ session }) {
                       <option key={e.id} value={e.id}>{e.nom} ({e.type})</option>
                     ))}
                   </select>
+                  <p className="text-[11px] text-on-surface-variant">
+                    Si une salle est choisie, une réservation d’espace est créée automatiquement pour les mêmes dates.
+                  </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1">
@@ -477,6 +554,20 @@ export default function TrainerDashboard({ session }) {
                     />
                   </div>
                 </div>
+                {formationSpaceCheck.status !== 'idle' && (
+                  <div className={`p-3 rounded-xl text-xs font-semibold flex items-start gap-2 ${
+                    formationSpaceCheck.status === 'ok'
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : formationSpaceCheck.status === 'conflict'
+                        ? 'bg-red-50 text-red-800 border border-red-200'
+                        : 'bg-amber-50 text-amber-800 border border-amber-200'
+                  }`}>
+                    <span className="material-symbols-outlined shrink-0" style={{ fontSize: 16 }}>
+                      {formationSpaceCheck.status === 'ok' ? 'check_circle' : formationSpaceCheck.status === 'conflict' ? 'event_busy' : 'hourglass_top'}
+                    </span>
+                    <span>{formationSpaceCheck.message}</span>
+                  </div>
+                )}
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-on-surface-variant">Prix d'inscription (DT)</label>
                   <input
@@ -535,7 +626,8 @@ export default function TrainerDashboard({ session }) {
               <button
                 type="button"
                 onClick={handleCreateFormation}
-                className="flex-1 py-2.5 bg-secondary text-white font-semibold rounded-xl text-sm hover:bg-secondary/90"
+                disabled={formationSpaceCheck.status === 'conflict'}
+                className="flex-1 py-2.5 bg-secondary text-white font-semibold rounded-xl text-sm hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Créer la formation
               </button>
@@ -666,6 +758,35 @@ export default function TrainerDashboard({ session }) {
                         </div>
                       </div>
 
+                      {/* Mode de paiement */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-on-surface-variant">Mode de paiement</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setBookingForm({ ...bookingForm, mode: 'online' })}
+                            className={`px-3 py-2.5 rounded-xl text-xs font-bold border-2 transition ${
+                              bookingForm.mode === 'online'
+                                ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                                : 'border-outline-variant/20 text-on-surface-variant'
+                            }`}
+                          >
+                            💳 En ligne
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBookingForm({ ...bookingForm, mode: 'sur_place' })}
+                            className={`px-3 py-2.5 rounded-xl text-xs font-bold border-2 transition ${
+                              bookingForm.mode === 'sur_place'
+                                ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                                : 'border-outline-variant/20 text-on-surface-variant'
+                            }`}
+                          >
+                            💵 Sur place
+                          </button>
+                        </div>
+                      </div>
+
                       {/* Estimation du prix */}
                       {bookingForm.date_debut && bookingForm.date_fin && (
                         <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-emerald-100 border border-emerald-200">
@@ -710,7 +831,7 @@ export default function TrainerDashboard({ session }) {
                 onClick={() => {
                   setShowBookingModal(false);
                   setSelectedEspace(null);
-                  setBookingForm({ espace_id: '', date_debut: '', date_fin: '' });
+                  setBookingForm({ espace_id: '', date_debut: '', date_fin: '', mode: 'online' });
                 }}
                 className="px-6 py-3 border border-outline-variant/40 text-on-surface-variant font-semibold rounded-xl text-sm hover:bg-surface-container transition-colors"
               >
@@ -736,10 +857,10 @@ export default function TrainerDashboard({ session }) {
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => setSelectedFormationParticipants(null)} />
           <div className="relative w-full max-w-2xl bg-surface-container-lowest rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
             {/* Header modal */}
-            <div className="p-6 border-b border-outline-variant/20 flex justify-between items-start" style={{ background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)' }}>
+            <div className="p-6 border-b border-outline-variant/20 flex justify-between items-start" style={{ background: 'linear-gradient(135deg, #ffedd8, #fff7ed)' }}>
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-violet-100 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-violet-600" style={{ fontSize: 22 }}>group</span>
+                <div className="w-11 h-11 rounded-2xl bg-[#f95d00]/10 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[#f95d00]" style={{ fontSize: 22 }}>group</span>
                 </div>
                 <div>
                   <h2 className="font-sora font-bold text-lg text-primary leading-snug">{selectedFormationParticipants.titre}</h2>
@@ -786,7 +907,7 @@ export default function TrainerDashboard({ session }) {
                       {/* Nom + email */}
                       <div className="col-span-5 flex items-center gap-2 min-w-0">
                         <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold text-xs text-white"
-                          style={{ background: 'linear-gradient(135deg, #6d28d9, #7c3aed)' }}
+                          style={{ background: 'linear-gradient(135deg, #100f0d, #f95d00)' }}
                         >
                           {(insc.profiles?.prenom?.[0] || '').toUpperCase()}{(insc.profiles?.nom?.[0] || '').toUpperCase()}
                         </div>

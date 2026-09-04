@@ -338,7 +338,7 @@ async function listAdminConversations(req, res) {
   res.json({ conversations: result, pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0 } });
 }
 
-// ── POST /api/admin/upload ────────────────────────────────────────────────
+// ── POST /api/upload ──────────────────────────────────────────────────────
 async function uploadPhoto(req, res) {
   try {
     const { base64Data, fileName, fileType, folder } = req.body;
@@ -349,10 +349,14 @@ async function uploadPhoto(req, res) {
 
     const buffer = Buffer.from(base64Data, 'base64');
     const ext = fileName.split('.').pop();
-    const targetPath = `${folder || 'espaces'}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const targetFolder = folder || 'espaces';
+    const bucket = ['avatars', 'documents'].includes(targetFolder) ? targetFolder : 'coworking-images';
+    const targetPath = targetFolder === bucket
+      ? `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      : `${targetFolder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
     const { error } = await supabaseAdmin.storage
-      .from('coworking-images')
+      .from(bucket)
       .upload(targetPath, buffer, {
         contentType: fileType || 'image/jpeg',
         upsert: true
@@ -363,7 +367,7 @@ async function uploadPhoto(req, res) {
     }
 
     const { data: { publicUrl } } = supabaseAdmin.storage
-      .from('coworking-images')
+      .from(bucket)
       .getPublicUrl(targetPath);
 
     res.json({ publicUrl });

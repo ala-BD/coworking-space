@@ -120,18 +120,147 @@ function computeRemainingMinutes(dateFin) {
   return Math.max(0, Math.round((new Date(dateFin).getTime() - Date.now()) / 60000));
 }
 
-async function hasBookingOverlap(espaceId, dateDebut, dateFin, excludeId = null) {
+async function countOverlappingBookings(espaceId, dateDebut, dateFin, excludeId = null) {
   let query = supabaseAdmin
     .from('reservations')
-    .select('id')
+    .select('id', { count: 'exact', head: true })
     .eq('espace_id', espaceId)
     .in('statut', ['confirmed', 'pending'])
     .lt('date_debut', dateFin)
     .gt('date_fin', dateDebut);
   if (excludeId) query = query.neq('id', excludeId);
-  const { data, error } = await query;
+  const { count, error } = await query;
   if (error) throw error;
-  return (data || []).length > 0;
+  return count || 0;
+}
+
+async function countOverlappingFormations(espaceId, dateDebut, dateFin, excludeFormationId = null) {
+  let query = supabaseAdmin
+    .from('formations')
+    .select('id', { count: 'exact', head: true })
+    .eq('espace_id', espaceId)
+    .in('statut', ['planifiee', 'en_cours'])
+    .lt('date_debut', dateFin)
+    .gt('date_fin', dateDebut);
+  if (excludeFormationId) query = query.neq('id', excludeFormationId);
+  const { count, error } = await query;
+  if (error) throw error;
+  return count || 0;
+}
+
+const FORMATION_ROOM_UNAVAILABLE =
+  "Cette salle n'est pas disponible à cette date. Changez la date de la formation ou choisissez une autre salle.";
+
+async function getBookingAvailability(espaceId, dateDebut, dateFin, excludeId = null, options = {}) {
+  const { data: espace, error: espErr } = await supabaseAdmin
+    .from('espaces')
+    .select('id, type, capacite, nom')
+    .eq('id', espaceId)
+    .single();
+
+  if (espErr || !espace) {
+    throw new Error('Espace introuvable.');
+  }
+
+  const overlappingCount = await countOverlappingBookings(espaceId, dateDebut, dateFin, excludeId);
+  const overlappingFormations = await countOverlappingFormations(
+    espaceId,
+    dateDebut,
+    dateFin,
+    options.excludeFormationId || null
+  );
+  const isOpenSpace = espace.type === 'open_space';
+  const exclusive = options.exclusive === true || !isOpenSpace;
+  const capacity = Math.max(1, parseInt(espace.capacite, 10) || 1);
+
+  let isAvailable;
+  let remaining;
+  let conflictMessage;
+
+  if (overlappingFormations > 0) {
+    isAvailable = false;
+    remaining = 0;
+    conflictMessage = FORMATION_ROOM_UNAVAILABLE;
+  } else if (exclusive) {
+    remaining = overlappingCount > 0 ? 0 : 1;
+    isAvailable = overlappingCount === 0;
+    conflictMessage = isAvailable ? null : FORMATION_ROOM_UNAVAILABLE;
+  } else {
+    remaining = Math.max(0, capacity - overlappingCount);
+    isAvailable = overlappingCount < capacity;
+    conflictMessage = isAvailable
+      ? null
+      : `Capacité de l'open space atteinte (${overlappingCount}/${capacity} places occupées) sur ce créneau.`;
+  }
+
+  return {
+    isAvailable,
+    shared: isOpenSpace && !exclusive,
+    spaceType: espace.type,
+    spaceName: espace.nom,
+    capacity,
+    overlappingCount,
+    remaining,
+    conflictMessage,
+  };
+}
+
+async function createReservationWithPayment({ userId, espaceId, dateDebut, dateFin, tenantId, mode = 'online' }) {
+  const { data: espData } = await supabaseAdmin
+    .from('espaces')
+    .select('tarif_horaire, tenant_id')
+    .eq('id', espaceId)
+    .single();
+
+  const hours = Math.max(1, (new Date(dateFin) - new Date(dateDebut)) / (1000 * 60 * 60));
+  const tarif = parseFloat(espData?.tarif_horaire) || 0;
+  const computedMontant = parseFloat((hours * tarif).toFixed(2));
+  const bookingTenantId = tenantId || espData?.tenant_id || null;
+
+  let dbMode = 'online';
+  if (mode === 'sur_place' || mode === 'on_site') dbMode = 'on_site';
+  else if (mode === 'phone') dbMode = 'phone';
+
+  const { data: reservation, error } = await supabaseAdmin
+    .from('reservations')
+    .insert({
+      tenant_id: bookingTenantId,
+      user_id: userId,
+      espace_id: espaceId,
+      date_debut: dateDebut,
+      date_fin: dateFin,
+      statut: 'pending',
+      mode: dbMode,
+    })
+    .select('*, espaces(nom, type, tarif_horaire)')
+    .single();
+
+  if (error) throw error;
+
+  let payment = null;
+  if (computedMontant > 0) {
+    const paymentMode = dbMode === 'online' ? 'online' : 'cash';
+    const { data: paymentRow, error: payErr } = await supabaseAdmin
+      .from('paiements')
+      .insert({
+        user_id: userId,
+        reservation_id: reservation.id,
+        montant: computedMontant,
+        mode: paymentMode,
+        statut: 'pending',
+        tenant_id: bookingTenantId,
+      })
+      .select('*')
+      .single();
+    if (!payErr) payment = paymentRow;
+  }
+
+  return { reservation, payment, tenantId: bookingTenantId };
+}
+
+async function hasBookingOverlap(espaceId, dateDebut, dateFin, excludeId = null) {
+  const availability = await getBookingAvailability(espaceId, dateDebut, dateFin, excludeId);
+  return !availability.isAvailable;
 }
 
 function addDays(dateStr, days) {
@@ -153,5 +282,10 @@ module.exports = {
   ensureQrToken,
   computeRemainingMinutes,
   hasBookingOverlap,
+  getBookingAvailability,
+  countOverlappingBookings,
+  countOverlappingFormations,
+  createReservationWithPayment,
+  FORMATION_ROOM_UNAVAILABLE,
   addDays,
 };

@@ -57,12 +57,12 @@ function groupNotifications(notifications) {
   return groups;
 }
 
-function NotificationItem({ notification, onRead }) {
+function NotificationItem({ notification, onClick }) {
   const { id, type, title, message, read, created_at } = notification;
 
   return (
     <button
-      onClick={() => !read && onRead(id)}
+      onClick={() => onClick(notification)}
       className={`w-full text-left flex items-start gap-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 ${
         read
           ? 'bg-white border-outline-variant/10'
@@ -79,7 +79,7 @@ function NotificationItem({ notification, onRead }) {
       >
         <span
           className="material-symbols-outlined"
-          style={{ fontSize: 20, color: '#0054cb' }}
+          style={{ fontSize: 20, color: '#f95d00' }}
         >
           {TYPE_ICONS[type] || TYPE_ICONS.system}
         </span>
@@ -93,7 +93,7 @@ function NotificationItem({ notification, onRead }) {
             {title}
           </span>
           {!read && (
-            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#0054cb' }} />
+            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#f95d00' }} />
           )}
         </div>
         <p className={`text-sm leading-relaxed mb-1.5 ${read ? 'text-on-surface-variant/70' : 'text-on-surface-variant'}`}>
@@ -155,14 +155,31 @@ export default function MemberNotifications() {
     fetchNotifications(1, false);
   }, [filter, fetchNotifications]);
 
-  const handleMarkRead = async (id) => {
-    try {
-      await memberPortalApi.markNotificationRead(id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-      );
-    } catch (err) {
-      console.error('Failed to mark notification as read:', err);
+  const handleNotificationClick = async (n) => {
+    if (!n.read) {
+      try {
+        await memberPortalApi.markNotificationRead(n.id);
+        setNotifications((prev) =>
+          prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
+        );
+      } catch (err) {
+        console.error('Failed to mark notification as read:', err);
+      }
+    }
+
+    const type = n.type || '';
+    if (type.includes('reservation') || type.includes('session')) {
+      navigate('/dashboard/bookings');
+    } else if (type.includes('paiement') || type.includes('payment') || type.includes('facture')) {
+      navigate('/dashboard/payments');
+    } else if (type.includes('message')) {
+      navigate('/dashboard/messages');
+    } else if (type.includes('formation') || type.includes('inscription')) {
+      navigate('/dashboard/formations');
+    } else if (type.includes('abonnement')) {
+      navigate('/dashboard/subscription');
+    } else {
+      navigate('/dashboard/bookings');
     }
   };
 
@@ -200,7 +217,7 @@ export default function MemberNotifications() {
             {unreadCount > 0 && (
               <span
                 className="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full text-xs font-bold text-white"
-                style={{ background: '#0054cb' }}
+                style={{ background: '#f95d00' }}
               >
                 {unreadCount}
               </span>
@@ -229,7 +246,7 @@ export default function MemberNotifications() {
                   ? 'text-white shadow-md'
                   : 'bg-white text-on-surface-variant border border-outline-variant/15 hover:bg-surface-variant/30'
               }`}
-              style={filter === tab.key ? { background: '#0054cb' } : {}}
+              style={filter === tab.key ? { background: '#f95d00' } : {}}
             >
               {tab.label}
             </button>
@@ -277,7 +294,7 @@ export default function MemberNotifications() {
                       <NotificationItem
                         key={n.id}
                         notification={n}
-                        onRead={handleMarkRead}
+                        onClick={handleNotificationClick}
                       />
                     ))}
                   </div>

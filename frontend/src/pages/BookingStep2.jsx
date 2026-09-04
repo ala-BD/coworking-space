@@ -3,11 +3,13 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { bookingApi } from '../services/api';
 import BrandLogo from '../components/layout/BrandLogo';
+import { getBookerNav } from '../utils/roles';
 
 export default function BookingStep2() {
   const [searchParams] = useSearchParams();
   const espaceId = searchParams.get('espaceId');
   const navigate = useNavigate();
+  const [nav, setNav] = useState(getBookerNav('member'));
 
   const [space, setSpace] = useState(null);
   const [date, setDate] = useState('');
@@ -16,6 +18,15 @@ export default function BookingStep2() {
   const [checking, setChecking] = useState(false);
   const [availabilityMessage, setAvailabilityMessage] = useState('');
   const [isAvailable, setIsAvailable] = useState(false);
+  const [occupancy, setOccupancy] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase.from('profiles').select('role').eq('id', user.id).single()
+        .then(({ data }) => setNav(getBookerNav(data?.role)));
+    });
+  }, []);
 
   useEffect(() => {
     if (!espaceId) {
@@ -47,6 +58,7 @@ export default function BookingStep2() {
     setChecking(true);
     setAvailabilityMessage('');
     setIsAvailable(false);
+    setOccupancy(null);
 
     const startDateTime = new Date(`${date}T${startTime}:00`).toISOString();
     const endDateTime = new Date(`${date}T${endTime}:00`).toISOString();
@@ -64,12 +76,22 @@ export default function BookingStep2() {
         date_fin: endDateTime,
       });
 
+      if (result.shared) {
+        setOccupancy({
+          remaining: result.remaining ?? 0,
+          capacity: result.capacity ?? space?.capacite ?? 0,
+          occupied: result.overlapsCount ?? 0,
+        });
+      } else {
+        setOccupancy(null);
+      }
+
       if (result.isAvailable) {
         setIsAvailable(true);
-        setAvailabilityMessage('Ce créneau est disponible. Vous pouvez confirmer la réservation.');
+        setAvailabilityMessage(result.message || 'Ce créneau est disponible. Vous pouvez continuer vers la confirmation.');
       } else {
         setIsAvailable(false);
-        setAvailabilityMessage('Ce créneau est déjà réservé. Choisissez un autre horaire.');
+        setAvailabilityMessage(result.message || 'Ce créneau est déjà réservé. Choisissez un autre horaire.');
       }
     } catch (err) {
       setAvailabilityMessage(err.message || 'Impossible de vérifier la disponibilité.');
@@ -84,21 +106,27 @@ export default function BookingStep2() {
 
   if (!space) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#F4F6F9]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary"></div>
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F6F9' }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: '4px solid #f95d00', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }} />
       </div>
     );
   }
 
   return (
-    <div className="bg-[#F4F6F9] min-h-screen text-on-background font-inter pb-xl">
+    <div style={{ backgroundColor: '#F4F6F9', minHeight: '100vh', fontFamily: 'Inter, sans-serif', paddingBottom: '48px' }}>
+      
       {/* Top Header */}
-      <nav className="fixed top-0 w-full z-50 bg-surface-container-lowest shadow-sm">
-        <div className="flex justify-between items-center px-margin-desktop py-sm max-w-container-max mx-auto">
-          <BrandLogo to="/dashboard" />
-          <div className="flex items-center gap-sm">
-            <span className="text-body-sm text-on-surface-variant font-semibold">Étape 2 sur 3</span>
-            <Link to="/book/step1" className="border border-outline-variant/30 text-primary px-sm py-xs rounded-lg font-semibold text-label-md hover:bg-surface-container-high transition-colors">
+      <nav style={{ position: 'fixed', top: 0, width: '100%', zIndex: 50, backgroundColor: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', maxWidth: '1240px', margin: '0 auto' }}>
+          <BrandLogo to={nav.home} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#f95d00', backgroundColor: '#ffedd8', padding: '6px 14px', borderRadius: '99px' }}>
+              Étape 2 sur 3
+            </span>
+            <Link 
+              to="/book/step1" 
+              style={{ padding: '6px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, border: '1px solid #c5c6ce', color: '#100f0d', textDecoration: 'none', backgroundColor: '#fff' }}
+            >
               Retour
             </Link>
           </div>
@@ -106,33 +134,57 @@ export default function BookingStep2() {
       </nav>
 
       {/* Main Container */}
-      <main className="pt-24 max-w-[600px] mx-auto px-margin-mobile py-lg">
-        <div className="bg-surface-container-lowest p-lg rounded-3xl border border-outline-variant/10 shadow-sm space-y-md">
-          <div>
-            <h1 className="font-sora text-headline-sm font-semibold text-primary mb-xs">Configurez votre créneau</h1>
-            <p className="text-body-sm text-on-surface-variant">
-              Espace sélectionné : <span className="font-semibold text-primary">{space.nom}</span> ({space.tarif_horaire} DT / h)
+      <main style={{ paddingTop: '110px', maxWidth: '600px', margin: '0 auto', paddingLeft: '20px', paddingRight: '20px' }}>
+        
+        {/* Card Form */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 8px 30px rgba(0,0,0,0.05)', padding: '32px' }}>
+          
+          <div style={{ marginBottom: '24px' }}>
+            <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '24px', fontWeight: 700, color: '#100f0d', marginBottom: '6px' }}>
+              Configurez votre créneau
+            </h1>
+            <p style={{ fontSize: '14px', color: '#5a6a8a', margin: 0 }}>
+              Espace sélectionné : <strong style={{ color: '#f95d00' }}>{space.nom}</strong> ({parseFloat(space.tarif_horaire).toFixed(2)} DT / h)
             </p>
+            {space.type === 'open_space' ? (
+              <p style={{ fontSize: '13px', color: '#059669', margin: '8px 0 0 0', fontWeight: 600 }}>
+                Open space partagé — plusieurs personnes peuvent réserver le même créneau, jusqu’à {space.capacite} places.
+              </p>
+            ) : (
+              <p style={{ fontSize: '13px', color: '#64748b', margin: '8px 0 0 0' }}>
+                Salle exclusive — un seul client peut réserver ce créneau.
+              </p>
+            )}
           </div>
 
-          <form onSubmit={handleCheckAvailability} className="space-y-md">
+          <form onSubmit={handleCheckAvailability} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
-              <label className="block font-inter text-label-sm text-primary mb-xs" htmlFor="date">
-                Date
+              <label htmlFor="date" style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#000d23', marginBottom: '8px' }}>
+                Date de réservation
               </label>
               <input
                 id="date"
                 type="date"
                 required
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-white border border-outline-variant/30 rounded-xl px-sm py-xs text-body-md focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-all"
+                onChange={(e) => { setDate(e.target.value); setIsAvailable(false); setAvailabilityMessage(''); setOccupancy(null); }}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  border: '1px solid #d0d7de',
+                  backgroundColor: '#f8fafc',
+                  fontSize: '14px',
+                  color: '#000d23',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-sm">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
-                <label className="block font-inter text-label-sm text-primary mb-xs" htmlFor="start">
+                <label htmlFor="start" style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#000d23', marginBottom: '8px' }}>
                   Heure de début
                 </label>
                 <input
@@ -140,12 +192,23 @@ export default function BookingStep2() {
                   type="time"
                   required
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full bg-white border border-outline-variant/30 rounded-xl px-sm py-xs text-body-md focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-all"
+                  onChange={(e) => { setStartTime(e.target.value); setIsAvailable(false); setAvailabilityMessage(''); setOccupancy(null); }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    border: '1px solid #d0d7de',
+                    backgroundColor: '#f8fafc',
+                    fontSize: '14px',
+                    color: '#000d23',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
                 />
               </div>
+
               <div>
-                <label className="block font-inter text-label-sm text-primary mb-xs" htmlFor="end">
+                <label htmlFor="end" style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#000d23', marginBottom: '8px' }}>
                   Heure de fin
                 </label>
                 <input
@@ -153,8 +216,18 @@ export default function BookingStep2() {
                   type="time"
                   required
                   value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full bg-white border border-outline-variant/30 rounded-xl px-sm py-xs text-body-md focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-all"
+                  onChange={(e) => { setEndTime(e.target.value); setIsAvailable(false); setAvailabilityMessage(''); setOccupancy(null); }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    border: '1px solid #d0d7de',
+                    backgroundColor: '#f8fafc',
+                    fontSize: '14px',
+                    color: '#000d23',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
                 />
               </div>
             </div>
@@ -162,32 +235,100 @@ export default function BookingStep2() {
             <button
               type="submit"
               disabled={checking}
-              className="w-full bg-primary text-white py-sm rounded-xl font-semibold text-label-md hover:bg-primary/95 transition-all active:scale-95 disabled:opacity-50"
+              style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '12px',
+                backgroundColor: '#f95d00',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '14px',
+                border: 'none',
+                cursor: checking ? 'not-allowed' : 'pointer',
+                opacity: checking ? 0.7 : 1,
+                boxShadow: '0 4px 14px rgba(0,84,203,0.3)',
+                transition: 'all 0.15s ease',
+              }}
             >
               {checking ? 'Vérification...' : 'Vérifier la disponibilité'}
             </button>
           </form>
 
-          {availabilityMessage && (
-            <div className={`p-sm rounded-xl text-body-sm flex items-center gap-xs ${
-              isAvailable ? 'bg-secondary-fixed text-on-secondary-fixed' : 'bg-error-container text-on-error-container'
-            }`}>
-              <span className="material-symbols-outlined text-[18px]">
-                {isAvailable ? 'check_circle' : 'warning'}
-              </span>
-              <span>{availabilityMessage}</span>
+          {occupancy && (
+            <div
+              style={{
+                marginTop: '20px',
+                padding: '16px 18px',
+                borderRadius: '14px',
+                backgroundColor: occupancy.remaining > 0 ? '#ecfdf5' : '#fef2f2',
+                border: occupancy.remaining > 0 ? '1px solid #a7f3d0' : '1px solid #fecaca',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: occupancy.remaining > 0 ? '#065f46' : '#991b1b' }}>
+                  Places restantes
+                </span>
+                <span style={{ fontFamily: 'Sora, sans-serif', fontSize: '22px', fontWeight: 800, color: occupancy.remaining > 0 ? '#059669' : '#dc2626' }}>
+                  {occupancy.remaining}
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748b' }}> / {occupancy.capacity}</span>
+                </span>
+              </div>
+              <div style={{ height: '8px', borderRadius: '99px', backgroundColor: '#e2e8f0', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${occupancy.capacity > 0 ? Math.min(100, (occupancy.occupied / occupancy.capacity) * 100) : 0}%`,
+                    backgroundColor: occupancy.remaining > 0 ? '#10b981' : '#ef4444',
+                    borderRadius: '99px',
+                  }}
+                />
+              </div>
+              <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                {occupancy.occupied} place{occupancy.occupied > 1 ? 's' : ''} déjà réservée{occupancy.occupied > 1 ? 's' : ''} sur ce créneau
+                {occupancy.remaining === 0 ? ' — complet, choisissez un autre horaire.' : '.'}
+              </p>
+            </div>
+          )}
+
+          {availabilityMessage && !occupancy && (
+            <div 
+              style={{
+                marginTop: '20px',
+                padding: '14px 18px',
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: 600,
+                backgroundColor: isAvailable ? '#d1fae5' : '#fee2e2',
+                color: isAvailable ? '#065f46' : '#991b1b',
+                border: isAvailable ? '1px solid #a7f3d0' : '1px solid #fca5a5',
+              }}
+            >
+              {availabilityMessage}
             </div>
           )}
 
           {isAvailable && (
             <button
               onClick={handleProceed}
-              className="w-full bg-secondary text-on-secondary py-md rounded-xl font-semibold text-label-md hover:shadow-lg transition-all active:scale-95 flex justify-center items-center gap-xs"
+              style={{
+                marginTop: '16px',
+                width: '100%',
+                padding: '14px',
+                borderRadius: '12px',
+                backgroundColor: '#f95d00',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '14px',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 16px rgba(0,84,203,0.3)',
+                transition: 'all 0.15s ease',
+              }}
             >
-              Continuer vers la confirmation
-              <span className="material-symbols-outlined">arrow_forward</span>
+              Continuer vers la confirmation →
             </button>
           )}
+
         </div>
       </main>
     </div>

@@ -162,6 +162,15 @@ async function updateMember(req, res) {
       .single();
 
     if (error) return res.status(400).json({ error: error.message });
+
+    if (updates.statut_compte === 'actif') {
+      try {
+        await supabaseAdmin.auth.admin.updateUserById(req.params.id, { email_confirm: true });
+      } catch (e) {
+        console.warn('⚠️ Erreur confirmation email Supabase Auth:', e.message);
+      }
+    }
+
     res.json({ profile: data });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -203,6 +212,15 @@ async function approveAccount(req, res) {
       .single();
 
     if (error) return res.status(400).json({ error: error.message });
+
+    // Si le statut passe à actif, auto-confirmer l'email dans Supabase Auth
+    if (newStatut === 'actif') {
+      try {
+        await supabaseAdmin.auth.admin.updateUserById(req.params.id, { email_confirm: true });
+      } catch (e) {
+        console.warn('⚠️ Erreur confirmation email Supabase Auth:', e.message);
+      }
+    }
     res.json({
       profile: data,
       message: action === 'approve'

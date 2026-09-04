@@ -280,7 +280,7 @@ export default function QrCodeView({ session }) {
                   onClick={handleDownload}
                   className="w-full text-white font-semibold text-sm py-4 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.97]"
                   style={{
-                    background: 'linear-gradient(135deg, #0054cb 0%, #2d6deb 100%)',
+                    background: 'linear-gradient(135deg, #f95d00 0%, #ff7a28 100%)',
                   }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 20 }}>download</span>
