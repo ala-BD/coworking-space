@@ -9,6 +9,7 @@ import {
   MEMBER_NAV,
   FORMATEUR_NAV,
   SUPER_ADMIN_NAV,
+  flattenNav,
   getHomePath,
   getRoleLabel,
   isAdminRole,
@@ -19,6 +20,35 @@ function getProfilePath(role) {
   if (role === 'formateur') return '/trainer/profile';
   if (isAdminRole(role)) return '/admin/profile-coworking';
   return '/super-admin/dashboard';
+}
+
+// Titres des pages hors navigation (breadcrumb / recherche)
+const PAGE_TITLES = {
+  '/book/step1': 'Réserver un espace',
+  '/book/step2': 'Réserver un espace',
+  '/book/step3': 'Réserver un espace',
+  '/admin/profile-coworking': 'Profil du Coworking',
+  '/admin/formations': 'Formations',
+  '/admin/formateurs': 'Formateurs',
+  '/admin/onboarding': 'Configuration initiale',
+  '/trainer-dashboard': 'Tableau de bord',
+  '/member/profile': 'Mon Profil',
+  '/trainer/profile': 'Mon Profil',
+  '/dashboard/notifications': 'Notifications',
+};
+
+function derivePageTitle(pathname, navItems) {
+  const match = navItems.find((item) =>
+    pathname === item.to || pathname.startsWith(`${item.to}/`)
+  );
+  if (match) return match.label;
+  if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
+  const last = pathname.split('/').filter(Boolean).pop();
+  if (!last) return 'Tableau de bord';
+  return last
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 }
 
 function getRelativeTime(dateStr) {
@@ -112,9 +142,11 @@ export default function PortalLayout({ children, profile, onLogout }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [tenantLogo, setTenantLogo] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const dropdownRef = useRef(null);
   const notifRef = useRef(null);
+  const searchRef = useRef(null);
   const { dark, toggle } = useTheme();
 
   const initials = `${profile?.prenom?.[0] || ''}${profile?.nom?.[0] || ''}`.toUpperCase() || 'U';
@@ -192,7 +224,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
   const isStaff = profile?.role === 'staff';
   const adminView = isAdminRole(profile?.role);
   const isTrainer = profile?.role === 'formateur';
-  const navItems = isSuperAdmin
+  const navSections = isSuperAdmin
     ? SUPER_ADMIN_NAV
     : isStaff
       ? STAFF_NAV
@@ -201,6 +233,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
         : isTrainer
           ? FORMATEUR_NAV
           : MEMBER_NAV;
+  const navItems = flattenNav(navSections);
   const homePath = getHomePath(profile?.role);
   const profilePath = getProfilePath(profile?.role);
   const portalLabel = isSuperAdmin
@@ -212,6 +245,19 @@ export default function PortalLayout({ children, profile, onLogout }) {
         : isTrainer
           ? 'Espace Formateur'
           : 'Espace membre';
+  const pageTitle = derivePageTitle(location.pathname, navItems);
+
+  // Recherche contextuelle : filtre le menu du rôle courant
+  const searchResults = searchQuery.trim()
+    ? navItems.filter((item) =>
+        item.label.toLowerCase().includes(searchQuery.trim().toLowerCase())
+      ).slice(0, 8)
+    : [];
+
+  const goToSearchResult = (item) => {
+    setSearchQuery('');
+    navigate(item.to);
+  };
 
   const isNavActive = (to) => {
     if (to === homePath) return location.pathname === to;
@@ -276,6 +322,9 @@ export default function PortalLayout({ children, profile, onLogout }) {
       if (notifRef.current && !notifRef.current.contains(event.target)) {
         setNotifOpen(false);
       }
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setSearchQuery('');
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -308,6 +357,92 @@ export default function PortalLayout({ children, profile, onLogout }) {
         {/* Left: Brand Logo */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <BrandLogo to={homePath} height={44} />
+        </div>
+
+        {/* Search — Barre de recherche contextuelle (menu du rôle) · Spec §13 */}
+        <div ref={searchRef} style={{ flex: '1 1 auto', minWidth: 0, maxWidth: 340, position: 'relative', marginLeft: 24 }}>
+          <div style={{ position: 'relative' }}>
+            <span
+              className="material-symbols-outlined"
+              style={{
+                position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+                fontSize: 18, color: dark ? 'rgba(251,255,255,0.5)' : '#8a8f98', pointerEvents: 'none',
+              }}
+            >
+              search
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchResults.length > 0) goToSearchResult(searchResults[0]);
+              }}
+              placeholder="Rechercher dans le menu…"
+              aria-label="Recherche contextuelle"
+              style={{
+                width: '100%',
+                height: 38,
+                borderRadius: 12,
+                border: dark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(16,15,13,0.10)',
+                background: dark ? 'rgba(255,255,255,0.06)' : 'rgba(16,15,13,0.04)',
+                color: dark ? '#fbffff' : '#100f0d',
+                fontSize: 13.5,
+                padding: '0 12px 0 38px',
+                outline: 'none',
+                transition: 'border-color 0.2s ease, background 0.2s ease',
+                fontFamily: 'Inter, sans-serif',
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = '#f95d00'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = dark ? 'rgba(255,255,255,0.12)' : 'rgba(16,15,13,0.10)'; }}
+            />
+          </div>
+
+          {searchResults.length > 0 && (
+            <div style={{
+              position: 'absolute', top: 46, left: 0, right: 0,
+              background: dark ? '#1b1a18' : '#ffffff',
+              border: dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(16,15,13,0.08)',
+              borderRadius: 16,
+              boxShadow: dark ? '0 16px 40px rgba(0,0,0,0.6)' : '0 16px 40px rgba(16,15,13,0.15)',
+              zIndex: 120, overflow: 'hidden', padding: 6,
+              animation: 'popDropdown 0.2s ease-out both',
+            }}>
+              {searchResults.map((item) => (
+                <button
+                  key={item.to}
+                  onClick={() => goToSearchResult(item)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    width: '100%', padding: '9px 12px', borderRadius: 12,
+                    border: 'none', background: 'transparent', cursor: 'pointer',
+                    textAlign: 'left', fontSize: 13.5, fontWeight: 600,
+                    color: dark ? '#fbffff' : '#100f0d',
+                    transition: 'background 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = dark ? 'rgba(249,93,0,0.15)' : 'rgba(249,93,0,0.08)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#f95d00' }}>{item.icon}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {searchQuery.trim() && searchResults.length === 0 && (
+            <div style={{
+              position: 'absolute', top: 46, left: 0, right: 0,
+              background: dark ? '#1b1a18' : '#ffffff',
+              border: dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(16,15,13,0.08)',
+              borderRadius: 16,
+              boxShadow: dark ? '0 16px 40px rgba(0,0,0,0.6)' : '0 16px 40px rgba(16,15,13,0.15)',
+              zIndex: 120, padding: '16px 18px',
+              fontSize: 13, color: dark ? 'rgba(251,255,255,0.6)' : '#666',
+            }}>
+              Aucun résultat dans le menu.
+            </div>
+          )}
         </div>
 
         {/* Right: User profile + Language Switcher + Notification Bell + Dark toggle + Clickable Avatar */}
@@ -651,10 +786,23 @@ export default function PortalLayout({ children, profile, onLogout }) {
             {portalLabel}
           </p>
 
-          {/* Navigation links */}
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {navItems.map((item) => (
-              <NavLink key={item.id} item={item} isActive={isNavActive(item.to)} dark={dark} />
+          {/* Navigation links — Menu / Sous-menu (Spec §13) */}
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {navSections.map((section, idx) => (
+              <div key={section.group || idx}>
+                <p style={{
+                  fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.16em',
+                  color: dark ? 'rgba(251,255,255,0.45)' : '#6b7280',
+                  margin: '0 0 6px 12px',
+                }}>
+                  {section.group}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {(section.items || []).map((item) => (
+                    <NavLink key={item.id} item={item} isActive={isNavActive(item.to)} dark={dark} />
+                  ))}
+                </div>
+              </div>
             ))}
           </nav>
 
@@ -707,6 +855,20 @@ export default function PortalLayout({ children, profile, onLogout }) {
           padding: '28px 24px', minHeight: 'calc(100vh - 68px)',
         }}>
           <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            {/* Breadcrumb — Fil d'ariane (Spec §13) */}
+            <nav aria-label="Fil d'ariane" style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              fontSize: 12.5, fontWeight: 500,
+              color: dark ? 'rgba(251,255,255,0.55)' : '#6b7280',
+              margin: '-10px 0 18px',
+              flexWrap: 'wrap',
+            }}>
+              <Link to={homePath} style={{ color: '#f95d00', textDecoration: 'none', fontWeight: 600 }}>
+                {portalLabel}
+              </Link>
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>chevron_right</span>
+              <span style={{ color: dark ? '#fbffff' : '#100f0d', fontWeight: 700 }}>{pageTitle}</span>
+            </nav>
             {children}
           </div>
         </main>
