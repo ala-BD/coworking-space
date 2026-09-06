@@ -14,22 +14,24 @@ if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
 // Client admin (service role) — contourne le RLS
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-// Assurer l'existence du bucket de stockage public pour les images
+// Assurer l'existence des buckets de stockage publics (images, avatars, documents)
 async function ensureStorageBucket() {
-  try {
-    const { data, error } = await supabaseAdmin.storage.createBucket('coworking-images', { public: true });
-    if (error) {
-      // Si le bucket existe déjà, Supabase renvoie un message d'erreur qu'on peut ignorer
-      if (error.message && (error.message.includes('already exists') || error.message.includes('Duplicate'))) {
-        console.log('✅ Bucket "coworking-images" déjà présent.');
+  const buckets = ['coworking-images', 'avatars', 'documents'];
+  for (const bucketName of buckets) {
+    try {
+      const { error } = await supabaseAdmin.storage.createBucket(bucketName, { public: true });
+      if (error) {
+        if (error.message && (error.message.includes('already exists') || error.message.includes('Duplicate'))) {
+          console.log(`✅ Bucket "${bucketName}" déjà présent.`);
+        } else {
+          console.warn(`⚠️ Bucket "${bucketName}" non créé:`, error.message);
+        }
       } else {
-        console.warn('⚠️ Bucket "coworking-images" non créé:', error.message);
+        console.log(`🚀 Bucket "${bucketName}" créé avec succès.`);
       }
-    } else {
-      console.log('🚀 Bucket "coworking-images" créé avec succès.');
+    } catch (err) {
+      console.warn(`⚠️ Impossible de créer/vérifier le bucket "${bucketName}":`, err.message);
     }
-  } catch (err) {
-    console.warn('⚠️ Impossible de créer/vérifier le bucket storage:', err.message);
   }
 }
 ensureStorageBucket();

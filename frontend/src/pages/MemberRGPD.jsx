@@ -5,7 +5,7 @@ import PortalLayout from '../components/layout/PortalLayout';
 
 const STATUT_STYLES = {
   en_attente: 'bg-amber-50 text-amber-700 border-amber-200',
-  en_cours:   'bg-blue-50 text-blue-700 border-blue-200',
+  en_cours:   'bg-[#f95d00]/10 text-[#f95d00] border-[#f95d00]/20',
   traite:     'bg-emerald-50 text-emerald-700 border-emerald-200',
   refuse:     'bg-red-50 text-red-700 border-red-200',
 };

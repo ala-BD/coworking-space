@@ -195,7 +195,7 @@ export default function MemberSubscription({ session }) {
         {activeSub && (
           <div
             className="mb-8 rounded-3xl overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, #000d23, #0054cb)', boxShadow: '0 8px 32px rgba(0,84,203,0.2)' }}
+            style={{ background: 'linear-gradient(135deg, #100f0d, #f95d00)', boxShadow: '0 8px 32px rgba(249,93,0,0.2)' }}
           >
             <div className="p-6 sm:p-8 text-white">
               <div className="flex items-center gap-2 mb-1">
@@ -364,7 +364,7 @@ export default function MemberSubscription({ session }) {
                             onClick={() => { setConfirmModal({ type: tarif.type_abonnement, label: SUBSCRIPTION_LABELS[tarif.type_abonnement], price: displayPrice }); setModalError(''); }}
                             disabled={isDisabled}
                             className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
-                            style={!isDisabled ? { background: 'linear-gradient(135deg, #0054cb, #0066ff)', boxShadow: '0 4px 12px rgba(0,84,203,0.2)' } : { background: '#ccc' }}
+                            style={!isDisabled ? { background: 'linear-gradient(135deg, #f95d00, #ff7a28)', boxShadow: '0 4px 12px rgba(249,93,0,0.2)' } : { background: '#ccc' }}
                           >
                             Souscrire maintenant
                           </button>
@@ -520,7 +520,7 @@ export default function MemberSubscription({ session }) {
                   onClick={() => handleSubscribe(confirmModal.type)}
                   disabled={subscribing}
                   className="flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                  style={{ background: 'linear-gradient(135deg, #0054cb, #0066ff)', boxShadow: '0 4px 12px rgba(0,84,203,0.2)' }}
+                  style={{ background: 'linear-gradient(135deg, #f95d00, #ff7a28)', boxShadow: '0 4px 12px rgba(249,93,0,0.2)' }}
                 >
                   {subscribing ? (
                     <span className="flex items-center justify-center gap-2">

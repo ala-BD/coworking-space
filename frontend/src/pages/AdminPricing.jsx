@@ -24,7 +24,6 @@ export default function AdminPricing({ session }) {
   const [tarifs, setTarifs] = useState([]);
   const [promoCodes, setPromoCodes] = useState([]);
   const [occupation, setOccupation] = useState([]);
-  const [bookings, setBookings] = useState([]);
   const [actionId, setActionId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -66,14 +65,12 @@ export default function AdminPricing({ session }) {
       }
       setProfile(prof);
 
-      const [tarifsData, promoData, bookingsData] = await Promise.all([
+      const [tarifsData, promoData] = await Promise.all([
         pricingApi.getAllPlans(),
         pricingApi.getPromoCodes(),
-        bookingApi.getAll(),
       ]);
       setTarifs(tarifsData.tarifs || []);
       setPromoCodes(promoData.promoCodes || []);
-      setBookings(bookingsData.reservations || []);
 
       const from = new Date();
       from.setDate(from.getDate() - 7);
@@ -146,39 +143,6 @@ export default function AdminPricing({ session }) {
     }
   };
 
-  const handleConfirmBooking = async (id) => {
-    setActionId(id);
-    setError('');
-    try {
-      await bookingApi.update(id, { statut: 'confirmed' });
-      await loadData();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setActionId(null);
-    }
-  };
-
-  const handleCancelBooking = async (id) => {
-    if (!window.confirm('Annuler cette réservation ?')) return;
-    setActionId(id);
-    setError('');
-    try {
-      await bookingApi.cancel(id);
-      await loadData();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setActionId(null);
-    }
-  };
-
-  const BOOKING_STATUT_LABELS = {
-    pending: 'En attente',
-    confirmed: 'Confirmée',
-    cancelled: 'Annulée',
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F4F6F9]">
@@ -190,8 +154,8 @@ export default function AdminPricing({ session }) {
   return (
     <PortalLayout profile={profile} onLogout={handleLogout}>
       <header className="mb-lg">
-        <h1 className="font-sora text-headline-lg text-primary">Tarification & réservations</h1>
-        <p className="text-on-surface-variant text-body-md mt-1">Gérez vos formules tarifaires, promotions et réservations.</p>
+        <h1 className="font-sora text-headline-lg text-primary">Tarification & formules</h1>
+        <p className="text-on-surface-variant text-body-md mt-1">Gérez vos formules tarifaires, abonnements et codes promotionnels.</p>
       </header>
 
       {error && (
@@ -204,7 +168,6 @@ export default function AdminPricing({ session }) {
         {[
           { id: 'tarifs', label: 'Tarifs abonnements' },
           { id: 'promo', label: 'Codes promo' },
-          { id: 'reservations', label: 'Réservations' },
           { id: 'occupation', label: 'Rapport occupation' },
         ].map((t) => (
           <button
@@ -407,74 +370,6 @@ export default function AdminPricing({ session }) {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {tab === 'reservations' && (
-        <div className="bg-white rounded-xl custom-shadow border border-outline-variant/10 overflow-x-auto">
-          <table className="w-full text-left text-body-sm">
-            <thead className="bg-surface-container-low">
-              <tr>
-                <th className="p-sm">Membre</th>
-                <th className="p-sm">Espace</th>
-                <th className="p-sm">Créneau</th>
-                <th className="p-sm">Statut</th>
-                <th className="p-sm">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookings.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="p-md text-on-surface-variant">Aucune réservation.</td>
-                </tr>
-              ) : (
-                bookings.map((b) => (
-                  <tr key={b.id} className="border-t border-outline-variant/10">
-                    <td className="p-sm">
-                      {b.profiles?.prenom} {b.profiles?.nom}
-                      <br />
-                      <span className="text-on-surface-variant text-label-sm">{b.profiles?.email}</span>
-                    </td>
-                    <td className="p-sm font-semibold">{b.espaces?.nom}</td>
-                    <td className="p-sm">
-                      {new Date(b.date_debut).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
-                      {' → '}
-                      {new Date(b.date_fin).toLocaleTimeString('fr-FR', { timeStyle: 'short' })}
-                    </td>
-                    <td className="p-sm">
-                      <span className={`px-2 py-0.5 rounded-full text-label-sm ${
-                        b.statut === 'confirmed' ? 'bg-secondary-fixed' : 'bg-surface-container-high'
-                      }`}>
-                        {BOOKING_STATUT_LABELS[b.statut] || b.statut}
-                      </span>
-                    </td>
-                    <td className="p-sm space-x-2">
-                      {b.statut === 'pending' && (
-                        <button
-                          type="button"
-                          onClick={() => handleConfirmBooking(b.id)}
-                          disabled={actionId === b.id}
-                          className="text-secondary font-semibold text-label-sm hover:underline disabled:opacity-50"
-                        >
-                          Confirmer
-                        </button>
-                      )}
-                      {['pending', 'confirmed'].includes(b.statut) && (
-                        <button
-                          type="button"
-                          onClick={() => handleCancelBooking(b.id)}
-                          disabled={actionId === b.id}
-                          className="text-error font-semibold text-label-sm hover:underline disabled:opacity-50"
-                        >
-                          Annuler
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
         </div>
       )}
 

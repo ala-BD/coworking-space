@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { formationApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import { exportEmargementToExcel } from '../utils/exportEmargementExcel';
 
 const STATUT_STYLES = {
   planifiee: 'bg-amber-50 text-amber-800 border border-amber-200',
@@ -94,10 +95,7 @@ export default function TrainerPlanning({ session }) {
   const downloadEmargement = async (formation) => {
     try {
       const res = await formationApi.getEmargement(formation.id);
-      const a = document.createElement('a');
-      a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(res, null, 2));
-      a.download = `emargement-${formation.titre.replace(/\s+/g, '_')}.json`;
-      a.click();
+      await exportEmargementToExcel(formation, res);
     } catch (err) { alert('Erreur export : ' + err.message); }
   };
 

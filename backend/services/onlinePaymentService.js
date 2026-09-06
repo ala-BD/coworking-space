@@ -3,7 +3,7 @@ const { sendReceiptEmail, isEmailConfigured } = require('../utils/sendEmail');
 
 function getCoworkingConfig() {
   return {
-    coworkingName: process.env.COWORKING_NAME || 'Thirty Three Space',
+    coworkingName: process.env.COWORKING_NAME || 'DeskyWork',
     coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
     coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
     coworkingAdresse: process.env.COWORKING_ADRESSE || 'Tunis, Tunisie',

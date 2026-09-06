@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { paymentApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
 import { supabase } from '../supabaseClient';
+import { getBookerNav } from '../utils/roles';
 
 export default function StripeVerify({ session }) {
   const [searchParams] = useSearchParams();
@@ -41,6 +42,8 @@ export default function StripeVerify({ session }) {
     verifyPayment();
   }, [searchParams, session.user.id]);
 
+  const paymentsHref = getBookerNav(profile?.role).payments;
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
@@ -72,7 +75,7 @@ export default function StripeVerify({ session }) {
                   <p className="text-muted mb-4">
                     Merci ! Votre transaction a bien été enregistrée. Vous allez recevoir un email avec votre reçu PDF.
                   </p>
-                  <Link to="/member/payments" className="btn btn-primary btn-lg px-5">
+                  <Link to={paymentsHref} className="btn btn-primary btn-lg px-5">
                     Retour à mes factures
                   </Link>
                 </div>
@@ -87,7 +90,7 @@ export default function StripeVerify({ session }) {
                   </div>
                   <h2 className="h4 fw-bold mb-3">Échec du paiement</h2>
                   <p className="text-muted mb-4">{errorMsg}</p>
-                  <Link to="/member/payments" className="btn btn-outline-primary btn-lg px-5">
+                  <Link to={paymentsHref} className="btn btn-outline-primary btn-lg px-5">
                     Réessayer
                   </Link>
                 </div>

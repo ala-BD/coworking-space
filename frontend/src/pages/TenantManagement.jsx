@@ -6,7 +6,7 @@ import { supabase } from '../supabaseClient';
 import PortalLayout from '../components/layout/PortalLayout';
 
 const PLAN_LABELS = { free: 'Free', starter: 'Starter', pro: 'Pro', enterprise: 'Enterprise' };
-const TIER_COLORS = { A: 'bg-secondary/10 text-secondary', B: 'bg-[#2d6deb]/10 text-[#2d6deb]', C: 'bg-surface-container text-on-surface-variant' };
+const TIER_COLORS = { A: 'bg-secondary/10 text-secondary', B: 'bg-[#f95d00]/10 text-[#f95d00]', C: 'bg-surface-container text-on-surface-variant' };
 const STATUT_STYLES = {
   actif: 'bg-[#2fbe8f1a] text-[#2fbe8f]',
   suspendu: 'bg-[#ff6f591a] text-[#ff6f59]',
@@ -92,16 +92,16 @@ export default function TenantManagement({ session }) {
   }
 
   const miniStats = [
-    { label: 'Total', value: pagination.total, icon: 'domain', color: '#0054cb' },
-    { label: 'Actifs', value: stats?.activeTenants ?? 0, icon: 'check_circle', color: '#2FBE8F' },
-    { label: 'Suspendus', value: stats?.suspendedTenants ?? 0, icon: 'block', color: '#FF6F59' },
+    { label: 'Total', value: pagination.total, icon: 'domain', color: '#f95d00' },
+    { label: 'Actifs', value: stats?.activeTenants ?? 0, icon: 'check_circle', color: '#f95d00' },
+    { label: 'Suspendus', value: stats?.suspendedTenants ?? 0, icon: 'block', color: '#100f0d' },
   ];
 
   return (
     <PortalLayout profile={profile} onLogout={handleLogout}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="font-sora text-2xl font-bold text-primary">Tenant Management</h1>
+          <h1 className="font-sora text-2xl font-bold text-primary">Gestion des Coworkings</h1>
           <p className="text-on-surface-variant text-sm mt-1">Validez les inscriptions et gérez les coworkings de la plateforme.</p>
         </div>
       </div>
@@ -136,9 +136,9 @@ export default function TenantManagement({ session }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-primary-container text-white">
-                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Tenant Name</th>
-                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Status</th>
-                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Tier</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Coworking</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Statut</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Niveau</th>
                 <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Plan</th>
                 <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Membres</th>
                 <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Espaces</th>
@@ -158,7 +158,7 @@ export default function TenantManagement({ session }) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUT_STYLES[t.statut] || ''}`}><span className="w-1.5 h-1.5 rounded-full bg-current" />{t.statut === 'actif' ? 'Active' : t.statut === 'suspendu' ? 'Suspended' : 'Inactive'}</span></td>
+                  <td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUT_STYLES[t.statut] || ''}`}><span className="w-1.5 h-1.5 rounded-full bg-current" />{t.statut === 'actif' ? 'Actif' : t.statut === 'suspendu' ? 'Suspendu' : 'Inactif'}</span></td>
                   <td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${TIER_COLORS[t.tier] || ''}`}><span className="w-1.5 h-1.5 rounded-full bg-current" />Tier {t.tier}</span></td>
                   <td className="px-4 py-3"><span className="text-xs font-semibold text-on-surface-variant">{PLAN_LABELS[t.plan] || t.plan}</span></td>
                   <td className="px-4 py-3"><span className="font-semibold text-primary">{t.member_count || 0}</span></td>
@@ -197,7 +197,7 @@ export default function TenantManagement({ session }) {
       {typeof document !== 'undefined' && modal === 'edit' && createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.5)' }} onClick={() => setModal(null)}>
           <div style={{ background: 'var(--color-surface-container)', borderRadius: 16, width: '100%', maxWidth: 520, padding: 28, boxShadow: '0 25px 50px rgba(0,0,0,0.25)', maxHeight: '85vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: 20, fontWeight: 700, color: '#000d23', marginBottom: 20 }}>Modifier le Coworking</h2>
+            <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: 20, fontWeight: 700, color: '#100f0d', marginBottom: 20 }}>Modifier le Coworking</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {[
                 { key: 'nom', label: 'Nom du coworking', required: true },
@@ -243,7 +243,7 @@ export default function TenantManagement({ session }) {
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
               <button onClick={() => setModal(null)} style={{ padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, border: '1px solid #c5c6ce', background: 'var(--color-surface-container)', cursor: 'pointer' }}>Annuler</button>
-              <button onClick={handleSave} disabled={saving || !form.nom} style={{ padding: '10px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600, background: '#0054cb', color: '#fff', border: 'none', cursor: 'pointer', opacity: saving || !form.nom ? 0.5 : 1 }}>{saving ? 'Enregistrement...' : 'Enregistrer'}</button>
+              <button onClick={handleSave} disabled={saving || !form.nom} style={{ padding: '10px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600, background: '#f95d00', color: '#fff', border: 'none', cursor: 'pointer', opacity: saving || !form.nom ? 0.5 : 1 }}>{saving ? 'Enregistrement...' : 'Enregistrer'}</button>
             </div>
           </div>
         </div>,

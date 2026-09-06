@@ -21,7 +21,7 @@ function toStripeAmount(montant) {
   return Math.round(parseFloat(montant) * 1000);
 }
 
-async function createCheckoutSession(payment, userId) {
+async function createCheckoutSession(payment, userId, options = {}) {
   const stripe = getStripe();
   if (!stripe) {
     throw new Error('Stripe non configuré. Ajoutez STRIPE_SECRET_KEY dans .env.');
@@ -30,6 +30,7 @@ async function createCheckoutSession(payment, userId) {
   const paymentId = payment.id;
   const ref = payment.numero_recu || paymentId.slice(0, 8);
   const frontendUrl = getFrontendUrl();
+  const paymentsPath = options.paymentsPath || '/member/payments';
   const currency = (process.env.STRIPE_CURRENCY || 'usd').toLowerCase();
   const formationTitre = payment.inscriptions_formations?.[0]?.formations?.titre;
   const productName = formationTitre ? `Formation : ${formationTitre}` : `Paiement ${ref}`;
@@ -51,8 +52,8 @@ async function createCheckoutSession(payment, userId) {
       quantity: 1,
     }],
     mode: 'payment',
-    success_url: `${frontendUrl}/member/payments/verify?paymentId=${paymentId}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${frontendUrl}/member/payments`,
+    success_url: `${frontendUrl}${paymentsPath}/verify?paymentId=${paymentId}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${frontendUrl}${paymentsPath}`,
     metadata: {
       paymentId,
       userId,

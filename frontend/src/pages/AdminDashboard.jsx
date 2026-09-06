@@ -12,7 +12,7 @@ import {
 
 
 // ─── Intervalles de rafraîchissement ────────────────────────────────────────
-const REFRESH_KPI_MS     = 30_000;  // KPIs généraux  : 30s
+const REFRESH_KPI_MS = 30_000;  // KPIs généraux  : 30s
 const REFRESH_SESSIONS_MS = 10_000; // Sessions live  : 10s
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -43,12 +43,12 @@ function formatTimeShort(dateStr) {
 }
 
 // ─── Composant StatCard ──────────────────────────────────────────────────────
-function StatCard({ label, value, sub, icon, accent = '#0054cb', to, badge, pulse }) {
+function StatCard({ label, value, sub, icon, accent = '#f95d00', to, badge, pulse }) {
   const bg = accent === '#2fbe8f' ? 'rgba(47,190,143,0.1)'
-    : accent === '#ba1a1a'        ? 'rgba(186,26,26,0.09)'
-    : accent === '#f59e0b'        ? 'rgba(245,158,11,0.1)'
-    : accent === '#8b5cf6'        ? 'rgba(139,92,246,0.1)'
-    : 'rgba(0,84,203,0.09)';
+    : accent === '#ba1a1a' ? 'rgba(186,26,26,0.09)'
+      : accent === '#f59e0b' ? 'rgba(245,158,11,0.1)'
+        : accent === '#8b5cf6' ? 'rgba(139,92,246,0.1)'
+          : 'rgba(249,93,0,0.09)';
 
   const inner = (
     <div
@@ -102,23 +102,56 @@ function CustomTooltip({ active, payload, label }) {
 
 // ─── Composant principal ─────────────────────────────────────────────────────
 export default function AdminDashboard({ session }) {
-  const navigate  = useNavigate();
-  const [profile, setProfile]     = useState(null);
-  const [kpis,    setKpis]        = useState(null);
-  const [chart,   setChart]       = useState(null);
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState(null);
+  const [kpis, setKpis] = useState(null);
+  const [chart, setChart] = useState(null);
   const [formations, setFormations] = useState([]);
   const [pendingAccounts, setPendingAccounts] = useState([]);
   const [approvingId, setApprovingId] = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [error,   setError]       = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [lastRefresh, setLastRefresh] = useState(null);
-  const [exporting,   setExporting]   = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Refs pour les intervalles — évite les fuites mémoire
-  const kpiTimerRef     = useRef(null);
+  const kpiTimerRef = useRef(null);
   const sessionTimerRef = useRef(null);
 
-  // ── Chargement initial du profil ─────────────────────────────────────────
+  // ── Fetch KPIs (silent = pas de spinner) ──────────────────────────────────
+  const fetchKpis = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    setError('');
+    try {
+      const [kpiRes, chartRes, pendingRes] = await Promise.all([
+        kpiApi.getAll(),
+        kpiApi.getRevenueChart(),
+        memberApi.getPendingAccounts().catch(() => ({ pending: [] })),
+      ]);
+      setKpis(kpiRes);
+      setChart(chartRes);
+      setPendingAccounts(pendingRes.pending || []);
+      setLastRefresh(new Date());
+    } catch (e) {
+      if (!silent) setError(e.message);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, []);
+
+  // ── Refresh sélectif (sessions uniquement, rapide) ───────────────────────
+  const fetchSessionsOnly = useCallback(async () => {
+    try {
+      const kpiData = await kpiApi.getAll();
+      setKpis((prev) => prev
+        ? { ...prev, sessionsEnCours: kpiData.sessionsEnCours, reservationsDuJour: kpiData.reservationsDuJour }
+        : kpiData
+      );
+      setLastRefresh(new Date());
+    } catch (_) { /* silencieux */ }
+  }, []);
+
+  // ── Effet principal : chargement profil + auto-refresh ────────────────────
   useEffect(() => {
     supabase.from('profiles').select('*').eq('id', session.user.id).single()
       .then(async ({ data, error: e }) => {
@@ -136,57 +169,17 @@ export default function AdminDashboard({ session }) {
           }
         }
       });
-  }, [session, navigate]);
+    
+    fetchKpis(false);
 
-  // ── Fetch KPIs principal (silencieux après le 1er) ───────────────────────
-  const fetchKpis = useCallback(async (silent = false) => {
-    try {
-      if (!silent) setLoading(true);
-      const [kpiData, chartData, formationsRes, pendingRes] = await Promise.all([
-        kpiApi.getAll(),
-        kpiApi.getRevenueChart(),
-        formationApi.getAll({ statut: 'planifiee' }),
-        memberApi.getPendingAccounts().catch(() => ({ pending: [] })),
-      ]);
-      setKpis(kpiData);
-      setChart(chartData);
-      setFormations(formationsRes.formations || []);
-      setPendingAccounts(pendingRes.pending || []);
-      setLastRefresh(new Date());
-      setError('');
-    } catch (e) {
-      if (!silent) setError(e.message);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, []);
-
-  // ── Fetch sessions seulement (très fréquent) ────────────────────────────
-  const fetchSessionsOnly = useCallback(async () => {
-    try {
-      const kpiData = await kpiApi.getAll();
-      setKpis((prev) => prev
-        ? { ...prev, sessionsEnCours: kpiData.sessionsEnCours, reservationsDuJour: kpiData.reservationsDuJour }
-        : kpiData
-      );
-      setLastRefresh(new Date());
-    } catch (_) { /* silencieux */ }
-  }, []);
-
-  // ── Démarrage des intervalles ────────────────────────────────────────────
-  useEffect(() => {
-    fetchKpis(false); // Premier chargement complet
-
-    // KPIs complets toutes les 30s
     kpiTimerRef.current = setInterval(() => fetchKpis(true), REFRESH_KPI_MS);
-    // Sessions live toutes les 10s
     sessionTimerRef.current = setInterval(fetchSessionsOnly, REFRESH_SESSIONS_MS);
 
     return () => {
       clearInterval(kpiTimerRef.current);
       clearInterval(sessionTimerRef.current);
     };
-  }, [fetchKpis, fetchSessionsOnly]);
+  }, [session, navigate, fetchKpis, fetchSessionsOnly]);
 
   // ── Export Excel ─────────────────────────────────────────────────────────
   const handleExport = async () => {
@@ -224,7 +217,7 @@ export default function AdminDashboard({ session }) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: '#f4f6f9' }}>
         <div className="w-14 h-14 rounded-full border-4 animate-spin mb-4"
-          style={{ borderColor: 'rgba(0,84,203,0.15)', borderTopColor: '#0054cb' }} />
+          style={{ borderColor: 'rgba(249,93,0,0.15)', borderTopColor: '#f95d00' }} />
         <p className="text-sm text-on-surface-variant font-medium">Chargement du tableau de bord…</p>
       </div>
     );
@@ -244,10 +237,9 @@ export default function AdminDashboard({ session }) {
     ? `▲ +${membres.evolution}% vs mois préc.`
     : membres.evolution < 0
       ? `▼ ${membres.evolution}% vs mois préc.`
-      : '→ Stable vs mois préc.';
+      : `→ Stable vs mois préc.`;
 
-  const evolutionColor = membres.evolution > 0 ? '#2fbe8f'
-    : membres.evolution < 0 ? '#ba1a1a' : '#64748b';
+  const welcomeText = greeting();
 
   return (
     <PortalLayout profile={profile} onLogout={handleLogout}>
@@ -256,11 +248,11 @@ export default function AdminDashboard({ session }) {
       <header className="mb-6 animate-fade-up">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant mb-1">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant mb-1">
               {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
             <h1 className="font-sora font-bold text-primary" style={{ fontSize: 26 }}>
-              {greeting()}, {profile?.prenom || 'Admin'} 👋
+              {welcomeText}, {profile?.prenom || 'Admin'} 👋
             </h1>
             <p className="text-on-surface-variant text-sm mt-1">
               Tableau de bord — {getRoleLabel(profile?.role)}
@@ -293,7 +285,7 @@ export default function AdminDashboard({ session }) {
         </div>
       )}
 
-      {/* ── Grille KPIs — Ligne 1 (Membres + CA) ──────────────────────── */}
+      {/* ── Grille KPIs — Ligne 1 ──────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-4 animate-fade-up">
         <StatCard
           label="Membres actifs"
@@ -301,7 +293,7 @@ export default function AdminDashboard({ session }) {
           sub={`${membres.moisActuel} nouveaux ce mois`}
           badge={evolutionLabel}
           icon="group"
-          accent="#0054cb"
+          accent="#f95d00"
         />
         <StatCard
           label="CA du mois"
@@ -352,7 +344,7 @@ export default function AdminDashboard({ session }) {
           value={k.abonnementsExpirant ?? '—'}
           sub="Dans les 7 prochains jours"
           icon="card_membership"
-          accent={k.abonnementsExpirant > 0 ? '#ba1a1a' : '#0054cb'}
+          accent={k.abonnementsExpirant > 0 ? '#ba1a1a' : '#f95d00'}
         />
         <StatCard
           label="Formations du jour"
@@ -408,7 +400,7 @@ export default function AdminDashboard({ session }) {
               <p className="text-xs text-on-surface-variant">Par espace — mois en cours</p>
             </div>
             <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-[rgba(0,84,203,0.09)]">
-              <span className="material-symbols-outlined text-[#0054cb]" style={{ fontSize: 17 }}>domain</span>
+              <span className="material-symbols-outlined text-[#f95d00]" style={{ fontSize: 17 }}>domain</span>
             </span>
           </div>
           {tauxOccupation.length > 0 ? (
@@ -419,7 +411,7 @@ export default function AdminDashboard({ session }) {
                   tickFormatter={(v) => v.length > 10 ? v.slice(0, 10) + '…' : v} />
                 <YAxis tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(v) => `${v}%`} domain={[0, 100]} width={40} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="taux" name="Occupation (%)" fill="#0054cb" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="taux" name="Occupation (%)" fill="#f95d00" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -465,11 +457,10 @@ export default function AdminDashboard({ session }) {
                 return (
                   <div key={s.id} className="py-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className={`flex items-center justify-center w-8 h-8 rounded-xl shrink-0 ${
-                        depasse  ? 'bg-[rgba(186,26,26,0.1)] text-[#ba1a1a]'
-                        : urgence ? 'bg-[rgba(245,158,11,0.1)] text-[#f59e0b]'
-                        : 'bg-[rgba(47,190,143,0.1)] text-[#2fbe8f]'
-                      }`}>
+                      <span className={`flex items-center justify-center w-8 h-8 rounded-xl shrink-0 ${depasse ? 'bg-[rgba(186,26,26,0.1)] text-[#ba1a1a]'
+                          : urgence ? 'bg-[rgba(245,158,11,0.1)] text-[#f59e0b]'
+                            : 'bg-[rgba(47,190,143,0.1)] text-[#2fbe8f]'
+                        }`}>
                         <span className="material-symbols-outlined" style={{ fontSize: 16 }}>person</span>
                       </span>
                       <div className="min-w-0">
@@ -603,9 +594,6 @@ export default function AdminDashboard({ session }) {
             <span className="material-symbols-outlined text-[#8b5cf6]" style={{ fontSize: 20 }}>school</span>
             <h2 className="font-sora font-bold text-primary text-base">Suivi des formations programmées</h2>
           </div>
-          <Link to="/admin/formations" className="text-xs font-semibold text-secondary hover:underline">
-            Gérer les formations
-          </Link>
         </div>
 
         {formations.length === 0 ? (
@@ -708,10 +696,10 @@ export default function AdminDashboard({ session }) {
             <h2 className="font-sora font-bold text-base mb-4">Actions rapides</h2>
             <div className="flex flex-col gap-2">
               {[
-                { to: '/admin/agenda',   icon: 'calendar_month',         label: 'Agenda & réservations' },
-                { to: '/admin/payments', icon: 'account_balance_wallet',  label: 'Gestion paiements' },
-                { to: '/admin/pricing',  icon: 'sell',                    label: 'Tarifs & codes promo' },
-                { to: '/admin/cancellation-policy', icon: 'policy',      label: 'Politique d\'annulation' },
+                { to: '/admin/agenda', icon: 'calendar_month', label: 'Agenda & réservations' },
+                { to: '/admin/payments', icon: 'account_balance_wallet', label: 'Gestion paiements' },
+                { to: '/admin/pricing', icon: 'sell', label: 'Tarifs & codes promo' },
+                { to: '/admin/cancellation-policy', icon: 'policy', label: 'Politique d\'annulation' },
               ].map(({ to, icon, label }) => (
                 <Link key={to} to={to}
                   className="flex items-center gap-3 bg-white/10 hover:bg-white/20 rounded-xl px-4 py-2.5 transition-colors no-underline text-white">

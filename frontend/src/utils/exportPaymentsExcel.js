@@ -54,12 +54,20 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-export async function exportPaymentsToExcel(payments, stats) {
+export async function exportPaymentsToExcel(payments = [], stats = null) {
+  const safeStats = {
+    totalRevenue: stats?.totalRevenue ?? payments.filter(p => p.statut === 'paid').reduce((s, p) => s + parseFloat(p.montant || 0), 0),
+    pendingAmount: stats?.pendingAmount ?? payments.filter(p => p.statut === 'pending').reduce((s, p) => s + parseFloat(p.montant || 0), 0),
+    paidCount: stats?.paidCount ?? payments.filter(p => p.statut === 'paid').length,
+    totalInvoices: stats?.totalInvoices ?? payments.length,
+    recoveryRate: stats?.recoveryRate ?? (payments.length ? Math.round((payments.filter(p => p.statut === 'paid').length / payments.length) * 100) : 0),
+  };
+
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Coworking Space';
+  workbook.creator = 'DeskyWork';
   workbook.created = new Date();
 
-  const sheet = workbook.addWorksheet('Paiements', {
+  const sheet = workbook.addWorksheet('Paiements DeskyWork', {
     views: [{ state: 'frozen', ySplit: 8 }],
     properties: { defaultRowHeight: 20 },
   });
@@ -77,16 +85,16 @@ export async function exportPaymentsToExcel(payments, stats) {
   // Titre principal
   sheet.mergeCells('A1:G1');
   const titleCell = sheet.getCell('A1');
-  titleCell.value = 'Rapport de Gestion des Paiements';
-  titleCell.font = { name: 'Calibri', size: 18, bold: true, color: { argb: 'FF1E3A5F' } };
+  titleCell.value = 'DeskyWork — Rapport de Gestion des Paiements';
+  titleCell.font = { name: 'Calibri', size: 18, bold: true, color: { argb: 'FF100F0D' } };
   titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
   sheet.getRow(1).height = 34;
 
   // Sous-titre (date d'export)
   sheet.mergeCells('A2:G2');
   const subtitleCell = sheet.getCell('A2');
-  subtitleCell.value = `Exporté le ${formatExportDate()}`;
-  subtitleCell.font = { name: 'Calibri', size: 11, italic: true, color: { argb: 'FF64748B' } };
+  subtitleCell.value = `Exporté le ${formatExportDate()} · DeskyWork Flex Office`;
+  subtitleCell.font = { name: 'Calibri', size: 11, italic: true, color: { argb: 'FFF95D00' } };
   subtitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
   sheet.getRow(2).height = 22;
 
@@ -94,23 +102,23 @@ export async function exportPaymentsToExcel(payments, stats) {
   const kpiRow = sheet.getRow(4);
   kpiRow.height = 24;
   const kpis = [
-    { label: 'Recettes encaissées', value: `${stats.totalRevenue.toLocaleString('fr-FR')} DT`, col: 1 },
-    { label: 'En attente', value: `${stats.pendingAmount.toLocaleString('fr-FR')} DT`, col: 3 },
-    { label: 'Taux de recouvrement', value: `${stats.recoveryRate}% (${stats.paidCount}/${stats.totalInvoices})`, col: 5 },
+    { label: 'Recettes encaissées', value: `${safeStats.totalRevenue.toLocaleString('fr-FR')} DT`, col: 1 },
+    { label: 'En attente', value: `${safeStats.pendingAmount.toLocaleString('fr-FR')} DT`, col: 3 },
+    { label: 'Taux de recouvrement', value: `${safeStats.recoveryRate}% (${safeStats.paidCount}/${safeStats.totalInvoices})`, col: 5 },
   ];
 
   kpis.forEach(({ label, value, col }) => {
     const labelCell = kpiRow.getCell(col);
     labelCell.value = label;
-    labelCell.font = { bold: true, size: 10, color: { argb: 'FF475569' } };
-    labelCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+    labelCell.font = { bold: true, size: 10, color: { argb: 'FF100F0D' } };
+    labelCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFEDD8' } };
     labelCell.border = THIN_BORDER;
     labelCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
     const valueCell = kpiRow.getCell(col + 1);
     valueCell.value = value;
-    valueCell.font = { bold: true, size: 11, color: { argb: 'FF1E3A5F' } };
-    valueCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+    valueCell.font = { bold: true, size: 11, color: { argb: 'FFF95D00' } };
+    valueCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
     valueCell.border = THIN_BORDER;
     valueCell.alignment = { horizontal: 'center', vertical: 'middle' };
   });
@@ -132,7 +140,7 @@ export async function exportPaymentsToExcel(payments, stats) {
     const cell = headerRow.getCell(index + 1);
     cell.value = header;
     cell.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF95D00' } };
     cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
     cell.border = THIN_BORDER;
   });

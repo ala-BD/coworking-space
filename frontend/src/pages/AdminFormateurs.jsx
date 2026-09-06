@@ -73,7 +73,7 @@ function Modal({ open, onClose, title, subtitle, icon, children, footer, maxWidt
 
         {/* Footer */}
         {footer && (
-          <div className="p-6 border-t border-outline-variant/15 bg-[#F8F9FF] rounded-b-[32px] shrink-0">{footer}</div>
+          <div className="p-6 border-t border-outline-variant/15 bg-surface-container-low rounded-b-[32px] shrink-0">{footer}</div>
         )}
       </div>
 

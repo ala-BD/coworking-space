@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { paymentApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import { exportPaymentsToExcel } from '../utils/exportPaymentsExcel';
 
 const PER_PAGE = 5;
 
@@ -62,27 +63,6 @@ function generateRef(payment) {
   const year = d.getFullYear();
   const seq = String(payment.id).slice(-4).padStart(4, '0');
   return `REF-${year}-${seq}`;
-}
-
-function downloadCSV(payments) {
-  const headers = ['Date', 'Référence', 'Montant', 'Mode de paiement', 'Statut'];
-  const rows = payments.map((p) => [
-    formatDate(p.date_paiement || p.created_at),
-    generateRef(p),
-    p.montant,
-    p.mode_paiement || '—',
-    STATUS_CONFIG[p.statut]?.label || p.statut,
-  ]);
-  const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
-  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `factures_export_${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  URL.revokeObjectURL(url);
-  a.remove();
 }
 
 export default function MemberPayments({ session }) {
@@ -198,13 +178,13 @@ export default function MemberPayments({ session }) {
   };
 
   const handleExport = () => {
-    downloadCSV(filteredPayments.length > 0 ? filteredPayments : payments);
+    exportPaymentsToExcel(filteredPayments.length > 0 ? filteredPayments : payments);
   };
 
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center" style={{ background: '#F4F6F9' }}>
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0054cb]" />
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#f95d00]" />
       </div>
     );
   }
@@ -238,7 +218,7 @@ export default function MemberPayments({ session }) {
         </div>
         <button
           onClick={handleExport}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#0054cb] text-white rounded-xl font-semibold text-sm hover:shadow-lg active:scale-[0.97] transition-all"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#f95d00] text-white rounded-xl font-semibold text-sm hover:shadow-lg active:scale-[0.97] transition-all"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 20 }}>download</span>
           Télécharger tout
@@ -255,7 +235,7 @@ export default function MemberPayments({ session }) {
             <span className="text-[#44474d] text-xs font-medium uppercase tracking-[0.08em]">
               Total dépensé (année)
             </span>
-            <span className="material-symbols-outlined text-[#0054cb]">payments</span>
+            <span className="material-symbols-outlined text-[#f95d00]">payments</span>
           </div>
           <p className="font-[Sora] text-[28px] leading-[36px] font-semibold text-[#000d23] tracking-[-0.01em]">
             {formatCurrency(stats.yearPaid)}
@@ -306,7 +286,7 @@ export default function MemberPayments({ session }) {
             placeholder="Rechercher une facture..."
             value={searchQuery}
             onChange={handleSearch}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#c5c6ce]/30 bg-white text-sm text-[#1b1b1e] placeholder:text-[#75777e] focus:outline-none focus:ring-2 focus:ring-[#0054cb]/30 focus:border-[#0054cb] transition-all"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#c5c6ce]/30 bg-white text-sm text-[#1b1b1e] placeholder:text-[#75777e] focus:outline-none focus:ring-2 focus:ring-[#f95d00]/30 focus:border-[#f95d00] transition-all"
           />
         </div>
 
@@ -318,8 +298,8 @@ export default function MemberPayments({ session }) {
               onClick={() => handleFilterChange(tab.key)}
               className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                 activeFilter === tab.key
-                  ? 'bg-[#0054cb] text-white shadow-sm'
-                  : 'bg-white text-[#44474d] border border-[#c5c6ce]/30 hover:border-[#0054cb]/30 hover:text-[#0054cb]'
+                  ? 'bg-[#f95d00] text-white shadow-sm'
+                  : 'bg-white text-[#44474d] border border-[#c5c6ce]/30 hover:border-[#f95d00]/30 hover:text-[#f95d00]'
               }`}
             >
               {tab.label}
@@ -374,7 +354,7 @@ export default function MemberPayments({ session }) {
                           {formatDate(p.date_paiement || p.created_at)}
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-sm font-semibold text-[#0054cb]">
+                          <span className="text-sm font-semibold text-[#f95d00]">
                             {generateRef(p)}
                           </span>
                         </td>
@@ -403,7 +383,7 @@ export default function MemberPayments({ session }) {
                             {(isPaid || isFailed) && (
                               <button
                                 onClick={() => handleDownload(p.id)}
-                                className="p-2 text-[#44474d] hover:text-[#0054cb] hover:bg-[#0054cb]/5 rounded-full transition-all"
+                                className="p-2 text-[#44474d] hover:text-[#f95d00] hover:bg-[#f95d00]/5 rounded-full transition-all"
                                 title="Télécharger le reçu"
                               >
                                 <span className="material-symbols-outlined" style={{ fontSize: 20 }}>download</span>
@@ -464,31 +444,31 @@ export default function MemberPayments({ session }) {
       {/* ══════════════════════════════════════════
           SUPPORT CTA
           ══════════════════════════════════════════ */}
-      <div className="mt-8 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 border border-[#0054cb]/10"
+      <div className="mt-8 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 border border-[#f95d00]/10"
         style={{
           background: 'rgba(255,255,255,0.8)',
           backdropFilter: 'blur(8px)',
         }}
       >
         <div className="flex gap-4 items-center text-center md:text-left">
-          <div className="w-12 h-12 bg-[#0054cb]/10 rounded-full flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[#0054cb]">support_agent</span>
+          <div className="w-12 h-12 bg-[#f95d00]/10 rounded-full flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[#f95d00]">support_agent</span>
           </div>
           <div>
             <p className="font-[Sora] text-base font-semibold text-[#000d23]">
-              Besoin d'aide avec votre facturation ?
+              Besoin d'aide avec une facture ?
             </p>
             <p className="text-sm text-[#44474d] mt-0.5">
-              Notre équipe comptable est disponible 24h/24 pour les membres.
+              Notre équipe support est disponible pour répondre à vos questions 7j/7.
             </p>
           </div>
         </div>
-        <Link
-          to="/member/support"
-          className="px-6 py-2.5 border border-[#0054cb] text-[#0054cb] rounded-xl font-semibold text-sm hover:bg-[#0054cb]/5 active:scale-[0.97] transition-all whitespace-nowrap"
+        <a
+          href="mailto:contact@deskywork.tn"
+          className="px-6 py-2.5 border border-[#f95d00] text-[#f95d00] rounded-xl font-semibold text-sm hover:bg-[#f95d00]/5 active:scale-[0.97] transition-all whitespace-nowrap"
         >
           Contacter le support
-        </Link>
+        </a>
       </div>
     </PortalLayout>
   );

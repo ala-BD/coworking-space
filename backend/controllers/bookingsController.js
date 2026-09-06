@@ -1,6 +1,6 @@
 // controllers/bookingsController.js — MODULE B : Réservations
 const { supabaseAdmin } = require('../config/supabase');
-const { hasBookingOverlap, getCancellationPolicy, evaluateCancellation } = require('../models/helpers');
+const { getBookingAvailability, getCancellationPolicy, evaluateCancellation } = require('../models/helpers');
 const { applyTenantFilter } = require('../middleware/guards');
 const { notifyConfirmationReservation, notifyAnnulationReservation } = require('../services/notificationService');
 
@@ -12,23 +12,43 @@ async function getBookingsCalendar(req, res) {
       return res.status(400).json({ error: 'Paramètres from et to requis (ISO date).' });
     }
 
+    const isSuperAdmin = req.profile.role === 'super_admin';
+    const isStaff = ['admin', 'staff'].includes(req.profile.role);
+
     let query = supabaseAdmin
       .from('reservations')
-      .select('id, espace_id, user_id, date_debut, date_fin, statut, mode, espaces(nom, type), profiles(nom, prenom, email)')
-      .in('statut', ['confirmed', 'pending'])
+      .select('id, espace_id, user_id, date_debut, date_fin, statut, mode, tenant_id, espaces(nom, type, tenant_id), profiles(nom, prenom, email)')
+      .eq('statut', 'confirmed')  // Le calendrier n'affiche que les réservations confirmées
       .lt('date_debut', to)
       .gt('date_fin', from)
       .order('date_debut', { ascending: true });
 
-    query = applyTenantFilter(query, req);
+    if (isSuperAdmin) {
+      // Super admin voit tout
+    } else if (isStaff) {
+      // Admin/Staff ne voient QUE les réservations de leurs propres espaces
+      if (req.tenantId) {
+        const { data: tenantEspaces } = await supabaseAdmin
+          .from('espaces')
+          .select('id')
+          .eq('tenant_id', req.tenantId);
+
+        const espaceIds = (tenantEspaces || []).map((e) => e.id);
+
+        if (espaceIds.length > 0) {
+          query = query.in('espace_id', espaceIds);
+        } else {
+          return res.json({ reservations: [] });
+        }
+      } else {
+        query = query.eq('user_id', req.user.id);
+      }
+    } else {
+      query = query.eq('user_id', req.user.id);
+    }
 
     if (espace_id) {
       query = query.eq('espace_id', espace_id);
-    }
-
-    const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
-    if (!isStaff) {
-      query = query.eq('user_id', req.user.id);
     }
 
     const { data, error } = await query;
@@ -54,50 +74,111 @@ async function createBooking(req, res) {
       return res.status(400).json({ error: 'date_fin doit être postérieure à date_debut.' });
     }
 
-    const overlap = await hasBookingOverlap(espace_id, date_debut, date_fin);
-    if (overlap) {
-      return res.status(409).json({ error: 'Conflit : ce créneau est déjà réservé.' });
+    const availability = await getBookingAvailability(espace_id, date_debut, date_fin);
+    if (!availability.isAvailable) {
+      return res.status(409).json({
+        error: availability.conflictMessage,
+        remaining: availability.remaining,
+        capacity: availability.capacity,
+        overlappingCount: availability.overlappingCount,
+      });
+    }
+
+    // Calcul automatique du montant total selon le tarif horaire de l'espace
+    const { data: espData } = await req.db
+      .from('espaces')
+      .select('tarif_horaire, tenant_id')
+      .eq('id', espace_id)
+      .single();
+
+    const hours = Math.max(1, (new Date(date_fin) - new Date(date_debut)) / (1000 * 60 * 60));
+    const tarif = parseFloat(espData?.tarif_horaire) || 0;
+    const computedMontant = parseFloat((hours * tarif).toFixed(2));
+
+    const bookingTenantId = req.tenantId || espData?.tenant_id || null;
+
+    // Normalisation du mode pour respecter la contrainte CHECK (mode IN ('online', 'on_site', 'phone'))
+    let dbMode = 'online';
+    if (mode === 'sur_place' || mode === 'on_site') {
+      dbMode = 'on_site';
+    } else if (mode === 'phone') {
+      dbMode = 'phone';
+    } else {
+      dbMode = 'online';
     }
 
     const { data, error } = await req.db
       .from('reservations')
       .insert({
-        tenant_id: req.tenantId,
+        tenant_id: bookingTenantId,
         user_id: req.user.id,
         espace_id,
         date_debut,
         date_fin,
         statut: 'pending',
-        mode: mode || 'online',
+        mode: dbMode,
       })
-      .select('*, espaces(nom, type)')
+      .select('*, espaces(nom, type, tarif_horaire)')
       .single();
 
     if (error) {
       return res.status(400).json({ error: error.message });
     }
 
-    try {
-      await notifyConfirmationReservation(
-        supabaseAdmin,
-        {
-          id: data.id,
-          date_debut: data.date_debut,
-          date_fin: data.date_fin,
-          espaces: data.espaces
-        },
-        {
-          id: req.user.id,
-          nom: req.profile.nom,
-          prenom: req.profile.prenom,
-          email: req.user.email
-        }
-      );
-    } catch (notifErr) {
-      console.error('⚠️ Échec notification confirmation réservation:', notifErr.message);
+    let payment = null;
+    if (computedMontant > 0) {
+      const paymentMode = dbMode === 'online' ? 'online' : 'cash';
+      const { data: paymentRow, error: payErr } = await supabaseAdmin
+        .from('paiements')
+        .insert({
+          user_id: req.user.id,
+          reservation_id: data.id,
+          montant: computedMontant,
+          mode: paymentMode,
+          statut: 'pending',
+          tenant_id: bookingTenantId,
+        })
+        .select('*')
+        .single();
+
+      if (payErr) {
+        console.error('⚠️ Création du paiement à la réservation:', payErr.message);
+      } else {
+        payment = paymentRow;
+      }
     }
 
-    res.status(201).json({ reservation: data });
+    // Notifier les admins/staff du tenant qu'une nouvelle réservation est en attente
+    try {
+      const targetTenantId = bookingTenantId || req.tenantId;
+      let adminsQuery = supabaseAdmin
+        .from('profiles')
+        .select('id, nom, prenom, email')
+        .in('role', ['admin', 'staff']);
+
+      if (targetTenantId) {
+        adminsQuery = adminsQuery.eq('tenant_id', targetTenantId);
+      }
+
+      const { data: admins } = await adminsQuery;
+
+      if (admins && admins.length > 0) {
+        const memberProfile = req.profile;
+        const modeLabel = (mode === 'sur_place' || mode === 'cash' || mode === 'on_site') ? 'Sur place' : 'En ligne';
+        for (const admin of admins) {
+          await supabaseAdmin.from('notifications').insert({
+            user_id: admin.id,
+            type: 'nouvelle_demande_reservation',
+            canal: 'Dashboard',
+            message: `📋 Nouvelle demande de réservation de ${memberProfile?.prenom || ''} ${memberProfile?.nom || ''} pour ${data.espaces?.nom || 'un espace'} — Paiement : ${modeLabel}`,
+          });
+        }
+      }
+    } catch (notifErr) {
+      console.error('⚠️ Notification admin nouvelle réservation:', notifErr.message);
+    }
+
+    res.status(201).json({ reservation: data, payment });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -142,6 +223,7 @@ async function deleteBooking(req, res) {
     }
 
     try {
+      // 1) Email + notification in-app d'annulation pour le membre
       await notifyAnnulationReservation(
         supabaseAdmin,
         {
@@ -157,6 +239,32 @@ async function deleteBooking(req, res) {
           email: req.user.email
         }
       );
+
+      // 2) Notification in-app pour le membre (portail / dashboard)
+      await supabaseAdmin.from('notifications').insert({
+        user_id: reservation.user_id,
+        type: 'annulation_reservation',
+        canal: 'Dashboard',
+        message: `❌ Votre réservation pour ${reservation.espaces?.nom || 'un espace'} a été annulée.`,
+      });
+
+      // 3) Notification in-app pour les admins du tenant
+      const { data: admins } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('tenant_id', req.tenantId)
+        .in('role', ['admin', 'staff']);
+
+      if (admins && admins.length > 0) {
+        for (const admin of admins) {
+          await supabaseAdmin.from('notifications').insert({
+            user_id: admin.id,
+            type: 'annulation_reservation',
+            canal: 'Dashboard',
+            message: `🚫 ${req.profile?.prenom || ''} ${req.profile?.nom || ''} a annulé sa réservation pour ${reservation.espaces?.nom || 'un espace'}.`,
+          });
+        }
+      }
     } catch (notifErr) {
       console.error('⚠️ Échec notification annulation réservation:', notifErr.message);
     }
@@ -184,10 +292,21 @@ async function checkAvailability(req, res) {
   }
 
   try {
-    const overlap = await hasBookingOverlap(espace_id, date_debut, date_fin, exclude_reservation_id);
+    const availability = await getBookingAvailability(espace_id, date_debut, date_fin, exclude_reservation_id, {
+      exclusive: req.body.exclusive === true || req.body.exclusive === 'true',
+    });
     res.json({
-      isAvailable: !overlap,
-      overlapsCount: overlap ? 1 : 0,
+      isAvailable: availability.isAvailable,
+      overlapsCount: availability.overlappingCount,
+      remaining: availability.remaining,
+      capacity: availability.capacity,
+      shared: availability.shared,
+      spaceType: availability.spaceType,
+      message: availability.isAvailable
+        ? (availability.shared
+          ? `${availability.remaining} place${availability.remaining > 1 ? 's' : ''} restante${availability.remaining > 1 ? 's' : ''} sur ${availability.capacity} (open space partagé).`
+          : 'Ce créneau est disponible.')
+        : availability.conflictMessage,
     });
   } catch (err) {
     console.error('Erreur disponibilité:', err);
@@ -196,16 +315,38 @@ async function checkAvailability(req, res) {
 }
 
 async function listBookings(req, res) {
-  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+  const isSuperAdmin = req.profile.role === 'super_admin';
+  const isStaff = ['admin', 'staff'].includes(req.profile.role);
   const { statut, espace_id, from, to } = req.query;
 
   try {
     let query = supabaseAdmin
       .from('reservations')
-      .select('*, espaces(nom, type, tarif_horaire), profiles(nom, prenom, email)')
-      .order('date_debut', { ascending: false });
+      .select('*, espaces(nom, type, tarif_horaire, tenant_id), profiles(nom, prenom, email), paiements(id, statut, mode, montant)')
+      .order('created_at', { ascending: false });
 
-    if (!isStaff) {
+    if (isSuperAdmin) {
+      // Super admin a accès à toutes les réservations
+    } else if (isStaff) {
+      // Admin et Staff ne voient QUE les réservations de leurs propres espaces
+      if (req.tenantId) {
+        const { data: tenantEspaces } = await supabaseAdmin
+          .from('espaces')
+          .select('id')
+          .eq('tenant_id', req.tenantId);
+
+        const espaceIds = (tenantEspaces || []).map((e) => e.id);
+
+        if (espaceIds.length > 0) {
+          query = query.in('espace_id', espaceIds);
+        } else {
+          return res.json({ reservations: [] });
+        }
+      } else {
+        query = query.eq('user_id', req.user.id);
+      }
+    } else {
+      // Membre régulier ne voit que ses propres réservations
       query = query.eq('user_id', req.user.id);
     }
 
@@ -216,7 +357,14 @@ async function listBookings(req, res) {
 
     const { data, error } = await query;
     if (error) return res.status(500).json({ error: error.message });
-    res.json({ reservations: data });
+
+    const reservations = (data || []).map((b) => {
+      const hours = Math.max(0, (new Date(b.date_fin) - new Date(b.date_debut)) / (1000 * 60 * 60));
+      const tarif = parseFloat(b.espaces?.tarif_horaire) || 0;
+      return { ...b, montant_total: parseFloat((hours * tarif).toFixed(2)) };
+    });
+
+    res.json({ reservations });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -229,17 +377,30 @@ async function getBookingsOccupation(req, res) {
     return res.status(400).json({ error: 'Paramètres from et to requis (ISO date).' });
   }
 
+  const isSuperAdmin = req.profile.role === 'super_admin';
+
   try {
-    const { data: espaces, error: espErr } = await supabaseAdmin.from('espaces').select('id, nom, type, capacite');
+    let espQuery = supabaseAdmin.from('espaces').select('id, nom, type, capacite');
+    if (!isSuperAdmin && req.tenantId) {
+      espQuery = espQuery.eq('tenant_id', req.tenantId);
+    }
+    const { data: espaces, error: espErr } = await espQuery;
     if (espErr) return res.status(500).json({ error: espErr.message });
 
-    const { data: reservations, error: resErr } = await supabaseAdmin
+    const espaceIds = (espaces || []).map((e) => e.id);
+
+    let resQuery = supabaseAdmin
       .from('reservations')
       .select('id, espace_id, date_debut, date_fin, statut')
       .in('statut', ['confirmed', 'pending'])
       .gte('date_debut', from)
       .lte('date_debut', to);
 
+    if (!isSuperAdmin && req.tenantId && espaceIds.length > 0) {
+      resQuery = resQuery.in('espace_id', espaceIds);
+    }
+
+    const { data: reservations, error: resErr } = await resQuery;
     if (resErr) return res.status(500).json({ error: resErr.message });
 
     const periodMs = new Date(to).getTime() - new Date(from).getTime();
@@ -294,9 +455,9 @@ async function updateBooking(req, res) {
     }
 
     if (date_debut || date_fin) {
-      const overlap = await hasBookingOverlap(existing.espace_id, newDebut, newFin, id);
-      if (overlap) {
-        return res.status(409).json({ error: 'Conflit : ce créneau est déjà réservé.' });
+      const availability = await getBookingAvailability(existing.espace_id, newDebut, newFin, id);
+      if (!availability.isAvailable) {
+        return res.status(409).json({ error: availability.conflictMessage });
       }
     }
 
@@ -322,6 +483,92 @@ async function updateBooking(req, res) {
       .single();
 
     if (error) return res.status(400).json({ error: error.message });
+
+    // Si l'admin confirme la réservation → notifier le membre par email + in-app
+    if (updates.statut === 'confirmed') {
+      try {
+        const { data: memberProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('id, nom, prenom, email')
+          .eq('id', data.user_id)
+          .single();
+
+        let memberEmail = memberProfile?.email;
+        if (!memberEmail) {
+          const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(data.user_id);
+          memberEmail = authUser?.user?.email;
+        }
+
+        if (memberProfile && memberEmail) {
+          const modeLabel = (data.mode === 'on_site' || data.mode === 'sur_place') ? '💵 sur place à l\'accueil' : '💳 en ligne depuis votre espace membre';
+
+          // 1) Email de confirmation (enregistre aussi la notification en base avec canal: 'Email')
+          await notifyConfirmationReservation(
+            supabaseAdmin,
+            {
+              id: data.id,
+              date_debut: data.date_debut,
+              date_fin: data.date_fin,
+              espaces: data.espaces,
+              mode: data.mode,
+            },
+            { ...memberProfile, email: memberEmail }
+          );
+
+          // 2) Notification in-app pour le dashboard du membre
+          await supabaseAdmin.from('notifications').insert({
+            user_id: data.user_id,
+            type: 'confirmation_reservation',
+            canal: 'Dashboard',
+            message: `✅ Votre réservation pour ${data.espaces?.nom || 'l\'espace'} a été acceptée ! Paiement : ${modeLabel}.`,
+          });
+        }
+      } catch (notifErr) {
+        console.error('⚠️ Échec notification confirmation réservation:', notifErr.message);
+      }
+    }
+
+    // Si l'admin annule la réservation → notifier le membre
+    if (updates.statut === 'cancelled') {
+      try {
+        const { data: memberProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('id, nom, prenom, email')
+          .eq('id', data.user_id)
+          .single();
+
+        let memberEmail = memberProfile?.email;
+        if (!memberEmail) {
+          const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(data.user_id);
+          memberEmail = authUser?.user?.email;
+        }
+
+        if (memberProfile && memberEmail) {
+          // 1) Email d'annulation
+          await notifyAnnulationReservation(
+            supabaseAdmin,
+            {
+              id: data.id,
+              date_debut: data.date_debut,
+              date_fin: data.date_fin,
+              espaces: data.espaces,
+            },
+            { ...memberProfile, email: memberEmail }
+          );
+
+          // 2) Notification in-app
+          await supabaseAdmin.from('notifications').insert({
+            user_id: data.user_id,
+            type: 'annulation_reservation',
+            canal: 'Dashboard',
+            message: `❌ Votre réservation pour ${data.espaces?.nom || 'l\'espace'} a été annulée par l'administrateur.`,
+          });
+        }
+      } catch (notifErr) {
+        console.error('⚠️ Échec notification annulation réservation (admin):', notifErr.message);
+      }
+    }
+
     res.json({ reservation: data });
   } catch (err) {
     res.status(500).json({ error: err.message });

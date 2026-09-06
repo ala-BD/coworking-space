@@ -81,7 +81,7 @@ function Modal({ open, onClose, title, subtitle, icon, children, footer }) {
         <div className="flex-1 overflow-y-auto p-6 space-y-5">{children}</div>
 
         {footer && (
-          <div className="p-5 border-t border-outline-variant/15 bg-[#F8F9FF] rounded-b-3xl shrink-0">{footer}</div>
+          <div className="p-5 border-t border-outline-variant/15 bg-surface-container-low rounded-b-3xl shrink-0">{footer}</div>
         )}
       </div>
 
@@ -115,10 +115,10 @@ function ParticipantsModal({ open, onClose, formation, inscriptions }) {
         className="relative w-full max-w-2xl mx-auto bg-white rounded-3xl shadow-[0_40px_120px_rgba(15,23,42,0.18)] flex flex-col max-h-[85vh] overflow-hidden"
         style={{ animation: 'popIn 0.22s cubic-bezier(.34,1.56,.64,1)' }}
       >
-        <div className="p-5 border-b border-outline-variant/20 flex justify-between items-start" style={{ background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)' }}>
+        <div className="p-5 border-b border-outline-variant/20 flex justify-between items-start" style={{ background: 'linear-gradient(135deg, #ffedd8, #fff7ed)' }}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-violet-100 flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-violet-600" style={{ fontSize: 20 }}>group</span>
+            <div className="w-10 h-10 rounded-2xl bg-[#f95d00]/10 flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[#f95d00]" style={{ fontSize: 20 }}>group</span>
             </div>
             <div>
               <h2 className="font-sora font-bold text-lg text-primary leading-snug">{formation.titre}</h2>
@@ -163,7 +163,7 @@ function ParticipantsModal({ open, onClose, formation, inscriptions }) {
                   <div className="col-span-5 flex items-center gap-2 min-w-0">
                     <div
                       className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold text-xs text-white"
-                      style={{ background: 'linear-gradient(135deg, #6d28d9, #7c3aed)' }}
+                      style={{ background: 'linear-gradient(135deg, #100f0d, #f95d00)' }}
                     >
                       {(insc.profiles?.prenom?.[0] || '').toUpperCase()}{(insc.profiles?.nom?.[0] || '').toUpperCase()}
                     </div>
@@ -319,8 +319,10 @@ export default function TrainerFormations({ session }) {
     date_debut: '', date_fin: '',
     programme: '', prerequis: '', materiel: '',
     statut: 'planifiee',
+    reservation_id: '',
   };
   const [form, setForm] = useState(emptyForm);
+  const [spaceCheck, setSpaceCheck] = useState({ status: 'idle', message: '' });
 
   useEffect(() => { loadUserData(); }, []);
   useEffect(() => {
@@ -328,6 +330,53 @@ export default function TrainerFormations({ session }) {
     const t = setTimeout(() => setSuccess(''), 4000);
     return () => clearTimeout(t);
   }, [success]);
+
+  useEffect(() => {
+    if (!showFormModal || !form.espace_id || !form.date_debut || !form.date_fin) {
+      setSpaceCheck({ status: 'idle', message: '' });
+      return;
+    }
+    const start = new Date(form.date_debut);
+    const end = new Date(form.date_fin);
+    if (!(start < end)) {
+      setSpaceCheck({ status: 'idle', message: '' });
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setSpaceCheck({ status: 'checking', message: 'Vérification de la salle…' });
+      try {
+        const payload = {
+          espace_id: form.espace_id,
+          date_debut: start.toISOString(),
+          date_fin: end.toISOString(),
+          exclusive: true,
+        };
+        if (form.reservation_id) payload.exclude_reservation_id = form.reservation_id;
+        const res = await bookingApi.checkAvailability(payload);
+        if (cancelled) return;
+        if (res.isAvailable) {
+          setSpaceCheck({
+            status: 'ok',
+            message: 'Salle disponible. Une réservation d’espace sera créée en même temps que la formation.',
+          });
+        } else {
+          setSpaceCheck({
+            status: 'conflict',
+            message: res.message || "Cette salle n'est pas disponible à cette date. Changez la date de la formation ou choisissez une autre salle.",
+          });
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setSpaceCheck({ status: 'conflict', message: err.message });
+        }
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [showFormModal, form.espace_id, form.date_debut, form.date_fin, form.reservation_id]);
 
   /* ─── Data Loading ─── */
   const loadUserData = async () => {
@@ -397,6 +446,7 @@ export default function TrainerFormations({ session }) {
       prerequis: f.prerequis || '',
       materiel: f.materiel || '',
       statut: f.statut || 'planifiee',
+      reservation_id: f.reservation_id || '',
     });
     setError('');
     setShowFormModal(true);
@@ -411,6 +461,7 @@ export default function TrainerFormations({ session }) {
   /* ─── Save (Create or Update) ─── */
   const handleSave = async (e) => {
     e.preventDefault();
+    if (spaceCheck.status === 'conflict') return;
     setError(''); setFormSaving(true);
     try {
       const payload = {
@@ -427,8 +478,8 @@ export default function TrainerFormations({ session }) {
         await formationApi.update(form.id, payload);
         setSuccess('Formation modifiée avec succès !');
       } else {
-        await formationApi.create(payload);
-        setSuccess('Formation créée avec succès !');
+        const created = await formationApi.create(payload);
+        setSuccess(created.message || 'Formation créée avec succès !');
       }
 
       setShowFormModal(false);
@@ -756,7 +807,7 @@ export default function TrainerFormations({ session }) {
             <button
               form="trainerFormationForm"
               type="submit"
-              disabled={formSaving}
+              disabled={formSaving || spaceCheck.status === 'conflict'}
               className="flex-1 py-2.5 bg-secondary text-white font-semibold rounded-xl text-sm hover:bg-secondary/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
             >
               {formSaving && <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />}
@@ -797,6 +848,9 @@ export default function TrainerFormations({ session }) {
                 <option key={e.id} value={e.id}>{e.nom} ({e.type?.replace(/_/g, ' ')})</option>
               ))}
             </select>
+            <p className="text-[11px] text-on-surface-variant mt-1">
+              Si vous choisissez une salle, une réservation d’espace est créée automatiquement pour les mêmes dates.
+            </p>
           </Field>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -819,6 +873,21 @@ export default function TrainerFormations({ session }) {
               />
             </Field>
           </div>
+
+          {spaceCheck.status !== 'idle' && (
+            <div className={`p-3 rounded-xl text-xs font-semibold flex items-start gap-2 ${
+              spaceCheck.status === 'ok'
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                : spaceCheck.status === 'conflict'
+                  ? 'bg-red-50 text-red-800 border border-red-200'
+                  : 'bg-amber-50 text-amber-800 border border-amber-200'
+            }`}>
+              <span className="material-symbols-outlined shrink-0" style={{ fontSize: 16 }}>
+                {spaceCheck.status === 'ok' ? 'check_circle' : spaceCheck.status === 'conflict' ? 'event_busy' : 'hourglass_top'}
+              </span>
+              <span>{spaceCheck.message}</span>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Capacité max (places)" required>

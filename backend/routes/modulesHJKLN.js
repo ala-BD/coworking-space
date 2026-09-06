@@ -7,6 +7,7 @@
  * MODULE N — Multi-sites
  */
 const express = require('express');
+const { getBookingAvailability } = require('../models/helpers');
 
 // ─── Factory : reçoit les dépendances au moment du require() ─────────────
 module.exports = function createRouter({ supabaseAdmin, authenticate, requireRoles, applyTenantFilter }) {
@@ -66,17 +67,9 @@ router.post('/guests/booking', async (req, res) => {
   }
 
   try {
-    // Vérifier disponibilité
-    const { data: overlap } = await supabaseAdmin
-      .from('reservations')
-      .select('id')
-      .eq('espace_id', espace_id)
-      .in('statut', ['confirmed', 'pending'])
-      .lt('date_debut', date_fin)
-      .gt('date_fin', date_debut);
-
-    if (overlap && overlap.length > 0) {
-      return res.status(409).json({ error: 'Ce créneau est déjà réservé.' });
+    const availability = await getBookingAvailability(espace_id, date_debut, date_fin);
+    if (!availability.isAvailable) {
+      return res.status(409).json({ error: availability.conflictMessage });
     }
 
     // Créer ou récupérer le guest

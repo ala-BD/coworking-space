@@ -66,7 +66,7 @@ export default function MemberDocuments({ session }) {
       let url = null;
       if (fileRef.current?.files?.[0]) {
         const file = fileRef.current.files[0];
-        const path = `documents/${session.user.id}/${Date.now()}_${file.name}`;
+        const path = `${session.user.id}/${Date.now()}_${file.name}`;
         const { error: upErr } = await supabase.storage.from('documents').upload(path, file, { upsert: true });
         if (upErr) throw upErr;
         const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path);

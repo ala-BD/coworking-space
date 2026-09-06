@@ -14,6 +14,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const AdminPayments = lazy(() => import('./pages/AdminPayments'));
 const AdminPricing = lazy(() => import('./pages/AdminPricing'));
+const AdminReservations = lazy(() => import('./pages/AdminReservations'));
 const MemberPayments = lazy(() => import('./pages/MemberPayments'));
 const MemberSubscription = lazy(() => import('./pages/MemberSubscription'));
 const StripeVerify = lazy(() => import('./pages/StripeVerify'));
@@ -35,6 +36,7 @@ const TrainerPlanning = lazy(() => import('./pages/TrainerPlanning'));
 const TrainerProfile = lazy(() => import('./pages/TrainerProfile'));
 const TrainerDashboard = lazy(() => import('./pages/TrainerDashboard'));
 const TrainerFormations = lazy(() => import('./pages/TrainerFormations'));
+const TrainerBookings = lazy(() => import('./pages/TrainerBookings'));
 // Modules H, J, K, L, N
 const GuestBookingPage = lazy(() => import('./pages/GuestBookingPage'));
 const SignDocumentPage = lazy(() => import('./pages/SignDocumentPage'));
@@ -182,6 +184,20 @@ export default function App() {
     <ProtectedRoute>
 
       <RoleGuard session={session} requireTrainer>
+
+        {children}
+
+      </RoleGuard>
+
+    </ProtectedRoute>
+
+  );
+
+  const BookerRoute = ({ children }) => (
+
+    <ProtectedRoute>
+
+      <RoleGuard session={session} requireBooker>
 
         {children}
 
@@ -401,11 +417,11 @@ export default function App() {
 
             element={
 
-              <MemberRoute>
+              <BookerRoute>
 
                 <BookingStep1 />
 
-              </MemberRoute>
+              </BookerRoute>
 
             }
 
@@ -417,11 +433,11 @@ export default function App() {
 
             element={
 
-              <MemberRoute>
+              <BookerRoute>
 
                 <BookingStep2 />
 
-              </MemberRoute>
+              </BookerRoute>
 
             }
 
@@ -433,11 +449,11 @@ export default function App() {
 
             element={
 
-              <MemberRoute>
+              <BookerRoute>
 
                 <BookingStep3 session={session} />
 
-              </MemberRoute>
+              </BookerRoute>
 
             }
 
@@ -476,7 +492,15 @@ export default function App() {
               </AdminRoute>
 
             }
+          />
 
+          <Route
+            path="/admin/reservations"
+            element={
+              <AdminRoute>
+                <AdminReservations session={session} />
+              </AdminRoute>
+            }
           />
 
           <Route
@@ -680,6 +704,54 @@ export default function App() {
               <TrainerRoute>
 
                 <TrainerFormations session={session} />
+
+              </TrainerRoute>
+
+            }
+
+          />
+
+          <Route
+
+            path="/trainer/bookings"
+
+            element={
+
+              <TrainerRoute>
+
+                <TrainerBookings session={session} />
+
+              </TrainerRoute>
+
+            }
+
+          />
+
+          <Route
+
+            path="/trainer/payments"
+
+            element={
+
+              <TrainerRoute>
+
+                <MemberPayments session={session} />
+
+              </TrainerRoute>
+
+            }
+
+          />
+
+          <Route
+
+            path="/trainer/payments/verify"
+
+            element={
+
+              <TrainerRoute>
+
+                <StripeVerify session={session} />
 
               </TrainerRoute>
 

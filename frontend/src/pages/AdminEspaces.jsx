@@ -4,11 +4,11 @@ import { tenantAdminApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
 
 const ESPACE_TYPES = [
-  { value: 'open_space',     label: 'Open Space',          icon: 'desk',        color: '#0054cb' },
-  { value: 'private_office', label: 'Bureau privé',        icon: 'meeting_room',color: '#6d28d9' },
-  { value: 'meeting_room',   label: 'Salle de réunion',    icon: 'groups',      color: '#1a7a5a' },
-  { value: 'training_room',  label: 'Salle de formation',  icon: 'school',      color: '#b45309' },
-  { value: 'event_space',    label: 'Espace événementiel', icon: 'celebration', color: '#b91c1c' },
+  { value: 'open_space', label: 'Open Space', icon: 'desk', color: '#f95d00' },
+  { value: 'private_office', label: 'Bureau privé', icon: 'meeting_room', color: '#6d28d9' },
+  { value: 'meeting_room', label: 'Salle de réunion', icon: 'groups', color: '#1a7a5a' },
+  { value: 'training_room', label: 'Salle de formation', icon: 'school', color: '#b45309' },
+  { value: 'event_space', label: 'Espace événementiel', icon: 'celebration', color: '#b91c1c' },
 ];
 
 function fileToBase64(file) {
@@ -210,12 +210,21 @@ export default function AdminEspaces({ session }) {
                   className={inputCls} />
               </div>
 
-              {/* Photo upload */}
-              <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant mb-1.5">Photo de l'espace</label>
+              {/* Photo upload — pleine largeur, visible en création ET en édition */}
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant mb-1.5">
+                  Photo de l'espace
+                  {!editId && <span className="ml-2 text-[10px] font-normal text-secondary normal-case tracking-normal">(facultatif — vous pouvez en ajouter une maintenant ou plus tard)</span>}
+                </label>
                 <div
-                  className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden ${uploading ? 'border-secondary/50' : 'border-outline-variant/40 hover:border-secondary hover:bg-secondary/3'}`}
-                  style={{ minHeight: 120 }}
+                  className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden ${
+                    uploading
+                      ? 'border-secondary/50 bg-secondary/3'
+                      : form.photo_url
+                        ? 'border-secondary/40'
+                        : 'border-outline-variant/40 hover:border-secondary hover:bg-secondary/3'
+                  }`}
+                  style={{ minHeight: 140 }}
                   onClick={() => !uploading && fileRef.current?.click()}
                 >
                   <input ref={fileRef} type="file" accept="image/*" className="hidden"
@@ -223,27 +232,34 @@ export default function AdminEspaces({ session }) {
 
                   {form.photo_url ? (
                     <>
-                      <img src={form.photo_url} alt="Aperçu" className="w-full h-32 object-cover rounded-2xl" />
+                      <img src={form.photo_url} alt="Aperçu" className="w-full h-44 object-cover rounded-2xl" />
                       <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                        <span className="text-white text-sm font-semibold">Changer la photo</span>
+                        <div className="flex flex-col items-center gap-2">
+                          <span className="material-symbols-outlined text-white" style={{ fontSize: 28 }}>photo_camera</span>
+                          <span className="text-white text-sm font-semibold">Changer la photo</span>
+                        </div>
                       </div>
                     </>
                   ) : uploading ? (
-                    <div className="flex flex-col items-center gap-2 py-4">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-secondary" />
-                      <p className="text-sm text-on-surface-variant">Upload en cours…</p>
+                    <div className="flex flex-col items-center gap-2 py-6">
+                      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-secondary" />
+                      <p className="text-sm text-on-surface-variant font-medium">Upload en cours…</p>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center gap-2 py-4">
-                      <span className="material-symbols-outlined text-on-surface-variant/50" style={{ fontSize: 36 }}>add_photo_alternate</span>
-                      <p className="text-sm text-on-surface-variant">Cliquer pour ajouter une photo</p>
+                    <div className="flex flex-col items-center gap-2 py-6">
+                      <div className="w-14 h-14 rounded-2xl bg-secondary/8 flex items-center justify-center mb-1">
+                        <span className="material-symbols-outlined text-secondary" style={{ fontSize: 32 }}>add_photo_alternate</span>
+                      </div>
+                      <p className="text-sm font-semibold text-on-surface-variant">
+                        {editId ? 'Cliquer pour changer la photo' : 'Cliquer pour ajouter une photo'}
+                      </p>
                       <p className="text-xs text-on-surface-variant/60">JPG, PNG, WebP — max 5 MB</p>
                     </div>
                   )}
                 </div>
                 {form.photo_url && (
-                  <button onClick={() => setForm(f => ({ ...f, photo_url: '' }))}
-                    className="mt-1.5 text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
+                  <button onClick={(e) => { e.stopPropagation(); setForm(f => ({ ...f, photo_url: '' })); }}
+                    className="mt-1.5 text-xs text-red-500 hover:text-red-700 flex items-center gap-1 transition-colors">
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>delete</span>
                     Supprimer la photo
                   </button>

@@ -24,7 +24,8 @@ router.patch('/admin/tenant', authenticate, requireRoles('admin'), updateTenant)
 router.post('/admin/espaces', authenticate, requireRoles('admin'), createEspace);
 router.patch('/admin/espaces/:id', authenticate, requireRoles('admin'), updateEspace);
 router.delete('/admin/espaces/:id', authenticate, requireRoles('admin'), deleteEspace);
-router.post('/admin/upload', authenticate, requireRoles('super_admin', 'admin', 'staff'), uploadPhoto);
+router.post('/admin/upload', authenticate, uploadPhoto);
+router.post('/upload', authenticate, uploadPhoto);
 
 // Onboarding
 router.post('/admin/onboarding/complete', authenticate, requireRoles('admin'), completeOnboarding);

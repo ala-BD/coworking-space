@@ -33,7 +33,7 @@ function SectionHeader({ icon, title, subtitle }) {
     <div className="flex items-start gap-3 mb-5">
       <span
         className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0"
-        style={{ background: 'rgba(0,84,203,0.09)', color: '#0054cb' }}
+        style={{ background: 'rgba(249,93,0,0.09)', color: '#f95d00' }}
       >
         <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{icon}</span>
       </span>
@@ -175,15 +175,55 @@ export default function MemberProfile({ session }) {
     if (!file) return;
     setPhotoUploading(true);
     try {
-      const ext = file.name.split('.').pop();
-      const filePath = `avatars/${profile.id || 'current'}_${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      await memberApi.updateMe({ photo_url: urlData.publicUrl });
-      setProfile((p) => ({ ...p, photo_url: urlData.publicUrl }));
+      let publicUrl = null;
+
+      // 1. Essayer l'upload sécurisé via le Backend (service role, contourne RLS)
+      try {
+        const reader = new FileReader();
+        const base64Promise = new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = reject;
+        });
+        reader.readAsDataURL(file);
+        const base64Data = await base64Promise;
+
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+        const res = await fetch(`${API_URL}/api/upload`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            base64Data,
+            fileName: file.name,
+            fileType: file.type,
+            folder: 'avatars',
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok && data.publicUrl) {
+          publicUrl = data.publicUrl;
+        }
+      } catch (_) { }
+
+      // 2. Fallback vers le client Supabase direct si l'API backend n'est pas dispo
+      if (!publicUrl) {
+        const ext = file.name.split('.').pop();
+        const filePath = `${profile.id || 'current'}_${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, file, { upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+        publicUrl = urlData.publicUrl;
+      }
+
+      await memberApi.updateMe({ photo_url: publicUrl });
+      setProfile((p) => ({ ...p, photo_url: publicUrl }));
       setSuccess('Photo de profil mise a jour.');
       setTimeout(() => setSuccess(''), 3500);
     } catch (e) {
@@ -335,7 +375,7 @@ export default function MemberProfile({ session }) {
       <PortalLayout profile={profile} onLogout={() => supabase.auth.signOut()}>
         <div className="flex items-center justify-center" style={{ minHeight: '60vh' }}>
           <div className="flex flex-col items-center gap-3">
-            <span className="material-symbols-outlined animate-spin" style={{ fontSize: 32, color: '#0054cb' }}>
+            <span className="material-symbols-outlined animate-spin" style={{ fontSize: 32, color: '#f95d00' }}>
               progress_activity
             </span>
             <p className="text-sm text-on-surface-variant font-medium">Chargement du profil...</p>
@@ -398,7 +438,7 @@ export default function MemberProfile({ session }) {
                   ) : (
                     <div
                       className="w-full h-full flex items-center justify-center font-sora font-bold text-2xl"
-                      style={{ background: 'linear-gradient(135deg, #10233f, #0054cb)', color: '#dae2ff' }}
+                      style={{ background: 'linear-gradient(135deg, #100f0d, #f95d00)', color: '#dae2ff' }}
                     >
                       {initials}
                     </div>
@@ -408,7 +448,7 @@ export default function MemberProfile({ session }) {
                   onClick={() => photoInputRef.current?.click()}
                   disabled={photoUploading}
                   className="absolute bottom-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-200 hover:scale-110"
-                  style={{ background: '#0054cb' }}
+                  style={{ background: '#f95d00' }}
                   title="Changer la photo"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
@@ -483,7 +523,7 @@ export default function MemberProfile({ session }) {
               onClick={handleSaveProfile}
               disabled={saving}
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #0054cb, #10233f)', boxShadow: '0 4px 14px rgba(0,84,203,0.25)' }}
+              style={{ background: 'linear-gradient(135deg, #f95d00, #100f0d)', boxShadow: '0 4px 14px rgba(249,93,0,0.25)' }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                 {saving ? 'progress_activity' : 'save'}
@@ -583,7 +623,7 @@ export default function MemberProfile({ session }) {
               onClick={handleShareQr}
               disabled={!qrData?.token}
               className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-40"
-              style={{ background: '#0054cb', color: 'white' }}
+              style={{ background: '#f95d00', color: 'white' }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>share</span>
               Partager
@@ -620,7 +660,7 @@ export default function MemberProfile({ session }) {
                 >
                   <span
                     className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0"
-                    style={{ background: 'rgba(0,84,203,0.07)', color: '#0054cb' }}
+                    style={{ background: 'rgba(249,93,0,0.07)', color: '#f95d00' }}
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                       {DOC_TYPE_ICONS[doc.type] || 'attach_file'}
@@ -687,7 +727,7 @@ export default function MemberProfile({ session }) {
                   onClick={handleAddDocument}
                   disabled={docUploading || !docForm.nom.trim() || !docForm.url.trim()}
                   className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-40 shrink-0"
-                  style={{ background: '#0054cb' }}
+                  style={{ background: '#f95d00' }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                     {docUploading ? 'progress_activity' : 'add'}
@@ -713,7 +753,7 @@ export default function MemberProfile({ session }) {
             onClick={handleExportData}
             disabled={exporting}
             className="w-full inline-flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md disabled:opacity-50 mb-3"
-            style={{ background: 'rgba(0,84,203,0.06)', color: '#0054cb', border: '1px solid rgba(0,84,203,0.12)' }}
+            style={{ background: 'rgba(249,93,0,0.06)', color: '#f95d00', border: '1px solid rgba(249,93,0,0.12)' }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 19 }}>
               {exporting ? 'progress_activity' : 'download'}
@@ -787,7 +827,7 @@ export default function MemberProfile({ session }) {
                   <div className="flex items-center gap-2.5">
                     <span
                       className="flex items-center justify-center w-8 h-8 rounded-lg"
-                      style={{ background: 'rgba(0,84,203,0.06)', color: '#0054cb' }}
+                      style={{ background: 'rgba(249,93,0,0.06)', color: '#f95d00' }}
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 17 }}>{icon}</span>
                     </span>

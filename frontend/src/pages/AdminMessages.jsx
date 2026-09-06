@@ -52,7 +52,7 @@ function ConversationItem({ conv, isActive, onClick }) {
           </p>
         ) : <p className="text-xs text-on-surface-variant/40 italic">Aucun message</p>}
       </div>
-      {conv.unread_count > 0 && <span className="flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-bold text-white shrink-0 mt-1" style={{ background: '#0054cb' }}>{conv.unread_count > 99 ? '99+' : conv.unread_count}</span>}
+      {conv.unread_count > 0 && <span className="flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-bold text-white shrink-0 mt-1" style={{ background: '#f95d00' }}>{conv.unread_count > 99 ? '99+' : conv.unread_count}</span>}
     </button>
   );
 }
@@ -65,14 +65,14 @@ function MessageBubble({ msg, isOwn, showSender }) {
     <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} mb-3`}>
       {showSender && !isOwn && (
         <div className="flex items-center gap-1.5 mb-1 ml-1">
-          <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: isAdmin ? 'linear-gradient(135deg, #0054cb, #0066ff)' : 'linear-gradient(135deg, #2FBE8F, #28a745)' }}>
+          <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: isAdmin ? 'linear-gradient(135deg, #f95d00, #ff7a28)' : 'linear-gradient(135deg, #2FBE8F, #28a745)' }}>
             {senderName.charAt(0).toUpperCase()}
           </div>
           <span className="text-xs font-semibold text-on-surface-variant">{senderName}</span>
           {isAdmin && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-secondary/10 text-secondary">Staff</span>}
         </div>
       )}
-      <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isOwn ? 'text-white rounded-br-md' : 'bg-white border border-outline-variant/10 text-on-surface rounded-bl-md'}`} style={isOwn ? { background: 'linear-gradient(135deg, #0054cb, #0066ff)', boxShadow: '0 4px 12px rgba(0,84,203,0.15)' } : { boxShadow: '0 2px 8px rgba(16,35,63,0.04)' }}>
+      <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isOwn ? 'text-white rounded-br-md' : 'bg-white border border-outline-variant/10 text-on-surface rounded-bl-md'}`} style={isOwn ? { background: 'linear-gradient(135deg, #f95d00, #ff7a28)', boxShadow: '0 4px 12px rgba(249,93,0,0.15)' } : { boxShadow: '0 2px 8px rgba(16,35,63,0.04)' }}>
         {msg.content}
       </div>
       <span className="text-[10px] text-on-surface-variant/40 mt-0.5 mx-2">
@@ -266,9 +266,9 @@ export default function AdminMessages() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: 'Sora, sans-serif' }}>Messagerie</h1>
-            {totalUnread > 0 && <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full text-xs font-bold text-white" style={{ background: '#0054cb' }}>{totalUnread}</span>}
+            {totalUnread > 0 && <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full text-xs font-bold text-white" style={{ background: '#f95d00' }}>{totalUnread}</span>}
           </div>
-          <button onClick={() => setShowNewConvModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: 'linear-gradient(135deg, #0054cb, #0066ff)', boxShadow: '0 4px 12px rgba(0,84,203,0.2)' }}>
+          <button onClick={() => setShowNewConvModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: 'linear-gradient(135deg, #f95d00, #ff7a28)', boxShadow: '0 4px 12px rgba(249,93,0,0.2)' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>Nouvelle conversation
           </button>
         </div>
@@ -350,7 +350,7 @@ export default function AdminMessages() {
                     <div className="flex-1">
                       <textarea ref={inputRef} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={handleKeyDown} placeholder="Écrivez votre message..." rows={1} className="w-full px-4 py-3 rounded-2xl bg-surface-variant/30 border border-outline-variant/15 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:border-secondary/40 transition-colors resize-none" style={{ minHeight: '44px', maxHeight: '120px' }} />
                     </div>
-                    <button onClick={handleSend} disabled={!newMessage.trim() || sending} className="flex items-center justify-center w-11 h-11 rounded-full text-white shrink-0 transition-all duration-200 disabled:opacity-40 hover:scale-105 active:scale-95" style={{ background: 'linear-gradient(135deg, #0054cb, #0066ff)', boxShadow: '0 4px 12px rgba(0,84,203,0.2)' }}>
+                    <button onClick={handleSend} disabled={!newMessage.trim() || sending} className="flex items-center justify-center w-11 h-11 rounded-full text-white shrink-0 transition-all duration-200 disabled:opacity-40 hover:scale-105 active:scale-95" style={{ background: 'linear-gradient(135deg, #f95d00, #ff7a28)', boxShadow: '0 4px 12px rgba(249,93,0,0.2)' }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 20 }}>send</span>
                     </button>
                   </div>

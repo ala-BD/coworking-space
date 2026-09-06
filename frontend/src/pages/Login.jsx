@@ -7,26 +7,26 @@ import { getHomePath, getPostLoginPath } from '../utils/roles';
 /* ─── Icône SVG Google ─── */
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
   </svg>
 );
 
 /* ─── Icône SVG LinkedIn ─── */
 const LinkedInIcon = () => (
   <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <rect width="48" height="48" rx="8" fill="#0077B5"/>
-    <path fill="white" d="M13 18h5v17h-5V18zm2.5-7a2.9 2.9 0 1 1 0 5.8A2.9 2.9 0 0 1 15.5 11zM21 18h4.8v2.3h.1c.7-1.3 2.3-2.7 4.7-2.7C35.7 17.6 37 20 37 24.3V35h-5v-9.7c0-2.3-.8-3.9-2.7-3.9-1.5 0-2.4 1-2.8 2-.1.4-.2.9-.2 1.4V35h-5V18z"/>
+    <rect width="48" height="48" rx="8" fill="#0077B5" />
+    <path fill="white" d="M13 18h5v17h-5V18zm2.5-7a2.9 2.9 0 1 1 0 5.8A2.9 2.9 0 0 1 15.5 11zM21 18h4.8v2.3h.1c.7-1.3 2.3-2.7 4.7-2.7C35.7 17.6 37 20 37 24.3V35h-5v-9.7c0-2.3-.8-3.9-2.7-3.9-1.5 0-2.4 1-2.8 2-.1.4-.2.9-.2 1.4V35h-5V18z" />
   </svg>
 );
 
 export default function Login() {
-  const [email, setEmail]       = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPwd, setShowPwd]   = useState(false);
-  const [loading, setLoading]   = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
 
@@ -60,7 +60,7 @@ export default function Login() {
     } catch (error) {
       const msg = typeof error?.message === 'string' ? error.message
         : typeof error === 'string' ? error
-        : JSON.stringify(error) || 'Erreur de connexion.';
+          : JSON.stringify(error) || 'Erreur de connexion.';
       setErrorMsg(msg);
     } finally {
       setLoading(false);
@@ -93,7 +93,7 @@ export default function Login() {
           width: '46%',
           minWidth: 340,
           padding: '40px 48px',
-          background: 'linear-gradient(145deg, #000d23 0%, #10233f 50%, #0040a0 100%)',
+          background: 'linear-gradient(145deg, #100f0d 0%, #1c1b18 50%, #291a0c 100%)',
           position: 'relative',
           overflow: 'hidden',
         }}
@@ -101,20 +101,20 @@ export default function Login() {
         {/* Blobs décoratifs */}
         <div style={{
           position: 'absolute', top: -80, right: -60,
-          width: 400, height: 400, borderRadius: '50%', opacity: 0.15,
-          background: 'radial-gradient(circle, #0054cb, transparent)',
+          width: 400, height: 400, borderRadius: '50%', opacity: 0.25,
+          background: 'radial-gradient(circle, #f95d00, transparent)',
           pointerEvents: 'none',
         }} />
         <div style={{
           position: 'absolute', bottom: -60, left: -40,
-          width: 300, height: 300, borderRadius: '50%', opacity: 0.1,
-          background: 'radial-gradient(circle, #b5c7eb, transparent)',
+          width: 300, height: 300, borderRadius: '50%', opacity: 0.15,
+          background: 'radial-gradient(circle, #ffedd8, transparent)',
           pointerEvents: 'none',
         }} />
 
         {/* Logo haut gauche */}
         <div style={{ position: 'relative', zIndex: 10 }}>
-          <BrandLogo to="/" light />
+          <BrandLogo to="/" light height={56} />
         </div>
 
         {/* Contenu central */}
@@ -125,8 +125,8 @@ export default function Login() {
               display: 'inline-flex', alignItems: 'center', gap: 8,
               padding: '6px 16px', borderRadius: 99,
               fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
-              background: 'rgba(181,199,235,0.15)', color: '#b5c7eb',
-              border: '1px solid rgba(181,199,235,0.2)',
+              background: 'rgba(249,93,0,0.12)', color: '#f95d00',
+              border: '1px solid rgba(249,93,0,0.25)',
               marginBottom: 24,
             }}
           >
@@ -137,17 +137,17 @@ export default function Login() {
           {/* Titre */}
           <h2
             className="font-sora"
-            style={{ color: '#f0f4ff', fontWeight: 700, fontSize: 'clamp(28px, 3.5vw, 44px)', lineHeight: 1.18, marginBottom: 16 }}
+            style={{ color: '#fbffff', fontWeight: 700, fontSize: 'clamp(28px, 3.5vw, 44px)', lineHeight: 1.18, marginBottom: 16 }}
           >
-            Votre espace<br/>
-            <span style={{ color: '#b1c5ff' }}>de travail</span><br/>
+            Votre espace<br />
+            <span style={{ color: '#f95d00' }}>de travail</span><br />
             vous attend.
           </h2>
 
           {/* Description */}
           <p
             style={{
-              color: 'rgba(181,199,235,0.78)',
+              color: 'rgba(251,255,255,0.75)',
               fontSize: 15, lineHeight: 1.65,
               marginBottom: 28,
               width: '100%',
@@ -160,8 +160,8 @@ export default function Login() {
           {/* Features */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
-              { icon: 'wifi',          text: 'Wi-Fi fibre gigabit symétrique' },
-              { icon: 'lock',          text: 'Accès biométrique 24h/7j' },
+              { icon: 'wifi', text: 'Wi-Fi fibre gigabit symétrique' },
+              { icon: 'lock', text: 'Accès biométrique 24h/7j' },
               { icon: 'support_agent', text: 'Conciergerie dédiée on-site' },
             ].map(({ icon, text }) => (
               <div key={icon} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -169,12 +169,12 @@ export default function Login() {
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                    background: 'rgba(255,255,255,0.08)', color: '#b1c5ff',
+                    background: 'rgba(249,93,0,0.15)', color: '#f95d00',
                   }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 17 }}>{icon}</span>
                 </span>
-                <span style={{ color: 'rgba(214,227,255,0.82)', fontSize: 14 }}>{text}</span>
+                <span style={{ color: 'rgba(251,255,255,0.85)', fontSize: 14 }}>{text}</span>
               </div>
             ))}
           </div>
@@ -191,8 +191,8 @@ export default function Login() {
             { value: '24/7', label: 'Accès garanti' },
           ].map(({ value, label }) => (
             <div key={label}>
-              <div className="font-sora" style={{ fontSize: 22, fontWeight: 700, color: '#dae2ff' }}>{value}</div>
-              <div style={{ fontSize: 11, color: 'rgba(181,199,235,0.6)', marginTop: 2 }}>{label}</div>
+              <div className="font-sora" style={{ fontSize: 22, fontWeight: 700, color: '#fbffff' }}>{value}</div>
+              <div style={{ fontSize: 11, color: 'rgba(251,255,255,0.6)', marginTop: 2 }}>{label}</div>
             </div>
           ))}
         </div>
@@ -204,9 +204,9 @@ export default function Login() {
       <div className="flex-1 page-gradient flex flex-col relative overflow-hidden">
         {/* Blobs background */}
         <div className="absolute -bottom-24 -right-24 w-80 h-80 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(0,84,203,0.08), transparent)' }} />
+          style={{ background: 'radial-gradient(circle, rgba(249,93,0,0.08), transparent)' }} />
         <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(0,13,35,0.06), transparent)' }} />
+          style={{ background: 'radial-gradient(circle, rgba(16,15,13,0.06), transparent)' }} />
 
         {/* Header mobile — logo visible uniquement sur petit écran */}
         <header className="lg:hidden flex items-center justify-between px-6 py-4 relative z-10">
@@ -222,7 +222,7 @@ export default function Login() {
 
             {/* En-tête form */}
             <div className="text-center mb-5">
-              <h1 className="font-sora text-2xl font-bold text-primary mb-1">Bon retour 👋</h1>
+              <h1 className="font-sora text-2xl font-bold text-[#100f0d] mb-1">Bon retour 👋</h1>
               <p className="text-body-sm text-on-surface-variant">
                 Connectez-vous pour accéder à votre espace
               </p>
@@ -240,7 +240,7 @@ export default function Login() {
                   <div>
                     <p className="font-bold text-sm" style={{ color: '#92400e' }}>Compte en attente d'approbation</p>
                     <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#b45309' }}>
-                      Votre compte a bien été créé. L'administrateur du coworking doit valider votre inscription avant que vous puissiez vous connecter.
+                      Votre compte administrateur d'espace coworking a bien été créé. Le Super Administrateur doit valider votre espace avant que vous puissiez vous connecter.
                     </p>
                   </div>
                 </div>
@@ -259,7 +259,7 @@ export default function Login() {
 
             {/* Card form */}
             <div className="glass-card rounded-3xl shadow-elevated p-6 space-y-5">
-              
+
               <form onSubmit={handleLogin} className="space-y-4">
                 {/* Email */}
                 <div className="space-y-1.5">
@@ -369,7 +369,7 @@ export default function Login() {
         {/* Footer */}
         <footer className="relative z-10 text-center py-2 px-6">
           <p className="text-[10px] text-outline-variant">
-            © {new Date().getFullYear()} Encre &amp; Cobalt · Tous droits réservés
+            © {new Date().getFullYear()} DeskyWork · Tous droits réservés
           </p>
         </footer>
       </div>

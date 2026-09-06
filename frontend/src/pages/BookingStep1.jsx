@@ -2,14 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import BrandLogo from '../components/layout/BrandLogo';
+import { getBookerNav } from '../utils/roles';
 
 export default function BookingStep1() {
   const [spaces, setSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
   const [selectedTenant, setSelectedTenant] = useState(null);
+  const [nav, setNav] = useState(getBookerNav('member'));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase.from('profiles').select('role').eq('id', user.id).single()
+        .then(({ data }) => setNav(getBookerNav(data?.role)));
+    });
+  }, []);
 
   useEffect(() => {
     const tenantId = searchParams.get('tenantId');
@@ -31,7 +41,7 @@ export default function BookingStep1() {
       const { data, error } = await query.order('tarif_horaire', { ascending: true });
 
       if (error) throw error;
-      setSpaces(data);
+      setSpaces(data || []);
     } catch (e) {
       console.error('Error fetching spaces:', e.message);
     } finally {
@@ -49,21 +59,27 @@ export default function BookingStep1() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#F4F6F9]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary"></div>
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F6F9' }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: '4px solid #f95d00', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }} />
       </div>
     );
   }
 
   return (
-    <div className="bg-[#F4F6F9] min-h-screen text-on-background font-inter pb-xl">
+    <div style={{ backgroundColor: '#F4F6F9', minHeight: '100vh', fontFamily: 'Inter, sans-serif', paddingBottom: '48px' }}>
+      
       {/* Top Header */}
-      <nav className="fixed top-0 w-full z-50 bg-surface-container-lowest shadow-sm">
-        <div className="flex justify-between items-center px-margin-desktop py-sm max-w-container-max mx-auto">
-          <BrandLogo to="/dashboard" />
-          <div className="flex items-center gap-sm">
-            <span className="text-body-sm text-on-surface-variant font-semibold">Étape 1 sur 3</span>
-            <Link to="/dashboard" className="border border-outline-variant/30 text-primary px-sm py-xs rounded-lg font-semibold text-label-md hover:bg-surface-container-high transition-colors">
+      <nav style={{ position: 'fixed', top: 0, width: '100%', zIndex: 50, backgroundColor: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', maxWidth: '1240px', margin: '0 auto' }}>
+          <BrandLogo to={nav.home} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#f95d00', backgroundColor: '#ffedd8', padding: '6px 14px', borderRadius: '99px' }}>
+              Étape 1 sur 3
+            </span>
+            <Link 
+              to={nav.home} 
+              style={{ padding: '6px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, border: '1px solid #c5c6ce', color: '#100f0d', textDecoration: 'none', backgroundColor: '#fff' }}
+            >
               Annuler
             </Link>
           </div>
@@ -71,56 +87,108 @@ export default function BookingStep1() {
       </nav>
 
       {/* Main Container */}
-      <main className="pt-24 max-w-container-max mx-auto px-margin-desktop py-lg">
-        <div className="text-center mb-xl">
-          <h1 className="font-sora text-headline-lg text-primary mb-xs">Choisissez votre espace</h1>
-          <p className="text-body-md text-on-surface-variant max-w-xl mx-auto">
+      <main style={{ paddingTop: '110px', maxWidth: '1240px', margin: '0 auto', paddingLeft: '24px', paddingRight: '24px' }}>
+        
+        {/* Header Section — Fixed paragraph wrapping */}
+        <div style={{ textAlign: 'center', marginBottom: '36px' }}>
+          <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '32px', fontWeight: 700, color: '#100f0d', marginBottom: '10px' }}>
+            Choisissez votre espace
+          </h1>
+          <p style={{ fontSize: '15px', color: '#4e4a46', maxWidth: '600px', width: '100%', margin: '0 auto', textAlign: 'center', lineHeight: '1.5' }}>
             Sélectionnez la salle ou le poste qui correspond à vos besoins de travail.
           </p>
         </div>
 
-        {/* Filter Badges */}
-        <div className="flex flex-wrap gap-xs justify-center mb-xl">
-          {['all', 'open_space', 'private_office', 'meeting_room', 'training_room'].map((type) => (
+        {/* Filter Badges — Clean Bootstrap-style Pills */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center', marginBottom: '40px' }}>
+          {[
+            { id: 'all', label: 'Tous les espaces' },
+            { id: 'open_space', label: 'Open Space' },
+            { id: 'private_office', label: 'Bureau Privé' },
+            { id: 'meeting_room', label: 'Salle de Réunion' },
+            { id: 'training_room', label: 'Salle de Formation' },
+            { id: 'event_space', label: 'Événement' },
+          ].map(({ id, label }) => (
             <button
-              key={type}
-              onClick={() => setFilterType(type)}
-              className={`px-md py-sm rounded-full font-semibold text-label-sm uppercase transition-all ${
-                filterType === type 
-                  ? 'bg-secondary text-on-secondary shadow-sm' 
-                  : 'bg-surface-container-lowest text-primary hover:bg-surface-container-high border border-outline-variant/10'
-              }`}
+              key={id}
+              onClick={() => setFilterType(id)}
+              style={{
+                padding: '8px 20px',
+                borderRadius: '99px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                border: filterType === id ? 'none' : '1px solid #d0d7de',
+                backgroundColor: filterType === id ? '#f95d00' : '#ffffff',
+                color: filterType === id ? '#ffffff' : '#334155',
+                boxShadow: filterType === id ? '0 4px 12px rgba(249,93,0,0.25)' : '0 1px 3px rgba(0,0,0,0.05)',
+                transition: 'all 0.2s ease',
+              }}
             >
-              {type.replace('_', ' ')}
+              {label}
             </button>
           ))}
         </div>
 
-        {/* Grid List */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+        {/* Grid List — Clean Bootstrap Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
           {filteredSpaces.map((space) => (
-            <div key={space.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/10 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-all">
-              <div className="p-lg space-y-md">
-                <div className="flex justify-between items-start">
-                  <span className="bg-secondary-fixed text-on-secondary-fixed px-sm py-xs rounded-full font-semibold text-label-sm uppercase tracking-wider">
-                    {space.type.replace('_', ' ')}
+            <div 
+              key={space.id} 
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '20px',
+                border: '1px solid rgba(0,0,0,0.08)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              }}
+            >
+              <div style={{ padding: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <span style={{ backgroundColor: '#dae2ff', color: '#001847', padding: '4px 12px', borderRadius: '99px', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {space.type ? space.type.replace('_', ' ') : 'Espace'}
                   </span>
-                  <span className="font-sora text-headline-sm font-bold text-secondary">
-                    {space.tarif_horaire} DT <span className="text-body-sm font-normal text-on-surface-variant">/ hr</span>
+                  <span style={{ fontFamily: 'Sora, sans-serif', fontSize: '20px', fontWeight: 800, color: '#f95d00' }}>
+                    {parseFloat(space.tarif_horaire).toFixed(2)} DT <span style={{ fontSize: '12px', fontWeight: 400, color: '#6b7280' }}>/ h</span>
                   </span>
                 </div>
+
                 <div>
-                  <h3 className="font-sora text-headline-sm text-primary mb-xs">{space.nom}</h3>
-                  <p className="text-body-sm text-on-surface-variant">
-                    Capacité : jusqu&apos;à {space.capacite} personnes.
+                  <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '18px', fontWeight: 700, color: '#000d23', marginBottom: '6px' }}>
+                    {space.nom}
+                  </h3>
+                  <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
+                    Capacité : jusqu&apos;à <strong style={{ color: '#000d23' }}>{space.capacite}</strong> personnes.
+                    {space.type === 'open_space'
+                      ? ' Places partagées : plusieurs réservations au même horaire.'
+                      : ' Réservation exclusive : un seul client par créneau.'}
                   </p>
                 </div>
               </div>
-              <div className="p-lg border-t border-outline-variant/10 bg-surface-container-low flex justify-between items-center">
-                <span className="text-body-sm text-on-surface-variant">Disponible aujourd&apos;hui</span>
+
+              <div style={{ padding: '16px 24px', backgroundColor: '#f8fafc', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                  Disponible aujourd&apos;hui
+                </span>
                 <button
                   onClick={() => handleSelectSpace(space.id)}
-                  className="bg-primary text-white px-md py-sm rounded-xl font-semibold text-label-sm hover:bg-primary/95 transition-all active:scale-95"
+                  style={{
+                    backgroundColor: '#f95d00',
+                    color: '#ffffff',
+                    padding: '8px 18px',
+                    borderRadius: '10px',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(0,84,203,0.2)',
+                    transition: 'all 0.15s ease',
+                  }}
                 >
                   Sélectionner
                 </button>
@@ -128,6 +196,7 @@ export default function BookingStep1() {
             </div>
           ))}
         </div>
+
       </main>
     </div>
   );

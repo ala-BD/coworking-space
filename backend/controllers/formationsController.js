@@ -1,6 +1,10 @@
 // controllers/formationsController.js — MODULE G : Formations catalogue & creation
 const { supabaseAdmin } = require('../config/supabase');
-const { hasBookingOverlap } = require('../models/helpers');
+const {
+  getBookingAvailability,
+  createReservationWithPayment,
+  FORMATION_ROOM_UNAVAILABLE,
+} = require('../models/helpers');
 const { applyTenantFilter } = require('../middleware/guards');
 
 async function listFormations(req, res) {
@@ -87,24 +91,93 @@ async function createFormation(req, res) {
       .from('profiles').select('id').eq('id', formateur_id).eq('role', 'formateur').single();
     if (fErr || !formateur) return res.status(404).json({ error: 'Formateur introuvable.' });
 
+    let reservationId = null;
     if (espace_id) {
-      const overlap = await hasBookingOverlap(espace_id, date_debut, date_fin);
-      if (overlap) return res.status(409).json({ error: 'La salle est déjà réservée sur ce créneau.' });
+      const availability = await getBookingAvailability(espace_id, date_debut, date_fin, null, { exclusive: true });
+      if (!availability.isAvailable) {
+        return res.status(409).json({
+          error: availability.conflictMessage || FORMATION_ROOM_UNAVAILABLE,
+          code: 'SALLE_INDISPONIBLE',
+        });
+      }
+
+      const { reservation } = await createReservationWithPayment({
+        userId: req.user.id,
+        espaceId: espace_id,
+        dateDebut: date_debut,
+        dateFin: date_fin,
+        tenantId: req.tenantId,
+        mode: 'online',
+      });
+      reservationId = reservation.id;
+
+      try {
+        const { data: admins } = await supabaseAdmin
+          .from('profiles')
+          .select('id')
+          .in('role', ['admin', 'staff'])
+          .eq('tenant_id', reservation.tenant_id || req.tenantId);
+        for (const admin of admins || []) {
+          await supabaseAdmin.from('notifications').insert({
+            user_id: admin.id,
+            type: 'nouvelle_demande_reservation',
+            canal: 'Dashboard',
+            message: `📋 Réservation liée à la formation « ${titre} » — ${reservation.espaces?.nom || 'espace'} (en attente de confirmation).`,
+          });
+        }
+      } catch (notifErr) {
+        console.error('⚠️ Notification réservation formation:', notifErr.message);
+      }
     }
 
-    const { data, error } = await supabaseAdmin
+    const insertPayload = {
+      titre,
+      description: description || null,
+      formateur_id,
+      espace_id: espace_id || null,
+      date_debut,
+      date_fin,
+      capacite_max: parseInt(capacite_max),
+      prix_inscription: parseFloat(prix_inscription || 0),
+      programme: programme || null,
+      prerequis: prerequis || null,
+      materiel: materiel || null,
+      statut: 'planifiee',
+      tenant_id: req.tenantId,
+    };
+    if (reservationId) insertPayload.reservation_id = reservationId;
+
+    let { data, error } = await supabaseAdmin
       .from('formations')
-      .insert({
-        titre, description: description || null, formateur_id, espace_id: espace_id || null,
-        date_debut, date_fin, capacite_max: parseInt(capacite_max), prix_inscription: parseFloat(prix_inscription || 0),
-        programme: programme || null, prerequis: prerequis || null, materiel: materiel || null,
-        statut: 'planifiee', tenant_id: req.tenantId
-      })
+      .insert(insertPayload)
       .select(`*, profiles!formateur_id (id, nom, prenom), espaces (id, nom, type)`)
       .single();
 
-    if (error) return res.status(400).json({ error: error.message });
-    res.status(201).json({ formation: data });
+    if (error && reservationId && /reservation_id/.test(error.message || '')) {
+      delete insertPayload.reservation_id;
+      const retry = await supabaseAdmin
+        .from('formations')
+        .insert(insertPayload)
+        .select(`*, profiles!formateur_id (id, nom, prenom), espaces (id, nom, type)`)
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
+    if (error) {
+      if (reservationId) {
+        await supabaseAdmin.from('reservations').update({ statut: 'cancelled' }).eq('id', reservationId);
+      }
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.status(201).json({
+      formation: data,
+      reservation_id: reservationId,
+      message: reservationId
+        ? 'Formation créée. Une réservation de salle a été enregistrée en parallèle (en attente de confirmation admin).'
+        : 'Formation créée.',
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -126,10 +199,59 @@ async function updateFormation(req, res) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
     }
 
-    if (updates.date_debut || updates.date_fin) {
-      const debut = updates.date_debut || existing.date_debut;
-      const fin = updates.date_fin || existing.date_fin;
-      if (new Date(debut) >= new Date(fin)) return res.status(400).json({ error: 'date_fin doit être postérieure à date_debut.' });
+    const newDebut = updates.date_debut || existing.date_debut;
+    const newFin = updates.date_fin || existing.date_fin;
+    const newEspace = updates.espace_id !== undefined ? (updates.espace_id || null) : existing.espace_id;
+
+    if (new Date(newDebut) >= new Date(newFin)) {
+      return res.status(400).json({ error: 'date_fin doit être postérieure à date_debut.' });
+    }
+
+    const scheduleChanged = updates.date_debut || updates.date_fin || updates.espace_id !== undefined;
+    const existingReservationId = existing.reservation_id || null;
+
+    if (scheduleChanged && newEspace) {
+      const availability = await getBookingAvailability(newEspace, newDebut, newFin, existingReservationId, {
+        exclusive: true,
+        excludeFormationId: existing.id,
+      });
+      if (!availability.isAvailable) {
+        return res.status(409).json({
+          error: availability.conflictMessage || FORMATION_ROOM_UNAVAILABLE,
+          code: 'SALLE_INDISPONIBLE',
+        });
+      }
+
+      if (existingReservationId) {
+        const { error: resErr } = await supabaseAdmin
+          .from('reservations')
+          .update({
+            espace_id: newEspace,
+            date_debut: newDebut,
+            date_fin: newFin,
+          })
+          .eq('id', existingReservationId);
+        if (resErr) return res.status(400).json({ error: resErr.message });
+      } else {
+        const { reservation } = await createReservationWithPayment({
+          userId: existing.formateur_id,
+          espaceId: newEspace,
+          dateDebut: newDebut,
+          dateFin: newFin,
+          tenantId: existing.tenant_id || req.tenantId,
+          mode: 'online',
+        });
+        updates.reservation_id = reservation.id;
+      }
+    }
+
+    if (scheduleChanged && !newEspace && existingReservationId) {
+      await supabaseAdmin.from('reservations').update({ statut: 'cancelled' }).eq('id', existingReservationId);
+      updates.reservation_id = null;
+    }
+
+    if (updates.statut === 'annulee' && existingReservationId) {
+      await supabaseAdmin.from('reservations').update({ statut: 'cancelled' }).eq('id', existingReservationId);
     }
 
     const { data, error } = await supabaseAdmin
@@ -153,7 +275,7 @@ async function deleteFormation(req, res) {
     }
 
     const { data: formation, error: fetchErr } = await supabaseAdmin
-      .from('formations').select('id, statut, titre, formateur_id').eq('id', req.params.id).single();
+      .from('formations').select('*').eq('id', req.params.id).single();
     if (fetchErr || !formation) return res.status(404).json({ error: 'Formation introuvable.' });
 
     if (isFormateur && formation.formateur_id !== req.user.id) {
@@ -168,7 +290,14 @@ async function deleteFormation(req, res) {
       const { error } = await supabaseAdmin
         .from('formations').update({ statut: 'annulee', updated_at: new Date().toISOString() }).eq('id', req.params.id);
       if (error) return res.status(400).json({ error: error.message });
+      if (formation.reservation_id) {
+        await supabaseAdmin.from('reservations').update({ statut: 'cancelled' }).eq('id', formation.reservation_id);
+      }
       return res.json({ message: `Formation "${formation.titre}" marquée comme annulée (${count} inscrit(s) concerné(s)).` });
+    }
+
+    if (formation.reservation_id) {
+      await supabaseAdmin.from('reservations').update({ statut: 'cancelled' }).eq('id', formation.reservation_id);
     }
 
     const { error } = await supabaseAdmin.from('formations').delete().eq('id', req.params.id);

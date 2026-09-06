@@ -2,9 +2,9 @@ import ExcelJS from 'exceljs';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 const COLORS = {
-  headerBg:    'FF1E3A5F',
+  headerBg:    'FF100F0D',
   headerFg:    'FFFFFFFF',
-  sectionBg:   'FF0054CB',
+  sectionBg:   'FFF95D00',
   sectionFg:   'FFFFFFFF',
   altRowBg:    'FFF8FAFC',
   kpiLabelBg:  'FFF1F5F9',
@@ -92,13 +92,13 @@ function styleDataCell(cell, value, opts = {}) {
  */
 export async function exportDashboardToExcel(kpis, chartData) {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'Coworking Space — Module D';
+  wb.creator = 'DeskyWork — Flex Office & Coworking';
   wb.created = new Date();
 
   // ══════════════════════════════════════════════════════════════════════
   // Feuille 1 — Résumé KPIs
   // ══════════════════════════════════════════════════════════════════════
-  const sheetKPI = wb.addWorksheet('📊 KPIs', {
+  const sheetKPI = wb.addWorksheet('📊 KPIs DeskyWork', {
     properties: { defaultRowHeight: 20 },
   });
   sheetKPI.columns = [
@@ -112,7 +112,7 @@ export async function exportDashboardToExcel(kpis, chartData) {
   // Titre
   sheetKPI.mergeCells('A1:E1');
   const title = sheetKPI.getCell('A1');
-  title.value = '📊 Tableau de Bord KPIs — Coworking Space';
+  title.value = '📊 Tableau de Bord KPIs — DeskyWork';
   title.font  = { name: 'Calibri', size: 18, bold: true, color: { argb: COLORS.headerBg } };
   title.alignment = { horizontal: 'center', vertical: 'middle' };
   sheetKPI.getRow(1).height = 36;

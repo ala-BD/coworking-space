@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
 import { useTheme } from '../../context/ThemeContext';
+import { supabase } from '../../supabaseClient';
 import {
   ADMIN_NAV,
   STAFF_NAV,
@@ -13,66 +14,180 @@ import {
   isAdminRole,
 } from '../../utils/roles';
 
-/* ─── Lien de navigation sidebar ─── */
-function NavLink({ item, isActive, onClick }) {
+function getProfilePath(role) {
+  if (role === 'member') return '/member/profile';
+  if (role === 'formateur') return '/trainer/profile';
+  if (isAdminRole(role)) return '/admin/profile-coworking';
+  return '/super-admin/dashboard';
+}
+
+function getRelativeTime(dateStr) {
+  if (!dateStr) return '';
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now - date;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffH = Math.floor(diffMin / 60);
+  const diffD = Math.floor(diffH / 24);
+  if (diffMin < 1) return "à l'instant";
+  if (diffMin < 60) return `il y a ${diffMin} min`;
+  if (diffH < 24) return `il y a ${diffH}h`;
+  if (diffD < 7) return `il y a ${diffD}j`;
+  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+function getNotifIcon(type) {
+  if (type === 'confirmation_reservation' || type === 'reservation') return 'calendar_month';
+  if (type === 'payment' || type === 'facture') return 'receipt_long';
+  if (type === 'formation') return 'school';
+  return 'notifications';
+}
+
+/* === NavLink Sidebar === */
+function NavLink({ item, isActive, onClick, dark }) {
+  const itemColor = isActive ? '#f95d00' : (dark ? '#fbffff' : '#100f0d');
+  const translatedLabel = item.label;
+
   return (
     <Link
       to={item.to}
       onClick={onClick}
-      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-150 ${isActive
-          ? 'bg-primary-container text-on-primary-container shadow-sm'
-          : 'text-on-surface-variant hover:bg-secondary/7 hover:text-secondary'
-        }`}
-    >
-      <span
-        className="material-symbols-outlined shrink-0"
-        style={{
-          fontSize: 20,
-          fontVariationSettings: isActive
-            ? "'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24"
-            : "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24",
-        }}
-      >
-        {item.icon}
-      </span>
-      <span className="truncate">{item.label}</span>
-      {isActive && (
-        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
-      )}
-    </Link>
-  );
-}
-
-/* ─── Lien bottom nav mobile ─── */
-function BottomNavLink({ item, isActive }) {
-  return (
-    <Link
-      to={item.to}
-      className={`flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 flex-1 transition-colors duration-150 ${isActive ? 'text-secondary' : 'text-on-surface-variant'
-        }`}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 14px',
+        borderRadius: 12,
+        fontWeight: 600,
+        fontSize: 14,
+        textDecoration: 'none',
+        transition: 'all 0.15s ease',
+        background: isActive
+          ? (dark ? 'rgba(249,93,0,0.18)' : 'rgba(249,93,0,0.10)')
+          : 'transparent',
+        color: itemColor,
+      }}
+      onMouseEnter={e => {
+        if (!isActive) {
+          e.currentTarget.style.background = dark ? 'rgba(249,93,0,0.10)' : 'rgba(249,93,0,0.06)';
+          e.currentTarget.style.color = '#f95d00';
+          const span = e.currentTarget.querySelector('span');
+          if (span) span.style.color = '#f95d00';
+        }
+      }}
+      onMouseLeave={e => {
+        if (!isActive) {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.color = itemColor;
+          const span = e.currentTarget.querySelector('span');
+          if (span) span.style.color = itemColor;
+        }
+      }}
     >
       <span
         className="material-symbols-outlined"
         style={{
-          fontSize: 22,
+          fontSize: 20, flexShrink: 0,
           fontVariationSettings: isActive
             ? "'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24"
             : "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24",
+          color: itemColor,
         }}
       >
         {item.icon}
       </span>
-      <span className="text-[10px] font-semibold leading-tight">{item.label}</span>
+      <span style={{ flex: 1, color: itemColor }}>{translatedLabel}</span>
+      {isActive && (
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f95d00', flexShrink: 0 }} />
+      )}
     </Link>
   );
 }
 
 export default function PortalLayout({ children, profile, onLogout }) {
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [tenantLogo, setTenantLogo] = useState(null);
+
+  const dropdownRef = useRef(null);
+  const notifRef = useRef(null);
   const { dark, toggle } = useTheme();
 
   const initials = `${profile?.prenom?.[0] || ''}${profile?.nom?.[0] || ''}`.toUpperCase() || 'U';
+
+  // Chargement du logo tenant fallback
+  useEffect(() => {
+    async function loadTenantLogo() {
+      if (profile?.tenant_id && !profile?.photo_url && !profile?.avatar_url) {
+        try {
+          const { data: tenantData } = await supabase
+            .from('tenants')
+            .select('logo_url')
+            .eq('id', profile.tenant_id)
+            .single();
+          if (tenantData?.logo_url) {
+            setTenantLogo(tenantData.logo_url);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    loadTenantLogo();
+  }, [profile]);
+
+  // Chargement + Écoute Temps Réel des Notifications
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    async function fetchNotifications() {
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', profile.id)
+          .order('created_at', { ascending: false })
+          .limit(15);
+
+        if (!error && data) {
+          setNotifications(data);
+          const unread = data.filter(n => !n.lu).length;
+          setUnreadCount(unread);
+        }
+      } catch (err) {
+        console.error('Erreur chargement notifications:', err);
+      }
+    }
+
+    fetchNotifications();
+
+    const channel = supabase
+      .channel(`user-notifs-${profile.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${profile.id}`,
+        },
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id]);
+
+  const avatarUrl = profile?.photo_url || profile?.avatar_url || profile?.avatar || profile?.tenant?.logo_url || tenantLogo || null;
+
   const isSuperAdmin = profile?.role === 'super_admin';
   const isStaff = profile?.role === 'staff';
   const adminView = isAdminRole(profile?.role);
@@ -87,6 +202,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
           ? FORMATEUR_NAV
           : MEMBER_NAV;
   const homePath = getHomePath(profile?.role);
+  const profilePath = getProfilePath(profile?.role);
   const portalLabel = isSuperAdmin
     ? 'VCLOW Platform'
     : isStaff
@@ -102,73 +218,288 @@ export default function PortalLayout({ children, profile, onLogout }) {
     return location.pathname === to || location.pathname.startsWith(`${to}/`);
   };
 
-  /* Bottom nav : max 5 items sur mobile */
-  const bottomNavItems = navItems.slice(0, 5);
+  const markAsRead = async (id) => {
+    try {
+      await supabase.from('notifications').update({ lu: true }).eq('id', id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, lu: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleNotificationClick = async (n) => {
+    if (!n.lu) {
+      await markAsRead(n.id);
+    }
+    setNotifOpen(false);
+
+    const type = n.type || '';
+    const isAdmin = ['super_admin', 'admin', 'staff'].includes(profile?.role);
+    const isTrainer = profile?.role === 'formateur';
+
+    let targetUrl = '';
+    if (type.includes('reservation') || type.includes('session') || type === 'nouvelle_demande_reservation') {
+      targetUrl = isAdmin ? '/admin/reservations' : '/dashboard/bookings';
+    } else if (type.includes('paiement') || type.includes('payment') || type.includes('facture')) {
+      targetUrl = isAdmin ? '/admin/payments' : '/dashboard/payments';
+    } else if (type.includes('message')) {
+      targetUrl = isAdmin ? '/admin/messages' : '/dashboard/messages';
+    } else if (type.includes('formation') || type.includes('inscription')) {
+      targetUrl = isTrainer ? '/trainer/formations' : (isAdmin ? '/admin/formations' : '/dashboard/formations');
+    } else if (type.includes('abonnement')) {
+      targetUrl = '/dashboard/subscription';
+    } else {
+      targetUrl = isAdmin ? '/admin/reservations' : '/dashboard/bookings';
+    }
+
+    if (targetUrl) {
+      navigate(targetUrl);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await supabase.from('notifications').update({ lu: true }).eq('user_id', profile.id).eq('lu', false);
+      setNotifications(prev => prev.map(n => ({ ...n, lu: true })));
+      setUnreadCount(0);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setNotifOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
-    <div className="min-h-screen text-on-surface" style={{ background: dark ? 'var(--color-background)' : '#f4f6f9', transition: 'background 0.3s ease' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: dark ? '#100f0d' : '#f6f4f1',
+      color: dark ? '#fbffff' : '#100f0d',
+      transition: 'background 0.3s ease, color 0.3s ease',
+      fontFamily: 'Inter, sans-serif',
+    }}>
 
-      {/* ── Blobs décoratifs ambient ── */}
-      <div className="fixed top-0 right-0 w-96 h-96 rounded-full pointer-events-none -z-10"
-        style={{ background: 'radial-gradient(circle, rgba(0,84,203,0.04), transparent)', transform: 'translate(30%, -30%)' }} />
-      <div className="fixed bottom-0 left-0 w-96 h-96 rounded-full pointer-events-none -z-10"
-        style={{ background: 'radial-gradient(circle, rgba(0,13,35,0.04), transparent)', transform: 'translate(-30%, 30%)' }} />
+      {/* Ambient blobs */}
+      <div style={{ position: 'fixed', top: 0, right: 0, width: 384, height: 384, borderRadius: '50%', pointerEvents: 'none', zIndex: -1, background: 'radial-gradient(circle, rgba(249,93,0,0.05), transparent)', transform: 'translate(30%, -30%)' }} />
+      <div style={{ position: 'fixed', bottom: 0, left: 0, width: 384, height: 384, borderRadius: '50%', pointerEvents: 'none', zIndex: -1, background: 'radial-gradient(circle, rgba(16,15,13,0.05), transparent)', transform: 'translate(-30%, 30%)' }} />
 
-      {/* ══════════════════════════════════════════
-          HEADER fixe
-          ══════════════════════════════════════════ */}
-      <header
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between"
-        style={{
-          height: 64,
-          padding: '0 24px',
-          background: dark
-            ? 'rgba(17,19,24,0.92)'
-            : 'rgba(251,249,251,0.88)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          borderBottom: dark
-            ? '1px solid rgba(255,255,255,0.07)'
-            : '1px solid rgba(197,198,206,0.25)',
-          boxShadow: '0 2px 12px rgba(0,13,35,0.05)',
-          transition: 'background 0.3s ease',
-        }}
-      >
-        {/* Gauche : hamburger mobile + logo */}
-        <div className="flex items-center gap-3">
-          {/* Bouton hamburger visible uniquement sur mobile */}
-          <button
-            className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors"
-            onClick={() => setSidebarOpen((v) => !v)}
-            aria-label="Ouvrir le menu"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
-              {sidebarOpen ? 'close' : 'menu'}
-            </span>
-          </button>
-          <BrandLogo to={homePath} />
+      {/* === HEADER === */}
+      <header style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
+        height: 68, padding: '0 24px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: dark ? 'rgba(16,15,13,0.92)' : 'rgba(251,255,255,0.88)',
+        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+        borderBottom: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(16,15,13,0.08)',
+        boxShadow: '0 2px 12px rgba(16,15,13,0.05)',
+        transition: 'background 0.3s ease',
+      }}>
+        {/* Left: Brand Logo */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <BrandLogo to={homePath} height={44} />
         </div>
 
-        {/* Droite : infos utilisateur + déconnexion */}
-        <div className="flex items-center gap-3">
-          {/* Nom et rôle — masqués sur très petit écran */}
-          <div className="hidden sm:flex flex-col items-end leading-none">
-            <span className="text-sm font-semibold text-primary">
+        {/* Right: User profile + Language Switcher + Notification Bell + Dark toggle + Clickable Avatar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
+
+          {/* Nom et rôle */}
+          <div
+            className="hidden sm:flex"
+            onClick={() => { setDropdownOpen(v => !v); setNotifOpen(false); }}
+            style={{ flexDirection: 'column', alignItems: 'flex-end', cursor: 'pointer' }}
+          >
+            <span style={{ fontSize: 14, fontWeight: 600, color: dark ? '#fbffff' : '#100f0d', lineHeight: 1.2 }}>
               {profile?.prenom} {profile?.nom}
             </span>
-            <span className="text-xs text-on-surface-variant mt-0.5">
+            <span style={{ fontSize: 12, color: dark ? 'rgba(251,255,255,0.6)' : '#44474d', marginTop: 2 }}>
               {getRoleLabel(profile?.role)}
             </span>
           </div>
 
-          {/* ── Bouton Dark / Light mode ── */}
+          {/* 🛎️ BOUTON NOTIFICATION AVEC COMPTEUR TEMPS RÉEL */}
+          <div style={{ position: 'relative' }} ref={notifRef}>
+            <button
+              onClick={() => { setNotifOpen(v => !v); setDropdownOpen(false); }}
+              title="Notifications"
+              style={{
+                position: 'relative',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 38, height: 38, borderRadius: 12, border: 'none',
+                cursor: 'pointer', transition: 'all 0.2s ease',
+                background: notifOpen
+                  ? (dark ? 'rgba(249,93,0,0.25)' : 'rgba(249,93,0,0.15)')
+                  : (dark ? 'rgba(255,255,255,0.08)' : 'rgba(16,15,13,0.06)'),
+                color: notifOpen ? '#f95d00' : (dark ? '#fbffff' : '#100f0d'),
+                boxShadow: dark ? 'inset 0 1px 2px rgba(255,255,255,0.1)' : 'inset 0 1px 2px rgba(0,0,0,0.05)',
+              }}
+              onMouseEnter={e => {
+                if (!notifOpen) {
+                  e.currentTarget.style.background = dark ? 'rgba(249,93,0,0.2)' : 'rgba(249,93,0,0.12)';
+                  e.currentTarget.style.color = '#f95d00';
+                }
+              }}
+              onMouseLeave={e => {
+                if (!notifOpen) {
+                  e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.08)' : 'rgba(16,15,13,0.06)';
+                  e.currentTarget.style.color = dark ? '#fbffff' : '#100f0d';
+                }
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>notifications</span>
+
+              {unreadCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: -3, right: -3,
+                  minWidth: 18, height: 18, padding: '0 4px',
+                  borderRadius: 99, background: '#f95d00', color: '#ffffff',
+                  fontSize: 10, fontWeight: 800,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 2px 6px rgba(249,93,0,0.5)',
+                  border: dark ? '2px solid #100f0d' : '2px solid #ffffff',
+                  animation: 'pulseNotif 2s infinite',
+                }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* POP-UP NOTIFICATIONS */}
+            {notifOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 52, right: 0,
+                  width: 360, maxWidth: '90vw',
+                  background: dark ? '#1b1a18' : '#ffffff',
+                  color: dark ? '#fbffff' : '#100f0d',
+                  borderRadius: 20,
+                  border: dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(16,15,13,0.08)',
+                  boxShadow: dark ? '0 16px 40px rgba(0,0,0,0.6)' : '0 16px 40px rgba(16,15,13,0.15)',
+                  zIndex: 100, overflow: 'hidden',
+                  animation: 'popDropdown 0.2s ease-out both',
+                }}
+              >
+                <style>{"@keyframes popDropdown { from { opacity: 0; transform: translateY(-8px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }"}</style>
+
+                <div style={{
+                  padding: '16px 20px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  borderBottom: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(16,15,13,0.08)',
+                  background: dark ? 'rgba(255,255,255,0.02)' : 'rgba(16,15,13,0.02)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700 }}>Notifications</span>
+                    {unreadCount > 0 && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'rgba(249,93,0,0.12)', color: '#f95d00' }}>
+                        {unreadCount} nouvelle{unreadCount > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={markAllAsRead}
+                      style={{ fontSize: 12, fontWeight: 600, color: '#f95d00', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                    >
+                      Tout lire
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ maxHeight: 340, overflowY: 'auto' }}>
+                  {notifications.length === 0 ? (
+                    <div style={{ padding: '36px 20px', textAlign: 'center', color: dark ? 'rgba(251,255,255,0.5)' : '#666' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 36, opacity: 0.4, marginBottom: 8, display: 'block' }}>notifications_off</span>
+                      <p style={{ fontSize: 13, margin: 0 }}>Aucune notification pour le moment.</p>
+                    </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        onClick={() => handleNotificationClick(n)}
+                        style={{
+                          padding: '14px 18px',
+                          display: 'flex', alignItems: 'flex-start', gap: 12,
+                          cursor: 'pointer', transition: 'background 0.15s ease',
+                          background: n.lu
+                            ? 'transparent'
+                            : (dark ? 'rgba(249,93,0,0.08)' : 'rgba(249,93,0,0.04)'),
+                          borderBottom: dark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(16,15,13,0.04)',
+                        }}
+                      >
+                        <div style={{
+                          width: 34, height: 34, borderRadius: 10,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0,
+                          background: n.lu
+                            ? (dark ? 'rgba(255,255,255,0.06)' : 'rgba(16,15,13,0.05)')
+                            : 'rgba(249,93,0,0.12)',
+                          color: n.lu ? (dark ? 'rgba(251,255,255,0.6)' : '#666') : '#f95d00',
+                        }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{getNotifIcon(n.type)}</span>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 13, fontWeight: n.lu ? 500 : 700, margin: 0, lineHeight: 1.35, color: dark ? '#fbffff' : '#100f0d' }}>
+                            {n.message || n.title || 'Notification'}
+                          </p>
+                          <span style={{ fontSize: 11, color: dark ? 'rgba(251,255,255,0.5)' : '#888', marginTop: 4, display: 'block' }}>
+                            {getRelativeTime(n.created_at)}
+                          </span>
+                        </div>
+                        {!n.lu && (
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f95d00', flexShrink: 0, marginTop: 4 }} />
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div style={{
+                  padding: '12px 20px', textAlign: 'center',
+                  borderTop: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(16,15,13,0.08)',
+                  background: dark ? 'rgba(255,255,255,0.02)' : 'rgba(16,15,13,0.02)',
+                }}>
+                  <Link
+                    to="/dashboard/notifications"
+                    onClick={() => setNotifOpen(false)}
+                    style={{ fontSize: 12, fontWeight: 700, color: '#f95d00', textDecoration: 'none' }}
+                  >
+                    Voir le centre de notifications →
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Bouton Toggle Mode Sombre / Clair ajusté */}
           <button
             onClick={toggle}
-            title={dark ? 'Passer en mode clair' : 'Passer en mode sombre'}
-            className="flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
+            title={dark ? 'Mode clair' : 'Mode sombre'}
             style={{
-              background: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,13,35,0.07)',
-              color: dark ? '#ffd966' : '#44474d',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 38, height: 38, borderRadius: 12, border: 'none',
+              cursor: 'pointer', transition: 'all 0.2s ease',
+              background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(16,15,13,0.06)',
+              color: dark ? '#ffd966' : '#100f0d',
+              boxShadow: dark ? 'inset 0 1px 2px rgba(255,255,255,0.1)' : 'inset 0 1px 2px rgba(0,0,0,0.05)',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = dark ? 'rgba(249,93,0,0.2)' : 'rgba(249,93,0,0.12)';
+              e.currentTarget.style.color = '#f95d00';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.08)' : 'rgba(16,15,13,0.06)';
+              e.currentTarget.style.color = dark ? '#ffd966' : '#100f0d';
             }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>
@@ -176,158 +507,210 @@ export default function PortalLayout({ children, profile, onLogout }) {
             </span>
           </button>
 
-          {/* Avatar initiales */}
-          <div
-            className="flex items-center justify-center w-9 h-9 rounded-full font-sora font-bold text-sm shrink-0 border-2 border-white shadow-sm"
-            style={{ background: 'linear-gradient(135deg, #10233f, #0054cb)', color: '#dae2ff' }}
-          >
-            {initials}
+          {/* Cercle Photo / Logo cliquable */}
+          <div style={{ position: 'relative' }} ref={dropdownRef}>
+            <button
+              onClick={() => { setDropdownOpen(v => !v); setNotifOpen(false); }}
+              title="Menu profil"
+              style={{
+                position: 'relative',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 40, height: 40, borderRadius: '50%',
+                flexShrink: 0, border: '2px solid #ffffff',
+                boxShadow: dropdownOpen ? '0 0 0 3px #f95d00' : '0 2px 10px rgba(16,15,13,0.15)',
+                background: avatarUrl ? '#ffffff' : 'linear-gradient(135deg, #100f0d, #f95d00)',
+                color: '#fbffff', cursor: 'pointer', overflow: 'hidden',
+                transition: 'all 0.2s ease', padding: 0,
+                fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: 14,
+              }}
+            >
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={`${profile?.prenom || ''} ${profile?.nom || ''}`}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <span>{initials}</span>
+              )}
+            </button>
+
+            {/* === MENU DÉROULANT DU PROFIL === */}
+            {dropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 52, right: 0,
+                  width: 260,
+                  background: dark ? '#1b1a18' : '#ffffff',
+                  color: dark ? '#fbffff' : '#100f0d',
+                  borderRadius: 20,
+                  border: dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(16,15,13,0.08)',
+                  boxShadow: dark ? '0 16px 40px rgba(0,0,0,0.6)' : '0 16px 40px rgba(16,15,13,0.15)',
+                  padding: '16px',
+                  zIndex: 100,
+                  animation: 'popDropdown 0.2s ease-out both',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 14, marginBottom: 12, borderBottom: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(16,15,13,0.08)' }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: 15,
+                    background: avatarUrl ? '#ffffff' : 'linear-gradient(135deg, #100f0d, #f95d00)', color: '#fbffff',
+                    overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(249,93,0,0.2)',
+                  }}>
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : initials}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whitespace: 'nowrap' }}>
+                      {profile?.prenom} {profile?.nom}
+                    </p>
+                    <p style={{ fontSize: 11, color: dark ? 'rgba(251,255,255,0.6)' : '#666', margin: '2px 0 4px 0', textOverflow: 'ellipsis', overflow: 'hidden', whitespace: 'nowrap' }}>
+                      {profile?.email || ''}
+                    </p>
+                    <span style={{
+                      display: 'inline-block', fontSize: 10, fontWeight: 700,
+                      padding: '2px 8px', borderRadius: 99,
+                      background: 'rgba(249,93,0,0.12)', color: '#f95d00',
+                    }}>
+                      {getRoleLabel(profile?.role)}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <Link
+                    to={profilePath}
+                    onClick={() => setDropdownOpen(false)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '10px 12px', borderRadius: 12,
+                      fontSize: 13, fontWeight: 600,
+                      textDecoration: 'none',
+                      color: dark ? '#fbffff' : '#100f0d',
+                      transition: 'background 0.15s ease',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.08)' : 'rgba(16,15,13,0.05)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#f95d00' }}>account_circle</span>
+                    <span>Mon Profil</span>
+                  </Link>
+
+                  <div style={{ margin: '6px 0', borderTop: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(16,15,13,0.08)' }} />
+
+                  <button
+                    onClick={() => { setDropdownOpen(false); onLogout(); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '10px 12px', borderRadius: 12,
+                      fontSize: 13, fontWeight: 600,
+                      border: 'none', background: 'transparent',
+                      color: '#ba1a1a', cursor: 'pointer', textAlign: 'left',
+                      transition: 'background 0.15s ease',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(186,26,26,0.08)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#ba1a1a' }}>logout</span>
+                    <span>Déconnexion</span>
+                  </button>
+                </div>
+
+              </div>
+            )}
           </div>
 
         </div>
       </header>
 
-      {/* ══════════════════════════════════════════
-          OVERLAY mobile sidebar
-          ══════════════════════════════════════════ */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/30 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      <div style={{ display: 'flex', paddingTop: 68 }}>
 
-      {/* ══════════════════════════════════════════
-          LAYOUT principal (sidebar + contenu)
-          ══════════════════════════════════════════ */}
-      <div className="flex" style={{ paddingTop: 64 }}>
-
-        {/* ── SIDEBAR desktop (toujours visible ≥ md) ── */}
-        <aside
-          className="hidden md:flex flex-col shrink-0"
-          style={{
-            width: 240,
-            minHeight: 'calc(100vh - 64px)',
-            position: 'sticky',
-            top: 64,
-            alignSelf: 'flex-start',
-            background: dark ? 'rgba(25,28,33,0.95)' : 'rgba(255,255,255,0.7)',
-            backdropFilter: 'blur(8px)',
-            borderRight: dark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(197,198,206,0.2)',
-            padding: '24px 12px',
-            gap: 0,
-            transition: 'background 0.3s ease',
-          }}
-        >
+        {/* Sidebar */}
+        <aside style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flexShrink: 0,
+          width: 240,
+          minHeight: 'calc(100vh - 68px)',
+          position: 'sticky',
+          top: 68,
+          alignSelf: 'flex-start',
+          background: dark ? 'rgba(17,16,14,0.97)' : 'rgba(255,255,255,0.92)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          borderRight: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(16,15,13,0.08)',
+          padding: '24px 12px',
+          transition: 'background 0.3s ease',
+        }}>
           {/* Label section */}
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant px-3 mb-3">
+          <p style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.18em', padding: '0 12px', marginBottom: 12, color: dark ? 'rgba(251,255,255,0.5)' : '#44474d' }}>
             {portalLabel}
           </p>
 
-          {/* Nav items */}
-          <nav className="flex flex-col gap-1">
+          {/* Navigation links */}
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {navItems.map((item) => (
-              <NavLink
-                key={item.id}
-                item={item}
-                isActive={isNavActive(item.to)}
-              />
+              <NavLink key={item.id} item={item} isActive={isNavActive(item.to)} dark={dark} />
             ))}
           </nav>
 
-          {/* Séparateur + déconnexion bas sidebar */}
-          <div className="mt-auto pt-6 border-t border-outline-variant/20">
+          {/* Logout button at bottom of sidebar */}
+          <div style={{
+            marginTop: 'auto',
+            paddingTop: 20,
+            borderTop: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(16,15,13,0.08)',
+          }}>
             <button
               onClick={onLogout}
-              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-error hover:bg-error/8 transition-all w-full"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '11px 14px',
+                borderRadius: 12,
+                fontWeight: 600,
+                fontSize: 14,
+                border: '1px solid rgba(186,26,26,0.2)',
+                background: 'rgba(186,26,26,0.05)',
+                cursor: 'pointer',
+                width: '100%',
+                textAlign: 'left',
+                color: '#ba1a1a',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = '#ba1a1a';
+                e.currentTarget.style.color = '#ffffff';
+                const spans = e.currentTarget.querySelectorAll('span');
+                spans.forEach(s => s.style.color = '#ffffff');
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(186,26,26,0.05)';
+                e.currentTarget.style.color = '#ba1a1a';
+                const spans = e.currentTarget.querySelectorAll('span');
+                spans.forEach(s => s.style.color = '#ba1a1a');
+              }}
             >
-              <span className="material-symbols-outlined shrink-0" style={{ fontSize: 20 }}>logout</span>
-              <span>Déconnexion</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 20, flexShrink: 0, color: '#ba1a1a' }}>logout</span>
+              <span style={{ color: '#ba1a1a' }}>Déconnexion</span>
             </button>
           </div>
         </aside>
 
-        {/* ── SIDEBAR mobile (drawer) ── */}
-        <aside
-          className={`fixed top-[64px] left-0 bottom-0 z-40 md:hidden flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-            }`}
-          style={{
-            width: 256,
-            background: dark ? 'rgba(17,19,24,0.98)' : 'rgba(255,255,255,0.98)',
-            backdropFilter: 'blur(16px)',
-            borderRight: dark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(197,198,206,0.3)',
-            padding: '20px 12px',
-            overflowY: 'auto',
-            transition: 'background 0.3s ease',
-          }}
-        >
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant px-3 mb-3">
-            {portalLabel}
-          </p>
-          <nav className="flex flex-col gap-1">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.id}
-                item={item}
-                isActive={isNavActive(item.to)}
-                onClick={() => setSidebarOpen(false)}
-              />
-            ))}
-          </nav>
-          <div className="mt-auto pt-6 border-t border-outline-variant/20">
-            <button
-              onClick={() => { setSidebarOpen(false); onLogout(); }}
-              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-error hover:bg-error/8 transition-all w-full"
-            >
-              <span className="material-symbols-outlined shrink-0" style={{ fontSize: 20 }}>logout</span>
-              <span>Déconnexion</span>
-            </button>
-          </div>
-        </aside>
-
-        {/* ── CONTENU principal ── */}
-        <main
-          className="flex-1 overflow-x-hidden"
-          style={{
-            padding: '28px 24px',
-            minHeight: 'calc(100vh - 64px)',
-            /* Offset bas sur mobile pour bottom nav */
-            paddingBottom: 'max(28px, calc(72px + 8px))',
-          }}
-        >
+        {/* Main content */}
+        <main style={{
+          flex: 1, overflowX: 'hidden',
+          padding: '28px 24px', minHeight: 'calc(100vh - 68px)',
+        }}>
           <div style={{ maxWidth: 1200, margin: '0 auto' }}>
             {children}
           </div>
         </main>
       </div>
-
-      {/* ══════════════════════════════════════════
-          BOTTOM NAV — visible uniquement mobile (< md)
-          ══════════════════════════════════════════ */}
-      <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex"
-        style={{
-          height: 64,
-          background: dark
-            ? 'rgba(17,19,24,0.97)'
-            : 'rgba(251,249,251,0.97)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          borderTop: dark
-            ? '1px solid rgba(255,255,255,0.07)'
-            : '1px solid rgba(197,198,206,0.3)',
-          boxShadow: '0 -4px 20px rgba(0,13,35,0.07)',
-          transition: 'background 0.3s ease',
-        }}
-      >
-        {bottomNavItems.map((item) => (
-          <BottomNavLink
-            key={item.id}
-            item={item}
-            isActive={isNavActive(item.to)}
-          />
-        ))}
-      </nav>
     </div>
   );
 }

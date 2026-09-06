@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { superAdminApi } from '../services/superAdminApi';
 import { supabase } from '../supabaseClient';
 import PortalLayout from '../components/layout/PortalLayout';
+import { exportBillingToExcel } from '../utils/exportBillingExcel';
 
 const PLAN_LABELS = { free: 'Free', starter: 'Starter', pro: 'Pro', enterprise: 'Enterprise' };
 const STATUT_STYLES = {
@@ -56,20 +57,7 @@ export default function TenantBilling({ session }) {
   const handleLogout = async () => { await supabase.auth.signOut(); navigate('/login'); };
 
   const exportMrrCsv = () => {
-    const rows = [
-      ['Mois', 'MRR (DT)'],
-      ...MONTHS.map((m, i) => [m, barData[i]]),
-    ];
-    const csv = rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `mrr-6-mois-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    exportBillingToExcel(tenants, MONTHS, barData);
   };
 
   const mrr = (tenants || []).filter(t => t.statut === 'actif').reduce((acc, t) => acc + (parseFloat(t.montant_mensuel) || 0), 0);
@@ -91,10 +79,10 @@ export default function TenantBilling({ session }) {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'MRR Total', value: `${mrr.toLocaleString('fr-TN')} DT`, icon: 'payments', color: '#0054cb', sub: '+2.4% vs dernier mois' },
-          { label: 'Tenants Actifs', value: stats?.activeTenants ?? 0, icon: 'person_pin', color: '#0054cb', sub: `${stats?.suspendedTenants || 0} suspendus` },
-          { label: 'Impayés B2B', value: `${unpaid.toLocaleString('fr-TN')} DT`, icon: 'warning', color: '#FF6F59', sub: 'Nécessite une action' },
-          { label: 'Croissance MRR', value: '+12.5%', icon: 'trending_up', color: '#2FBE8F', sub: 'Objectif atteint' },
+          { label: 'MRR Total', value: `${mrr.toLocaleString('fr-TN')} DT`, icon: 'payments', color: '#f95d00', sub: '+2.4% vs dernier mois' },
+          { label: 'Coworkings Actifs', value: stats?.activeTenants ?? 0, icon: 'person_pin', color: '#f95d00', sub: `${stats?.suspendedTenants || 0} suspendus` },
+          { label: 'Impayés B2B', value: `${unpaid.toLocaleString('fr-TN')} DT`, icon: 'warning', color: '#100f0d', sub: 'Nécessite une action' },
+          { label: 'Croissance MRR', value: '+12.5%', icon: 'trending_up', color: '#f95d00', sub: 'Objectif atteint' },
         ].map((c, i) => (
           <div key={i} className="bg-surface-container-lowest rounded-3xl p-5 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
             <div className="flex items-center justify-between mb-3">
@@ -111,13 +99,13 @@ export default function TenantBilling({ session }) {
         <div className="lg:col-span-2 bg-surface-container-lowest rounded-3xl p-6 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-sora text-base font-semibold text-primary">Évolution MRR (6 mois)</h2>
-            <button onClick={exportMrrCsv} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-outline-variant/30 hover:bg-surface-container-low text-on-surface-variant">Export CSV</button>
+            <button onClick={exportMrrCsv} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-outline-variant/30 hover:bg-surface-container-low text-on-surface-variant">Exporter en CSV</button>
           </div>
           <div className="flex items-end gap-3 h-48">
             {barData.map((val, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-2">
                 <span className="text-[10px] font-semibold text-on-surface-variant">{(val / 1000).toFixed(0)}k</span>
-                <div className="w-full rounded-t-lg transition-all" style={{ height: `${(val / maxBar) * 100}%`, background: i === barData.length - 1 ? '#0054cb' : 'rgba(0,84,203,0.2)' }} />
+                <div className="w-full rounded-t-lg transition-all" style={{ height: `${(val / maxBar) * 100}%`, background: i === barData.length - 1 ? '#f95d00' : 'rgba(249,93,0,0.2)' }} />
                 <span className={`text-xs font-semibold ${i === barData.length - 1 ? 'text-secondary font-bold' : 'text-on-surface-variant'}`}>{MONTHS[i]}</span>
               </div>
             ))}
@@ -166,54 +154,52 @@ export default function TenantBilling({ session }) {
 
       <div className="bg-surface-container-lowest rounded-3xl shadow-[0px_16px_32px_rgba(16,35,63,0.12)] overflow-hidden">
         <div className="px-5 py-4 border-b border-outline-variant/15">
-          <h2 className="font-sora text-base font-semibold text-primary">Suivi des Facturations Tenants</h2>
+          <h2 className="font-sora text-base font-semibold text-primary">Suivi des Facturations Coworkings</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-primary-container text-white">
-                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Tenant</th>
+                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Coworking</th>
                 <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Offre</th>
                 <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Montant mensuel</th>
                 <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Créé le</th>
                 <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Statut</th>
                 <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Prochaine échéance</th>
-                <th className="px-5 py-3.5 text-right font-semibold uppercase tracking-wider text-xs">Actions</th>
+                <th className="px-5 py-3.5 text-right font-semibold uppercase tracking-wider text-xs">Action</th>
               </tr>
             </thead>
             <tbody>
               {tenants.map((t) => (
-                <tr key={t.id} className="border-b border-outline-variant/15 hover:bg-surface-container-low/50 transition-colors group" style={{ borderLeft: '4px solid transparent' }} onMouseEnter={(e) => e.currentTarget.style.borderLeftColor = '#0054cb'} onMouseLeave={(e) => e.currentTarget.style.borderLeftColor = 'transparent'}>
+                <tr key={t.id} className="border-b border-outline-variant/15 hover:bg-surface-container-low/50 transition-colors">
+                  <td className="px-5 py-4 font-semibold text-primary">{t.nom}</td>
+                  <td className="px-5 py-4"><span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant">{t.plan?.toUpperCase() || 'STARTER'}</span></td>
+                  <td className="px-5 py-4 font-semibold text-primary">{parseFloat(t.montant_mensuel || 0).toLocaleString('fr-TN')} DT</td>
+                  <td className="px-5 py-4 text-xs text-on-surface-variant">{new Date(t.created_at).toLocaleDateString('fr-FR')}</td>
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-secondary/10 flex items-center justify-center font-sora font-bold text-secondary text-xs">{(t.nom || '?')[0]}</div>
-                      <span className="font-semibold text-primary">{t.nom}</span>
-                    </div>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${t.statut === 'actif' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                      {t.statut === 'actif' ? 'Payé / Actif' : 'Suspendu'}
+                    </span>
                   </td>
-                  <td className="px-5 py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${t.plan === 'pro' ? 'bg-secondary/10 text-secondary' : 'bg-surface-container text-on-surface-variant'}`}>{PLAN_LABELS[t.plan] || t.plan}</span></td>
-                  <td className="px-5 py-4"><span className="font-semibold text-primary">{parseFloat(t.montant_mensuel || 0).toLocaleString('fr-TN')} DT</span></td>
-                  <td className="px-5 py-4"><span className="text-on-surface-variant">{new Date(t.created_at).toLocaleDateString('fr-TN')}</span></td>
-                  <td className="px-5 py-4"><span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUT_STYLES[t.statut] || ''}`}><span className="w-1.5 h-1.5 rounded-full bg-current" />{STATUT_LABELS[t.statut] || t.statut}</span></td>
-                  <td className="px-5 py-4"><span className={`text-sm font-semibold ${t.statut === 'suspendu' ? 'text-[#ff6f59]' : 'text-primary'}`}>{t.prochaine_echeance ? new Date(t.prochaine_echeance).toLocaleDateString('fr-TN') : '—'}</span></td>
+                  <td className="px-5 py-4 text-xs text-on-surface-variant">{t.prochaine_echeance ? new Date(t.prochaine_echeance).toLocaleDateString('fr-FR') : '1er du mois'}</td>
                   <td className="px-5 py-4 text-right">
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {t.statut === 'suspendu' ? (
-                        <button onClick={async () => { await superAdminApi.updateTenant(t.id, { statut: 'actif' }); load(); }} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-secondary text-white hover:bg-secondary/90">Réactiver</button>
-                      ) : t.statut === 'actif' ? (
-                        <button className="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant" title="Reçu"><span className="material-symbols-outlined" style={{ fontSize: 18 }}>receipt_long</span></button>
-                      ) : null}
-                    </div>
+                    {t.statut === 'suspendu' ? (
+                      <button onClick={async () => { await superAdminApi.updateTenant(t.id, { statut: 'actif' }); load(); }} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-secondary text-white hover:bg-secondary/90">Réactiver</button>
+                    ) : (
+                      <button onClick={async () => { await superAdminApi.updateTenant(t.id, { statut: 'suspendu' }); load(); }} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white hover:bg-red-700">Suspendre</button>
+                    )}
                   </td>
                 </tr>
               ))}
               {tenants.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-on-surface-variant">Aucun tenant trouvé.</td></tr>
+                <tr><td colSpan={7} className="px-5 py-12 text-center text-on-surface-variant">Aucun coworking trouvé.</td></tr>
               )}
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between px-5 py-3 border-t border-outline-variant/15">
-          <span className="text-xs text-on-surface-variant">Affichage de {tenants.length > 0 ? ((page - 1) * 10 + 1) : 0}–{Math.min(page * 10, pagination.total)} sur {pagination.total} tenants</span>
+        <div className="px-5 py-3 border-t border-outline-variant/15 flex items-center justify-between">
+          <span className="text-xs text-on-surface-variant">Affichage de {tenants.length > 0 ? ((page - 1) * 10 + 1) : 0}–{Math.min(page * 10, pagination.total)} sur {pagination.total} coworkings</span>
           <div className="flex items-center gap-2">
             <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="px-3 py-1.5 rounded-lg border border-outline-variant/30 text-xs font-semibold disabled:opacity-40 hover:bg-surface-container-low">Précédent</button>
             <span className="text-xs font-semibold text-secondary px-2 bg-secondary/10 rounded-lg py-1">{page}</span>

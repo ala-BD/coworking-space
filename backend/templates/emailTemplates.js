@@ -1,33 +1,164 @@
 // backend/templates/emailTemplates.js
 // Module F Dev 2 — Étape F1 — S3
 // Templates d'emails pour les 15 notifications automatiques
-// Style : Encre & Cobalt — Responsive HTML
+// Style : DeskyWork — Orange · Blanc · Noir — Design Professionnel
 
-// ── Palette couleurs (Encre Cobalt) ──────────────────────────────────────────
-const PRIMARY   = '#1B2A6B';
-const SECONDARY = '#2D4CC8';
-const ACCENT    = '#4F6EF7';
-const LIGHT     = '#EEF1FF';
+// ── Palette couleurs (DeskyWork) ──────────────────────────────────────────────
+const PRIMARY   = '#100f0d';
+const SECONDARY = '#f95d00';
+const ACCENT    = '#ff7a28';
+const LIGHT     = '#fff4ec';
 const MUTED     = '#6B7280';
 const SUCCESS   = '#059669';
 const WARNING   = '#D97706';
 const DANGER    = '#DC2626';
 const WHITE     = '#FFFFFF';
+const BG_PAGE   = '#F2F2F2';
 
-// ── Helper : génère l'en-tête commun ──────────────────────────────────────────
+// ── Helper : en-tête DeskyWork — design professionnel ────────────────────────
 function buildHeader(config) {
+  const coworkingName = config?.coworkingName || 'Espace Coworking';
+  const coworkingEmail = config?.coworkingEmail || '';
+  const coworkingTel   = config?.coworkingTel   || '';
+
   return `
+    <!-- ══ HEADER ══════════════════════════════════════════════════════ -->
     <tr>
-      <td style="background:${PRIMARY};padding:32px 40px;">
+      <td style="padding:0;">
+        <!-- Bande supérieure fine orange -->
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
-            <td>
-              <p style="margin:0;color:${WHITE};font-size:22px;font-weight:700;">${config.coworkingName}</p>
-              <p style="margin:4px 0 0;color:${ACCENT};font-size:12px;">Espace de Coworking</p>
+            <td style="background:${SECONDARY};height:4px;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+        </table>
+        <!-- Corps de l'en-tête -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:${PRIMARY};">
+          <tr>
+            <td style="padding:28px 36px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <!-- Logo DeskyWork -->
+                  <td style="vertical-align:middle;" width="60%">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <!-- Icône carrée avec initiale stylisée -->
+                        <td style="vertical-align:middle;padding-right:14px;">
+                          <table cellpadding="0" cellspacing="0">
+                            <tr>
+                              <td style="
+                                width:44px;height:44px;
+                                background:linear-gradient(135deg,${SECONDARY} 0%,${ACCENT} 100%);
+                                border-radius:12px;
+                                text-align:center;vertical-align:middle;
+                                box-shadow:0 4px 12px rgba(249,93,0,0.45);
+                              ">
+                                <span style="
+                                  font-family:'Segoe UI',Arial,sans-serif;
+                                  font-size:22px;font-weight:900;
+                                  color:#ffffff;line-height:44px;
+                                  display:block;
+                                ">D</span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                        <!-- Nom de la marque -->
+                        <td style="vertical-align:middle;">
+                          <p style="
+                            margin:0;
+                            font-family:'Segoe UI',Arial,sans-serif;
+                            font-size:22px;font-weight:900;
+                            letter-spacing:-0.5px;
+                            color:#ffffff;line-height:1;
+                          ">DESKY<span style="color:${SECONDARY};">WORK</span></p>
+                          <p style="
+                            margin:4px 0 0;
+                            font-family:'Segoe UI',Arial,sans-serif;
+                            font-size:11px;font-weight:500;
+                            color:rgba(255,255,255,0.55);
+                            letter-spacing:0.3px;
+                          ">Solution de Gestion Coworking</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <!-- Infos coworking à droite -->
+                  <td align="right" style="vertical-align:middle;" width="40%">
+                    <p style="
+                      margin:0;
+                      font-family:'Segoe UI',Arial,sans-serif;
+                      font-size:13px;font-weight:700;
+                      color:#ffffff;
+                    ">${coworkingName}</p>
+                    ${coworkingEmail ? `<p style="margin:4px 0 0;font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.55);">${coworkingEmail}</p>` : ''}
+                    ${coworkingTel   ? `<p style="margin:3px 0 0;font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.45);">${coworkingTel}</p>` : ''}
+                  </td>
+                </tr>
+              </table>
             </td>
-            <td align="right">
-              <p style="margin:0;color:${WHITE};font-size:11px;">${config.coworkingEmail}</p>
-              <p style="margin:2px 0 0;color:#C7D2FE;font-size:11px;">${config.coworkingTel}</p>
+          </tr>
+          <!-- Séparateur orange bas -->
+          <tr>
+            <td style="background:${SECONDARY};height:3px;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+        </table>
+      </td>
+    </tr>`;
+}
+
+// ── Helper : pied de page DeskyWork ──────────────────────────────────────────
+function buildFooter(config) {
+  const coworkingName = config?.coworkingName || 'Notre espace';
+  const year = new Date().getFullYear();
+
+  return `
+    <!-- ══ FOOTER ══════════════════════════════════════════════════════ -->
+    <tr>
+      <td style="padding:0;">
+        <!-- Séparateur orange haut -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="background:${SECONDARY};height:2px;font-size:0;line-height:0;">&nbsp;</td></tr>
+        </table>
+        <!-- Corps du footer -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:${PRIMARY};">
+          <tr>
+            <td style="padding:24px 36px;text-align:center;">
+              <!-- Logo petit -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;">
+                <tr>
+                  <td align="center">
+                    <table cellpadding="0" cellspacing="0" style="display:inline-table;">
+                      <tr>
+                        <td style="
+                          width:28px;height:28px;
+                          background:${SECONDARY};
+                          border-radius:8px;
+                          text-align:center;vertical-align:middle;
+                          display:inline-block;
+                        ">
+                          <span style="font-family:'Segoe UI',Arial,sans-serif;font-size:14px;font-weight:900;color:#fff;line-height:28px;display:block;">D</span>
+                        </td>
+                        <td style="vertical-align:middle;padding-left:8px;">
+                          <span style="font-family:'Segoe UI',Arial,sans-serif;font-size:14px;font-weight:800;color:#ffffff;">DESKY<span style="color:${SECONDARY};">WORK</span></span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 6px;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.55);font-size:11px;">
+                ${coworkingName} · Propulsé par <strong style="color:${SECONDARY};">DeskyWork</strong>
+              </p>
+              <p style="margin:0 0 10px;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.35);font-size:10px;">
+                Cet email est généré automatiquement. Merci de ne pas y répondre directement.
+              </p>
+              <!-- Ligne de séparation fine -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0;">
+                <tr><td style="border-top:1px solid rgba(255,255,255,0.08);font-size:0;line-height:0;">&nbsp;</td></tr>
+              </table>
+              <p style="margin:0;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.25);font-size:10px;">
+                © ${year} DeskyWork — Tous droits réservés
+              </p>
             </td>
           </tr>
         </table>
@@ -35,20 +166,39 @@ function buildHeader(config) {
     </tr>`;
 }
 
-// ── Helper : génère le pied de page commun ───────────────────────────────────
-function buildFooter(config) {
-  return `
-    <tr>
-      <td style="background:${PRIMARY};padding:20px 40px;text-align:center;">
-        <p style="margin:0;color:#C7D2FE;font-size:11px;">
-          ${config.coworkingName} · Propulsé par <strong style="color:${WHITE};">VC LOW</strong> · contact@vclow.tn
-        </p>
-        <p style="margin:6px 0 0;color:#6B7280;font-size:10px;">
-          Cet email est généré automatiquement, merci de ne pas y répondre directement.
-        </p>
-      </td>
-    </tr>`;
+// ── Helper : wrapper HTML commun ─────────────────────────────────────────────
+function wrapEmail(innerRows, title = 'DeskyWork') {
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+</head>
+<body style="margin:0;padding:0;background:${BG_PAGE};font-family:'Segoe UI',Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:${BG_PAGE};padding:36px 16px;">
+    <tr><td align="center">
+      <!-- Conteneur principal -->
+      <table width="600" cellpadding="0" cellspacing="0" role="presentation"
+        style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;
+               box-shadow:0 6px 30px rgba(0,0,0,0.12);background:#ffffff;">
+        ${innerRows}
+      </table>
+      <!-- Bas de page hors email -->
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;margin-top:18px;">
+        <tr>
+          <td align="center" style="font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#9ca3af;">
+            Vous recevez cet email car vous êtes membre de <strong>${'${coworkingName}'}</strong>.
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
 }
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // TEMPLATE 1 — Nouvelle inscription membre
@@ -63,17 +213,17 @@ function templateNouveauMembre(membre, config) {
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Bienvenue ${prenom}</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
           <td style="background:${SUCCESS};padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">✨ Bienvenue dans notre communauté !</p>
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">✨ Bienvenue dans notre communauté !</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
+          <td style="background:#ffffff;padding:36px 40px;">
             <p style="margin:0 0 24px;color:${PRIMARY};font-size:18px;font-weight:700;">
               Bonjour ${prenom} ${nom},
             </p>
@@ -93,7 +243,7 @@ function templateNouveauMembre(membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
               <tr><td align="center">
                 <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" 
-                   style="display:inline-block;background:${SECONDARY};color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
+                   style="display:inline-block;background:${SECONDARY};color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.2px;">
                   Accéder à mon portail
                 </a>
               </td></tr>
@@ -123,62 +273,86 @@ function templateConfirmationReservation(reservation, membre, config) {
   const dateStr = dateDebut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const heureDebut = dateDebut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const heureFin = dateFin.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const isSurPlace = reservation.mode === 'sur_place' || reservation.mode === 'on_site' || reservation.mode === 'cash';
+  const modeLabel = isSurPlace ? '💵 Sur place (à l\'accueil)' : '💳 En ligne par carte bancaire';
   
   return `
 <!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Confirmation de réservation</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
-          <td style="background:${SUCCESS};padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">✅ Réservation confirmée</p>
+          <td style="background-color:${SECONDARY};background:linear-gradient(135deg, #f95d00 0%, #ff7a28 100%);padding:18px 40px;text-align:center;">
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;letter-spacing:0.3px;">✅ Réservation acceptée & confirmée</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
-            <p style="margin:0 0 24px;color:${PRIMARY};font-size:16px;">
+          <td style="background:#ffffff;padding:36px 40px;">
+            <p style="margin:0 0 20px;color:${PRIMARY};font-size:16px;line-height:1.5;">
               Bonjour <strong>${prenom}</strong>,
             </p>
-            <p style="margin:0 0 28px;color:#374151;font-size:14px;line-height:1.7;">
-              Votre réservation a été confirmée avec succès. Voici les détails :
+            <p style="margin:0 0 24px;color:#4b5563;font-size:14px;line-height:1.7;">
+              Excellente nouvelle ! L'administrateur de <strong>${config.coworkingName}</strong> a accepté votre demande de réservation. Voici le récapitulatif de votre séance :
             </p>
-            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;margin-bottom:28px;">
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #fed7aa;border-radius:14px;overflow:hidden;margin-bottom:24px;box-shadow:0 2px 8px rgba(249,93,0,0.06);">
               <tr>
-                <td style="background:${PRIMARY};padding:12px 20px;">
-                  <p style="margin:0;color:${WHITE};font-size:12px;font-weight:700;text-transform:uppercase;">Détails de votre réservation</p>
+                <td style="background:#fff7ed;padding:12px 20px;border-bottom:1px solid #fed7aa;">
+                  <p style="margin:0;color:#c2410c;font-size:11px;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;">Détails de votre réservation</p>
                 </td>
               </tr>
               <tr>
-                <td style="padding:20px;">
+                <td style="padding:20px;background:#ffffff;">
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
-                      <td style="color:${MUTED};font-size:12px;padding-bottom:12px;">Espace</td>
-                      <td align="right" style="color:#111827;font-size:14px;font-weight:600;padding-bottom:12px;">${espace}</td>
+                      <td style="color:${MUTED};font-size:13px;padding-bottom:12px;">Espace de coworking</td>
+                      <td align="right" style="color:${PRIMARY};font-size:14px;font-weight:700;padding-bottom:12px;">${espace}</td>
                     </tr>
                     <tr>
-                      <td style="color:${MUTED};font-size:12px;padding-bottom:12px;">Date</td>
-                      <td align="right" style="color:#111827;font-size:14px;font-weight:600;padding-bottom:12px;">${dateStr}</td>
+                      <td style="color:${MUTED};font-size:13px;padding-bottom:12px;">Date</td>
+                      <td align="right" style="color:${PRIMARY};font-size:14px;font-weight:600;padding-bottom:12px;">${dateStr}</td>
                     </tr>
                     <tr>
-                      <td style="color:${MUTED};font-size:12px;">Horaires</td>
-                      <td align="right" style="color:#111827;font-size:14px;font-weight:600;">${heureDebut} → ${heureFin}</td>
+                      <td style="color:${MUTED};font-size:13px;padding-bottom:12px;">Créneau horaire</td>
+                      <td align="right" style="color:${PRIMARY};font-size:14px;font-weight:600;padding-bottom:12px;">${heureDebut} → ${heureFin}</td>
+                    </tr>
+                    <tr>
+                      <td style="color:${MUTED};font-size:13px;">Mode de règlement</td>
+                      <td align="right" style="color:${SECONDARY};font-size:14px;font-weight:700;">${modeLabel}</td>
                     </tr>
                   </table>
                 </td>
               </tr>
             </table>
-            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+
+            <!-- Alerte consignes de paiement selon le mode -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffaf5;border:1px solid #ffedd8;border-left:4px solid ${SECONDARY};border-radius:10px;padding:16px;margin-bottom:28px;">
+              <tr><td>
+                <p style="margin:0;color:#9a3412;font-size:13px;line-height:1.6;">
+                  ${isSurPlace 
+                    ? '💡 <strong>Paiement sur place :</strong> Votre place est réservée. Vous pourrez procéder au règlement directement à l\'accueil le jour de votre arrivée (espèces, carte, TPE).'
+                    : '💡 <strong>Paiement en ligne :</strong> Votre réservation a été approuvée ! Vous pouvez dès à présent régler par carte bancaire en toute sécurité depuis votre espace membre.'}
+                </p>
+              </td></tr>
+            </table>
+
+            <!-- Bouton d'action DeskyWork -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
               <tr><td align="center">
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" 
-                   style="display:inline-block;background:${SECONDARY};color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
-                  Voir mes réservations
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/bookings" 
+                   style="display:inline-block;background-color:${SECONDARY};background:linear-gradient(135deg, #f95d00 0%, #ff7a28 100%);color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;box-shadow:0 4px 14px rgba(249,93,0,0.35);">
+                  Accéder à mes réservations
                 </a>
               </td></tr>
             </table>
+
+            <p style="margin:0;color:${MUTED};font-size:12px;text-align:center;">
+              Une question ? Contactez-nous à <a href="mailto:${config.coworkingEmail}" style="color:${SECONDARY};text-decoration:none;font-weight:600;">${config.coworkingEmail}</a>
+            </p>
           </td>
         </tr>
         ${buildFooter(config)}
@@ -205,17 +379,17 @@ function templateRappelReservationJ1(reservation, membre, config) {
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Rappel de réservation</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
           <td style="background:${ACCENT};padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">📅 Rappel : Votre réservation est demain !</p>
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">📅 Rappel : Votre réservation est demain !</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
+          <td style="background:#ffffff;padding:36px 40px;">
             <p style="margin:0 0 24px;color:${PRIMARY};font-size:16px;">
               Bonjour <strong>${prenom}</strong>,
             </p>
@@ -238,7 +412,7 @@ function templateRappelReservationJ1(reservation, membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
               <tr><td align="center">
                 <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" 
-                   style="display:inline-block;background:${SECONDARY};color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
+                   style="display:inline-block;background:${SECONDARY};color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.2px;">
                   Voir ma réservation
                 </a>
               </td></tr>
@@ -267,17 +441,17 @@ function templateAlerte15MinAvantFin(session, membre, config) {
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Votre session se termine bientôt</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
           <td style="background:${WARNING};padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">⏰ Plus que 15 minutes !</p>
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">⏰ Plus que 15 minutes !</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
+          <td style="background:#ffffff;padding:36px 40px;">
             <p style="margin:0 0 24px;color:${PRIMARY};font-size:16px;">
               Bonjour <strong>${prenom}</strong>,
             </p>
@@ -295,7 +469,7 @@ function templateAlerte15MinAvantFin(session, membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
               <tr><td align="center">
                 <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" 
-                   style="display:inline-block;background:${WARNING};color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
+                   style="display:inline-block;background:${WARNING};color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.2px;">
                   Prolonger ma session
                 </a>
               </td></tr>
@@ -323,17 +497,17 @@ function templateFinSession(session, membre, config) {
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Votre session est terminée</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
           <td style="background:${DANGER};padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">⏱️ Temps écoulé !</p>
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">⏱️ Temps écoulé !</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
+          <td style="background:#ffffff;padding:36px 40px;">
             <p style="margin:0 0 24px;color:${PRIMARY};font-size:16px;">
               Bonjour <strong>${prenom}</strong>,
             </p>
@@ -376,17 +550,17 @@ function templateDepassementSession(session, membre, minutesDepassement, config)
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Dépassement de session</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
           <td style="background:${DANGER};padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">🚨 Dépassement de ${minutesDepassement} minute${minutesDepassement > 1 ? 's' : ''}</p>
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">🚨 Dépassement de ${minutesDepassement} minute${minutesDepassement > 1 ? 's' : ''}</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
+          <td style="background:#ffffff;padding:36px 40px;">
             <p style="margin:0 0 24px;color:${PRIMARY};font-size:16px;">
               Bonjour <strong>${prenom}</strong>,
             </p>
@@ -407,7 +581,7 @@ function templateDepassementSession(session, membre, minutesDepassement, config)
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
               <tr><td align="center">
                 <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" 
-                   style="display:inline-block;background:${DANGER};color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
+                   style="display:inline-block;background:${DANGER};color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.2px;">
                   Voir ma facture
                 </a>
               </td></tr>
@@ -446,17 +620,17 @@ function templateAbonnementExpirantJ7(abonnement, membre, config) {
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Votre abonnement expire bientôt</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
           <td style="background:${WARNING};padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">📆 Votre abonnement expire dans 7 jours</p>
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">📆 Votre abonnement expire dans 7 jours</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
+          <td style="background:#ffffff;padding:36px 40px;">
             <p style="margin:0 0 24px;color:${PRIMARY};font-size:16px;">
               Bonjour <strong>${prenom}</strong>,
             </p>
@@ -474,7 +648,7 @@ function templateAbonnementExpirantJ7(abonnement, membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
               <tr><td align="center">
                 <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/abonnement" 
-                   style="display:inline-block;background:${SECONDARY};color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
+                   style="display:inline-block;background:${SECONDARY};color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.2px;">
                   Renouveler mon abonnement
                 </a>
               </td></tr>
@@ -512,17 +686,17 @@ function templateAbonnementExpire(abonnement, membre, config) {
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Votre abonnement a expiré</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
           <td style="background:${DANGER};padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">⚠️ Votre abonnement a expiré</p>
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">⚠️ Votre abonnement a expiré</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
+          <td style="background:#ffffff;padding:36px 40px;">
             <p style="margin:0 0 24px;color:${PRIMARY};font-size:16px;">
               Bonjour <strong>${prenom}</strong>,
             </p>
@@ -540,7 +714,7 @@ function templateAbonnementExpire(abonnement, membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
               <tr><td align="center">
                 <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/abonnement" 
-                   style="display:inline-block;background:${DANGER};color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
+                   style="display:inline-block;background:${DANGER};color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.2px;">
                   Renouveler maintenant
                 </a>
               </td></tr>
@@ -576,17 +750,17 @@ function templatePaiementEnregistre(payment, membre, config) {
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Paiement enregistré</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
           <td style="background:${statutColor};padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">${statut} — Reçu ${numero}</p>
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">${statut} — Reçu ${numero}</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
+          <td style="background:#ffffff;padding:36px 40px;">
             <p style="margin:0 0 24px;color:${PRIMARY};font-size:16px;">
               Bonjour <strong>${prenom}</strong>,
             </p>
@@ -598,7 +772,7 @@ function templatePaiementEnregistre(payment, membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;margin-bottom:28px;">
               <tr>
                 <td style="background:${PRIMARY};padding:12px 20px;">
-                  <p style="margin:0;color:${WHITE};font-size:12px;font-weight:700;">DÉTAIL DU PAIEMENT</p>
+                  <p style="margin:0;color:#ffffff;font-size:12px;font-weight:700;">DÉTAIL DU PAIEMENT</p>
                 </td>
               </tr>
               <tr>
@@ -619,7 +793,7 @@ function templatePaiementEnregistre(payment, membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
               <tr><td align="center">
                 <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/factures" 
-                   style="display:inline-block;background:${SECONDARY};color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
+                   style="display:inline-block;background:${SECONDARY};color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.2px;">
                   Voir mes factures
                 </a>
               </td></tr>
@@ -649,17 +823,17 @@ function templatePaiementRetardJ3(payment, membre, config) {
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Rappel de paiement</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
           <td style="background:#D97706;padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">💳 Rappel de paiement — Retard de 3 jours</p>
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">💳 Rappel de paiement — Retard de 3 jours</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
+          <td style="background:#ffffff;padding:36px 40px;">
             <p style="margin:0 0 24px;color:${PRIMARY};font-size:16px;">
               Bonjour <strong>${prenom}</strong>,
             </p>
@@ -669,7 +843,7 @@ function templatePaiementRetardJ3(payment, membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="border:2px solid #D97706;border-radius:12px;overflow:hidden;margin-bottom:28px;">
               <tr>
                 <td style="background:#D97706;padding:10px 20px;">
-                  <p style="margin:0;color:${WHITE};font-size:12px;font-weight:700;">PAIEMENT EN ATTENTE</p>
+                  <p style="margin:0;color:#ffffff;font-size:12px;font-weight:700;">PAIEMENT EN ATTENTE</p>
                 </td>
               </tr>
               <tr>
@@ -696,7 +870,7 @@ function templatePaiementRetardJ3(payment, membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
               <tr><td align="center">
                 <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/factures" 
-                   style="display:inline-block;background:#D97706;color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
+                   style="display:inline-block;background:#D97706;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.2px;">
                   Régulariser mon paiement
                 </a>
               </td></tr>
@@ -725,17 +899,17 @@ function templatePaiementRetardJ7(payment, membre, config) {
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Rappel urgent de paiement</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
           <td style="background:${WARNING};padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">⚠️ RAPPEL URGENT — Retard de 7 jours</p>
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">⚠️ RAPPEL URGENT — Retard de 7 jours</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
+          <td style="background:#ffffff;padding:36px 40px;">
             <p style="margin:0 0 24px;color:${PRIMARY};font-size:16px;">
               Bonjour <strong>${prenom}</strong>,
             </p>
@@ -745,7 +919,7 @@ function templatePaiementRetardJ7(payment, membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="border:2px solid ${WARNING};border-radius:12px;overflow:hidden;margin-bottom:28px;">
               <tr>
                 <td style="background:${WARNING};padding:12px 20px;">
-                  <p style="margin:0;color:${WHITE};font-size:12px;font-weight:700;">⚠️ PAIEMENT IMPAYÉ DEPUIS 7 JOURS</p>
+                  <p style="margin:0;color:#ffffff;font-size:12px;font-weight:700;">⚠️ PAIEMENT IMPAYÉ DEPUIS 7 JOURS</p>
                 </td>
               </tr>
               <tr>
@@ -779,7 +953,7 @@ function templatePaiementRetardJ7(payment, membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
               <tr><td align="center">
                 <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/factures" 
-                   style="display:inline-block;background:${WARNING};color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
+                   style="display:inline-block;background:${WARNING};color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.2px;">
                   Régulariser MAINTENANT
                 </a>
               </td></tr>
@@ -810,59 +984,64 @@ function templateAnnulationReservation(reservation, membre, config) {
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Annulation de réservation</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
-          <td style="background:#7C3AED;padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">🗑️ Réservation annulée</p>
+          <td style="background-color:${SECONDARY};background:linear-gradient(135deg, #f95d00 0%, #ff7a28 100%);padding:18px 40px;text-align:center;">
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;letter-spacing:0.3px;">🗑️ Réservation annulée</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
-            <p style="margin:0 0 24px;color:${PRIMARY};font-size:16px;">
+          <td style="background:#ffffff;padding:36px 40px;">
+            <p style="margin:0 0 20px;color:${PRIMARY};font-size:16px;line-height:1.5;">
               Bonjour <strong>${prenom}</strong>,
             </p>
-            <p style="margin:0 0 28px;color:#374151;font-size:14px;line-height:1.7;">
-              Votre réservation a été annulée avec succès. Voici les détails :
+            <p style="margin:0 0 24px;color:#4b5563;font-size:14px;line-height:1.7;">
+              Votre réservation a bien été annulée. Voici le récapitulatif de l'espace concerné :
             </p>
-            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;margin-bottom:28px;">
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #fed7aa;border-radius:14px;overflow:hidden;margin-bottom:24px;box-shadow:0 2px 8px rgba(249,93,0,0.06);">
               <tr>
-                <td style="background:#F3F4F6;padding:12px 20px;">
-                  <p style="margin:0;color:#374151;font-size:12px;font-weight:700;">RÉSERVATION ANNULÉE</p>
+                <td style="background:#fff7ed;padding:12px 20px;border-bottom:1px solid #fed7aa;">
+                  <p style="margin:0;color:#c2410c;font-size:11px;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;">Détails de la réservation annulée</p>
                 </td>
               </tr>
               <tr>
-                <td style="padding:20px;">
+                <td style="padding:20px;background:#ffffff;">
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
-                      <td style="color:${MUTED};font-size:12px;padding-bottom:12px;">Espace</td>
-                      <td align="right" style="color:#111827;font-size:14px;font-weight:600;padding-bottom:12px;">${espace}</td>
+                      <td style="color:${MUTED};font-size:13px;padding-bottom:12px;">Espace de coworking</td>
+                      <td align="right" style="color:${PRIMARY};font-size:14px;font-weight:700;padding-bottom:12px;">${espace}</td>
                     </tr>
                     <tr>
-                      <td style="color:${MUTED};font-size:12px;padding-bottom:12px;">Date</td>
-                      <td align="right" style="color:#111827;font-size:14px;font-weight:600;padding-bottom:12px;">${dateStr}</td>
+                      <td style="color:${MUTED};font-size:13px;padding-bottom:12px;">Date</td>
+                      <td align="right" style="color:${PRIMARY};font-size:14px;font-weight:600;padding-bottom:12px;">${dateStr}</td>
                     </tr>
                     <tr>
-                      <td style="color:${MUTED};font-size:12px;">Heure</td>
-                      <td align="right" style="color:#111827;font-size:14px;font-weight:600;">${heureDebut}</td>
+                      <td style="color:${MUTED};font-size:13px;">Heure</td>
+                      <td align="right" style="color:${SECONDARY};font-size:14px;font-weight:700;">${heureDebut}</td>
                     </tr>
                   </table>
                 </td>
               </tr>
             </table>
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:16px;margin-bottom:24px;">
+
+            <!-- Alerte politique remboursement assortie à la charte -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffaf5;border:1px solid #ffedd8;border-left:4px solid ${SECONDARY};border-radius:10px;padding:16px;margin-bottom:28px;">
               <tr><td>
-                <p style="margin:0;color:#065F46;font-size:13px;">
-                  💡 Selon notre politique d'annulation, le remboursement éventuel sera traité sous 3 à 5 jours ouvrés.
+                <p style="margin:0;color:#9a3412;font-size:13px;line-height:1.6;">
+                  💡 <strong>Politique de remboursement :</strong> Le traitement du remboursement éventuel s'effectuera sous 3 à 5 jours ouvrés selon les conditions de votre espace.
                 </p>
               </td></tr>
             </table>
-            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+
+            <!-- Bouton d'action DeskyWork -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
               <tr><td align="center">
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/reservations" 
-                   style="display:inline-block;background:${SECONDARY};color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/bookings" 
+                   style="display:inline-block;background-color:${SECONDARY};background:linear-gradient(135deg, #f95d00 0%, #ea580c 100%);color:#ffffff;text-decoration:none;padding:14px 34px;border-radius:12px;font-size:14px;font-weight:700;box-shadow:0 4px 14px rgba(249,93,0,0.35);">
                   Faire une nouvelle réservation
                 </a>
               </td></tr>
@@ -893,17 +1072,17 @@ function templateNouveauFormateur(formateur, config) {
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Bienvenue ${prenom}</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
           <td style="background:${SUCCESS};padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">✨ Votre compte formateur est prêt !</p>
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">✨ Votre compte formateur est prêt !</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
+          <td style="background:#ffffff;padding:36px 40px;">
             <p style="margin:0 0 24px;color:${PRIMARY};font-size:18px;font-weight:700;">Bonjour ${prenom} ${nom},</p>
             <p style="margin:0 0 20px;color:#374151;font-size:14px;line-height:1.7;">
               Votre compte formateur a été créé avec succès sur <strong>${config.coworkingName}</strong>.
@@ -925,7 +1104,7 @@ function templateNouveauFormateur(formateur, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
               <tr><td align="center">
                 <a href="${loginUrl}/login" 
-                   style="display:inline-block;background:${SECONDARY};color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
+                   style="display:inline-block;background:${SECONDARY};color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.2px;">
                   Accéder à mon espace formateur
                 </a>
               </td></tr>
@@ -961,17 +1140,17 @@ function templateInscriptionFormation(formation, membre, config) {
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Inscription confirmée</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
           <td style="background:${SUCCESS};padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">🎓 Inscription confirmée !</p>
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">🎓 Inscription confirmée !</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
+          <td style="background:#ffffff;padding:36px 40px;">
             <p style="margin:0 0 24px;color:${PRIMARY};font-size:16px;">
               Bonjour <strong>${prenom}</strong>,
             </p>
@@ -981,7 +1160,7 @@ function templateInscriptionFormation(formation, membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;margin-bottom:28px;">
               <tr>
                 <td style="background:${PRIMARY};padding:12px 20px;">
-                  <p style="margin:0;color:${WHITE};font-size:12px;font-weight:700;">DÉTAILS DE LA FORMATION</p>
+                  <p style="margin:0;color:#ffffff;font-size:12px;font-weight:700;">DÉTAILS DE LA FORMATION</p>
                 </td>
               </tr>
               <tr>
@@ -1021,7 +1200,7 @@ function templateInscriptionFormation(formation, membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
               <tr><td align="center">
                 <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/formations" 
-                   style="display:inline-block;background:${SECONDARY};color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
+                   style="display:inline-block;background:${SECONDARY};color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.2px;">
                   Voir mes formations
                 </a>
               </td></tr>
@@ -1054,17 +1233,17 @@ function templateRappelFormationJ1(formation, membre, config) {
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Rappel de formation</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
           <td style="background:${ACCENT};padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">🎓 Rappel : Votre formation est demain !</p>
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">🎓 Rappel : Votre formation est demain !</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
+          <td style="background:#ffffff;padding:36px 40px;">
             <p style="margin:0 0 24px;color:${PRIMARY};font-size:16px;">
               Bonjour <strong>${prenom}</strong>,
             </p>
@@ -1093,7 +1272,7 @@ function templateRappelFormationJ1(formation, membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
               <tr><td align="center">
                 <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/formations" 
-                   style="display:inline-block;background:${SECONDARY};color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
+                   style="display:inline-block;background:${SECONDARY};color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.2px;">
                   Voir ma formation
                 </a>
               </td></tr>
@@ -1123,17 +1302,17 @@ function templateNouveauMessagePortail(message, expediteur, config) {
 <html lang="fr">
 <head><meta charset="UTF-8"><title>Nouveau message</title></head>
 <body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
         ${buildHeader(config)}
         <tr>
           <td style="background:${ACCENT};padding:16px 40px;text-align:center;">
-            <p style="margin:0;color:${WHITE};font-size:16px;font-weight:700;">💬 Nouveau message portail</p>
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">💬 Nouveau message portail</p>
           </td>
         </tr>
         <tr>
-          <td style="background:${WHITE};padding:40px;">
+          <td style="background:#ffffff;padding:36px 40px;">
             <p style="margin:0 0 24px;color:${PRIMARY};font-size:16px;">
               <strong>Bonjour,</strong>
             </p>
@@ -1163,7 +1342,7 @@ function templateNouveauMessagePortail(message, expediteur, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
               <tr><td align="center">
                 <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/admin/messages" 
-                   style="display:inline-block;background:${SECONDARY};color:${WHITE};text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:700;">
+                   style="display:inline-block;background:${SECONDARY};color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.2px;">
                   Répondre au message
                 </a>
               </td></tr>

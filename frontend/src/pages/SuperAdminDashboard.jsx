@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { superAdminApi } from '../services/superAdminApi';
 import { formationApi } from '../services/api';
+import { exportFormationsToExcel } from '../utils/exportFormationsExcel';
 import { supabase } from '../supabaseClient';
 import PortalLayout from '../components/layout/PortalLayout';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const styles = `
 @keyframes bento-fade-in { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
@@ -68,27 +70,7 @@ export default function SuperAdminDashboard({ session }) {
 
 
   const handleDownloadCSV = () => {
-    const headers = ['Titre', 'Formateur', 'Espace/Coworking', 'Date debut', 'Inscrits', 'Tarif', 'Statut'];
-    const rows = allFormations.map(f => [
-      f.titre,
-      f.profiles ? `${f.profiles.prenom} ${f.profiles.nom}` : '—',
-      f.espaces?.nom || '—',
-      new Date(f.date_debut).toLocaleString('fr-FR'),
-      `${f.nb_inscrits ?? 0}/${f.capacite_max}`,
-      f.prix_inscription > 0 ? `${f.prix_inscription} DT` : 'Gratuit',
-      f.statut
-    ]);
-
-    const csvContent = "data:text/csv;charset=utf-8,\uFEFF"
-      + [headers.join(','), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))].join('\n');
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `liste_formations_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportFormationsToExcel(allFormations);
   };
 
   if (loading || !profile) {
@@ -100,10 +82,10 @@ export default function SuperAdminDashboard({ session }) {
   }
 
   const cards = [
-    { label: 'Total Coworkings', value: stats?.totalTenants ?? 0, icon: 'domain', color: '#0054cb', bg: 'rgba(0,84,203,0.08)' },
-    { label: 'MRR Total', value: `${(stats?.mrr || 0).toLocaleString('fr-TN')} DT`, icon: 'payments', color: '#000d23', bg: 'rgba(0,13,35,0.06)' },
-    { label: 'Total Membres', value: stats?.totalMembers ?? 0, icon: 'groups', color: '#2FBE8F', bg: 'rgba(47,190,143,0.08)' },
-    { label: 'Coworkings Actifs', value: stats?.activeTenants ?? 0, icon: 'check_circle', color: '#2FBE8F', bg: 'rgba(47,190,143,0.08)' },
+    { label: 'Total Coworkings', value: stats?.totalTenants ?? 0, icon: 'domain', color: '#f95d00', bg: 'rgba(249,93,0,0.08)' },
+    { label: 'MRR Total', value: `${(stats?.mrr || 0).toLocaleString('fr-TN')} DT`, icon: 'payments', color: '#f95d00', bg: 'rgba(249,93,0,0.08)' },
+    { label: 'Total Membres', value: stats?.totalMembers ?? 0, icon: 'groups', color: '#100f0d', bg: 'rgba(16,15,13,0.06)' },
+    { label: 'Coworkings Actifs', value: stats?.activeTenants ?? 0, icon: 'check_circle', color: '#f95d00', bg: 'rgba(249,93,0,0.08)' },
   ];
 
   return (
@@ -131,7 +113,7 @@ export default function SuperAdminDashboard({ session }) {
         <div className="bg-surface-container-lowest rounded-3xl p-6 border border-amber-200/60 mb-8 shadow-[0px_4px_12px_rgba(245,158,11,0.06)]">
           <div className="flex items-center gap-2 mb-4">
             <span className="material-symbols-outlined text-[#d97706]" style={{ fontSize: 22 }}>domain_disabled</span>
-            <h2 className="font-sora text-lg font-semibold text-primary">Demandes d'inscription de Coworkings</h2>
+            <h2 className="font-sora text-lg font-semibold text-primary">Demandes d’inscription de Coworkings</h2>
             <span className="ml-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white animate-pulse" style={{ background: '#d97706' }}>
               {pendingTenants.length}
             </span>
@@ -194,26 +176,39 @@ export default function SuperAdminDashboard({ session }) {
             <div className="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl">
               <span className="material-symbols-outlined text-secondary" style={{ fontSize: 24 }}>payments</span>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-primary">Revenus récurrents mensuels</p>
-                <p className="text-xs text-on-surface-variant">MRR stable et croissant</p>
+                <p className="text-sm font-semibold text-primary">Revenus récurrents mensuels (MRR)</p>
+                <p className="text-xs text-on-surface-variant">Croissance sur les 6 derniers mois</p>
               </div>
-              <span className="font-sora font-bold text-secondary">{(stats?.mrr || 0).toLocaleString('fr-TN')} DT</span>
+              <span className="font-sora font-bold text-secondary font-lg">{(stats?.mrr || 0).toLocaleString('fr-TN')} DT</span>
             </div>
-            <div className="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl">
-              <span className="material-symbols-outlined text-[#2FBE8F]" style={{ fontSize: 24 }}>trending_up</span>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-primary">Coworkings actifs</p>
-                <p className="text-xs text-on-surface-variant">{stats?.activeTenants || 0} sur {stats?.totalTenants || 0} coworkings</p>
+
+            {/* Graphique MRR & Croissance */}
+            <div className="pt-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-on-surface-variant">Évolution du MRR (DT)</span>
+                <span className="text-xs text-secondary font-bold">Actifs : {stats?.activeTenants || 0} coworkings</span>
               </div>
-              <span className="font-sora font-bold text-[#2FBE8F]">{stats?.totalTenants ? Math.round((stats.activeTenants / stats.totalTenants) * 100) : 0}%</span>
-            </div>
-            <div className="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl">
-              <span className="material-symbols-outlined text-[#FFB020]" style={{ fontSize: 24 }}>warning</span>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-primary">Coworkings suspendus</p>
-                <p className="text-xs text-on-surface-variant">Nécessitent une attention</p>
-              </div>
-              <span className="font-sora font-bold text-[#FFB020]">{stats?.suspendedTenants || 0}</span>
+              {stats?.monthlyGrowth && stats.monthlyGrowth.length > 0 ? (
+                <ResponsiveContainer width="100%" height={160}>
+                  <AreaChart data={stats.monthlyGrowth} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorMrr" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f95d00" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#f95d00" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+                    <XAxis dataKey="mois" tick={{ fontSize: 10, fill: '#64748b' }} />
+                    <YAxis tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(v) => `${v}`} width={45} />
+                    <Tooltip formatter={(value) => [`${value} DT`, 'MRR']} />
+                    <Area type="monotone" dataKey="mrr" stroke="#f95d00" strokeWidth={2.5} fillOpacity={1} fill="url(#colorMrr)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[140px] flex items-center justify-center text-xs text-on-surface-variant">
+                  Aucune donnée d'évolution disponible
+                </div>
+              )}
             </div>
           </div>
         </div>

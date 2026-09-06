@@ -11,8 +11,8 @@ const HOURS = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START
 
 const STATUT_COLORS = {
   pending: 'bg-amber-100 border-amber-400 text-amber-900',
-  confirmed: 'bg-secondary-fixed border-secondary text-on-secondary-fixed',
-  cancelled: 'bg-surface-container-high border-outline-variant text-on-surface-variant',
+  confirmed: 'bg-emerald-100 border-emerald-500 text-emerald-900',
+  cancelled: 'bg-surface-container-high border-outline-variant text-on-surface-variant line-through opacity-60',
 };
 
 const STATUT_LABELS = {
