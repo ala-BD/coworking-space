@@ -128,7 +128,8 @@ export default function AdminReservations({ session }) {
         const memberName = `${b.profiles?.prenom || ''} ${b.profiles?.nom || ''}`.toLowerCase();
         const memberEmail = (b.profiles?.email || '').toLowerCase();
         const espaceName = (b.espaces?.nom || '').toLowerCase();
-        if (!memberName.includes(q) && !memberEmail.includes(q) && !espaceName.includes(q)) {
+        const roleLabel = (b.profiles?.role === 'formateur' ? 'formateur' : 'membre').toLowerCase();
+        if (!memberName.includes(q) && !memberEmail.includes(q) && !espaceName.includes(q) && !roleLabel.includes(q)) {
           return false;
         }
       }
@@ -145,6 +146,16 @@ export default function AdminReservations({ session }) {
     const today = bookings.filter((b) => (b.date_debut || '').startsWith(todayStr)).length;
     return { total, pending, confirmed, today };
   }, [bookings]);
+
+  const getReservationOwner = (booking) => {
+    const profile = booking.profiles || {};
+    const prenom = profile.prenom || '';
+    const nom = profile.nom || '';
+    const email = profile.email || '—';
+    const role = profile.role === 'formateur' ? 'Formateur' : 'Membre';
+    const fullName = [prenom, nom].filter(Boolean).join(' ') || 'Sans nom';
+    return { fullName, email, role };
+  };
 
   if (loading) {
     return (
@@ -322,6 +333,11 @@ export default function AdminReservations({ session }) {
                     icon: 'info',
                   };
 
+                  const member = b.profiles || b.guests || {};
+                  const memberName = [member.prenom || b.guests?.prenom, member.nom || b.guests?.nom].filter(Boolean).join(' ') || 'Guest';
+                  const memberEmail = member.email || b.guests?.email || 'Sans email';
+                  const memberPhone = member.telephone || b.guests?.telephone || 'Sans téléphone';
+                  const memberRole = member.role === 'formateur' ? 'Formateur' : 'Membre';
                   const startDate = new Date(b.date_debut);
                   const endDate = new Date(b.date_fin);
                   const isActing = actionId === b.id;
@@ -332,14 +348,22 @@ export default function AdminReservations({ session }) {
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-secondary/10 text-secondary font-bold flex items-center justify-center text-xs shrink-0">
-                            {b.profiles?.prenom?.[0] || 'U'}{b.profiles?.nom?.[0] || ''}
+                            {(member.prenom || b.guests?.prenom || 'G')?.[0] || 'G'}{(member.nom || b.guests?.nom || '')?.[0] || ''}
                           </div>
                           <div className="min-w-0">
                             <p className="font-semibold text-primary truncate">
-                              {b.profiles?.prenom} {b.profiles?.nom}
+                              {memberName}
                             </p>
                             <p className="text-xs text-on-surface-variant truncate">
-                              {b.profiles?.email || 'Sans email'}
+                              {memberEmail}
+                            </p>
+                            <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 text-[10px] font-semibold">
+                              <span className="material-symbols-outlined" style={{ fontSize: 11 }}>{memberRole === 'Formateur' ? 'school' : 'person'}</span>
+                              {memberRole}
+                            </div>
+                            <p className="mt-1 text-[11px] text-on-surface-variant flex items-center gap-1 truncate">
+                              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>call</span>
+                              <span>{memberPhone}</span>
                             </p>
                           </div>
                         </div>

@@ -237,11 +237,11 @@ export default function AdminDashboard({ session }) {
   const k = kpis || {};
   const ca = k.chiffreAffaires || { jour: 0, mois: 0, annee: 0 };
   const membres = k.nouveauxMembres || { moisActuel: 0, moisPrecedent: 0, evolution: 0 };
-  const sessions = k.sessionsEnCours || [];
-  const topMembres = k.topMembres || [];
-  const tauxOccupation = k.tauxOccupation || [];
-  const revenueChart = chart?.revenueChart || [];
-  const occupationChart = chart?.occupationChart || [];
+  const sessions = Array.isArray(k.sessionsEnCours) ? k.sessionsEnCours : [];
+  const topMembres = Array.isArray(k.topMembres) ? k.topMembres : [];
+  const tauxOccupation = Array.isArray(k.tauxOccupation) ? k.tauxOccupation : [];
+  const revenueChart = Array.isArray(chart?.revenueChart) ? chart.revenueChart : [];
+  const occupationChart = Array.isArray(chart?.occupationChart) ? chart.occupationChart : [];
 
   const evolutionLabel = membres.evolution > 0
     ? `▲ +${membres.evolution}% vs mois préc.`

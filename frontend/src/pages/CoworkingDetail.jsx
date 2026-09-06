@@ -5,13 +5,15 @@ import BrandLogo from '../components/layout/BrandLogo';
 
 /* ─── Charte DeskyWork ─── */
 const EC = {
-  navy: '#100f0d',
-  cobalt: '#f95d00',
+  navy: '#111827',
+  cobalt: '#f97316',
   white: '#ffffff',
-  bg: '#fbffff',
-  onNavy: '#798bac',
-  muted: '#44474d',
-  outline: '#c5c6ce',
+  bg: '#f8f7f5',
+  onNavy: '#c7d2fe',
+  muted: '#475569',
+  outline: '#e2e8f0',
+  soft: '#fff7ed',
+  softDark: '#1f2937',
 };
 
 const SPACE_LABELS = {
@@ -90,19 +92,19 @@ export default function CoworkingDetail() {
       {/* ── HERO ── */}
       <div style={{ position: 'relative', height: 380, overflow: 'hidden' }}>
         <img src={heroImg} alt={c.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(16,15,13,0.95) 0%, rgba(16,15,13,0.15) 60%)' }} />
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '2rem 24px' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(17,24,39,0.94) 8%, rgba(17,24,39,0.38) 58%, rgba(17,24,39,0.2) 100%)' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '2.2rem 24px' }}>
           <div style={{ maxWidth: 1240, margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
               {c.logo_url && (
                 <img src={c.logo_url} alt="logo"
-                  style={{ width: 64, height: 64, borderRadius: 16, objectFit: 'contain', background: EC.white, border: '2px solid rgba(255,255,255,0.6)', padding: 6 }} />
+                  style={{ width: 64, height: 64, borderRadius: 16, objectFit: 'contain', background: EC.white, border: '2px solid rgba(255,255,255,0.7)', padding: 6, boxShadow: '0 8px 24px rgba(0,0,0,0.16)' }} />
               )}
               <div>
-                <span style={{ background: EC.cobalt, color: EC.white, borderRadius: 8, padding: '4px 12px', fontSize: '.72rem', fontWeight: 700, display: 'inline-block', marginBottom: 8 }}>
+                <span style={{ background: 'rgba(249,115,22,0.96)', color: EC.white, borderRadius: 8, padding: '5px 12px', fontSize: '.72rem', fontWeight: 800, display: 'inline-block', marginBottom: 10, letterSpacing: '.04em', boxShadow: '0 8px 18px rgba(249,115,22,0.25)' }}>
                   {c.ville || c.pays || 'Tunisie'}
                 </span>
-                <h1 style={{ fontFamily: 'Sora', fontWeight: 800, color: EC.white, fontSize: 'clamp(1.8rem,4vw,2.6rem)', margin: 0 }}>{c.nom}</h1>
+                <h1 style={{ fontFamily: 'Sora', fontWeight: 800, color: EC.white, fontSize: 'clamp(1.9rem,4vw,2.8rem)', margin: 0, textShadow: '0 2px 16px rgba(0,0,0,0.3)' }}>{c.nom}</h1>
               </div>
             </div>
           </div>
@@ -114,14 +116,14 @@ export default function CoworkingDetail() {
         {/* ── INFOS / COORDONNÉES ── */}
         <div className="row g-4 mb-5">
           <div className="col-lg-7">
-            <h2 style={{ fontFamily: 'Sora', fontWeight: 700, color: EC.navy, fontSize: '1.4rem', marginBottom: 12 }}>À propos</h2>
-            <p style={{ color: EC.muted, lineHeight: 1.85 }}>
+            <h2 style={{ fontFamily: 'Sora', fontWeight: 800, color: EC.navy, fontSize: '1.5rem', marginBottom: 12 }}>À propos</h2>
+            <p style={{ color: '#334155', lineHeight: 1.9, fontSize: '1rem', margin: 0 }}>
               {c.description || 'Espace de coworking premium pour professionnels ambitieux.'}
             </p>
           </div>
           <div className="col-lg-5">
-            <div style={{ background: EC.white, borderRadius: 20, border: `1.5px solid ${EC.outline}`, padding: '1.5rem', boxShadow: '0 4px 16px rgba(16,15,13,0.06)' }}>
-              <h3 style={{ fontFamily: 'Sora', fontWeight: 700, color: EC.navy, fontSize: '1rem', marginBottom: 16 }}>Coordonnées & accès</h3>
+            <div style={{ background: EC.white, borderRadius: 22, border: `1.5px solid ${EC.outline}`, padding: '1.6rem', boxShadow: '0 10px 28px rgba(15,23,42,0.06)' }}>
+              <h3 style={{ fontFamily: 'Sora', fontWeight: 800, color: EC.navy, fontSize: '1.05rem', marginBottom: 16 }}>Coordonnées & accès</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {c.adresse && (
                   <InfoRow icon="location_on" label="Adresse" value={`${c.adresse}${c.ville ? `, ${c.ville}` : ''}`} />
@@ -150,13 +152,13 @@ export default function CoworkingDetail() {
         {/* ── ESPACES ── */}
         <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
           <div>
-            <h2 style={{ fontFamily: 'Sora', fontWeight: 700, color: EC.navy, fontSize: '1.4rem', margin: 0 }}>Espaces disponibles</h2>
-            <p style={{ color: EC.muted, fontSize: '.9rem', margin: '4px 0 0' }}>
+            <h2 style={{ fontFamily: 'Sora', fontWeight: 800, color: EC.navy, fontSize: '1.5rem', margin: 0 }}>Espaces disponibles</h2>
+            <p style={{ color: '#475569', fontSize: '.95rem', margin: '6px 0 0' }}>
               Réservez sans compte — sélectionnez un espace et vos horaires.
             </p>
           </div>
           <Link to={`/book-guest?tenantId=${c.id}`}
-            style={{ background: EC.cobalt, color: EC.white, padding: '12px 22px', borderRadius: 12, fontWeight: 700, textDecoration: 'none', fontSize: '.9rem' }}>
+            style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: EC.white, padding: '12px 22px', borderRadius: 12, fontWeight: 800, textDecoration: 'none', fontSize: '.9rem', boxShadow: '0 12px 22px rgba(249,115,22,0.22)' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 17, verticalAlign: '-3px', marginRight: 6 }}>event_available</span>
             Réserver en tant qu'invité
           </Link>
@@ -173,28 +175,28 @@ export default function CoworkingDetail() {
               const img = esp.photo_url || (Array.isArray(esp.photos_urls) && esp.photos_urls[0]) || c.cover_url || FALLBACK_IMG;
               return (
                 <div key={esp.id} className="col-md-6 col-lg-4">
-                  <div style={{ background: EC.white, borderRadius: 20, overflow: 'hidden', border: `1.5px solid ${EC.outline}`, boxShadow: '0 4px 16px rgba(16,15,13,0.06)', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ height: 170, overflow: 'hidden' }}>
-                      <img src={img} alt={esp.nom} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ background: EC.white, borderRadius: 22, overflow: 'hidden', border: `1.5px solid ${EC.outline}`, boxShadow: '0 12px 28px rgba(15,23,42,0.06)', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ height: 180, overflow: 'hidden', background: '#eef2ff' }}>
+                      <img src={img} alt={esp.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     </div>
                     <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                        <span style={{ background: '#dae2ff', color: '#001847', padding: '3px 10px', borderRadius: 99, fontWeight: 700, fontSize: '.68rem', textTransform: 'uppercase', letterSpacing: '.5px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12 }}>
+                        <span style={{ background: '#e0f2fe', color: '#0f172a', padding: '4px 10px', borderRadius: 999, fontWeight: 800, fontSize: '.68rem', textTransform: 'uppercase', letterSpacing: '.5px' }}>
                           {SPACE_LABELS[esp.type] || esp.type}
                         </span>
                         {esp.tarif_horaire > 0 && (
-                          <span style={{ fontFamily: 'Sora', fontWeight: 800, color: EC.cobalt }}>
-                            {parseFloat(esp.tarif_horaire).toFixed(2)} DT <span style={{ fontSize: 11, fontWeight: 400, color: EC.muted }}>/ h</span>
+                          <span style={{ fontFamily: 'Sora', fontWeight: 800, color: EC.cobalt, fontSize: '1.1rem' }}>
+                            {parseFloat(esp.tarif_horaire).toFixed(2)} DT <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>/ h</span>
                           </span>
                         )}
                       </div>
-                      <h3 style={{ fontFamily: 'Sora', fontWeight: 700, color: EC.navy, fontSize: '1.05rem', marginBottom: 6 }}>{esp.nom}</h3>
-                      <p style={{ color: EC.muted, fontSize: '.82rem', margin: '0 0 1rem', flex: 1 }}>
-                        Capacité : jusqu'à <strong>{esp.capacite}</strong> personnes.
+                      <h3 style={{ fontFamily: 'Sora', fontWeight: 800, color: EC.navy, fontSize: '1.15rem', marginBottom: 8 }}>{esp.nom}</h3>
+                      <p style={{ color: '#475569', fontSize: '.88rem', margin: '0 0 1rem', flex: 1, lineHeight: 1.7 }}>
+                        Capacité : jusqu'à <strong style={{ color: EC.navy }}>{esp.capacite}</strong> personnes.
                       </p>
                       <button
                         onClick={() => navigate(`/book-guest?tenantId=${c.id}&espaceId=${esp.id}`)}
-                        style={{ background: EC.cobalt, color: EC.white, border: 'none', borderRadius: 10, padding: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '.85rem' }}
+                        style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: EC.white, border: 'none', borderRadius: 12, padding: '11px 12px', fontWeight: 800, cursor: 'pointer', fontSize: '.88rem', boxShadow: '0 12px 22px rgba(249,115,22,0.2)' }}
                       >
                         Réserver cet espace
                       </button>
@@ -209,16 +211,16 @@ export default function CoworkingDetail() {
         {/* Bandeau membre */}
         <div className="row mt-5">
           <div className="col-12">
-            <div style={{ background: EC.navy, borderRadius: 24, padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{ color: EC.white }}>
-                <h3 style={{ fontFamily: 'Sora', fontWeight: 700, margin: 0 }}>Membre du coworking ?</h3>
-                <p style={{ color: EC.onNavy, margin: '6px 0 0', fontSize: '.9rem' }}>Connectez-vous pour accéder à vos réservations et meilleurs tarifs.</p>
+            <div style={{ background: 'linear-gradient(135deg, #111827 0%, #1b2432 100%)', borderRadius: 26, padding: '2.1rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap', boxShadow: '0 18px 42px rgba(15,23,42,0.14)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ color: '#f8fbff', flex: 1, minWidth: 260 }}>
+                <h3 style={{ fontFamily: 'Sora', fontWeight: 800, margin: 0, fontSize: '1.45rem', lineHeight: 1.2, color: '#ffffff' }}>Membre du coworking ?</h3>
+                <p style={{ color: '#edf4ff', margin: '10px 0 0', fontSize: '.98rem', lineHeight: 1.6, fontWeight: 500 }}>Connectez-vous pour accéder à vos réservations et meilleurs tarifs.</p>
               </div>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <Link to="/login" style={{ background: EC.cobalt, color: EC.white, padding: '12px 24px', borderRadius: 12, fontWeight: 700, textDecoration: 'none', fontSize: '.9rem' }}>
+              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Link to="/login" style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: '#ffffff', padding: '16px 28px', borderRadius: 14, fontWeight: 800, textDecoration: 'none', fontSize: '1rem', boxShadow: '0 12px 22px rgba(249,115,22,0.24)', minWidth: 175, textAlign: 'center', letterSpacing: '0.01em' }}>
                   Se connecter
                 </Link>
-                <Link to="/register" style={{ border: '2px solid rgba(255,255,255,0.4)', color: EC.white, padding: '12px 24px', borderRadius: 12, fontWeight: 700, textDecoration: 'none', fontSize: '.9rem' }}>
+                <Link to="/register" style={{ border: '2px solid rgba(255,255,255,0.5)', color: '#ffffff', padding: '15px 28px', borderRadius: 14, fontWeight: 700, textDecoration: 'none', fontSize: '1rem', background: 'rgba(255,255,255,0.02)', minWidth: 175, textAlign: 'center', letterSpacing: '0.01em' }}>
                   Devenir membre
                 </Link>
               </div>
@@ -233,11 +235,11 @@ export default function CoworkingDetail() {
 
 function TopBar() {
   return (
-    <nav style={{ position: 'sticky', top: 0, zIndex: 60, background: 'rgba(251,255,255,0.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(16,15,13,0.08)' }}>
+    <nav style={{ position: 'sticky', top: 0, zIndex: 60, background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(15,23,42,0.08)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', maxWidth: 1240, margin: '0 auto' }}>
         <BrandLogo to="/" height={40} />
         <Link to="/book-guest"
-          style={{ background: EC.cobalt, color: EC.white, padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: '.85rem', textDecoration: 'none' }}>
+          style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: EC.white, padding: '10px 18px', borderRadius: 12, fontWeight: 800, fontSize: '.85rem', textDecoration: 'none', boxShadow: '0 10px 20px rgba(249,115,22,0.2)' }}>
           Réserver sans compte
         </Link>
       </div>
@@ -248,16 +250,16 @@ function TopBar() {
 function InfoRow({ icon, label, value, link }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <div style={{ width: 40, height: 40, borderRadius: 12, background: '#ffedd8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <div style={{ width: 40, height: 40, borderRadius: 12, background: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid rgba(249,115,22,0.14)' }}>
         <span className="material-symbols-outlined" style={{ color: EC.cobalt, fontSize: 20 }}>{icon}</span>
       </div>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: '.72rem', fontWeight: 700, color: EC.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{label}</div>
+        <div style={{ fontSize: '.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '.07em' }}>{label}</div>
         {link ? (
           <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noreferrer"
-            style={{ color: EC.cobalt, fontWeight: 600, fontSize: '.9rem', textDecoration: 'none', wordBreak: 'break-all' }}>{value}</a>
+            style={{ color: '#0f172a', fontWeight: 700, fontSize: '.92rem', textDecoration: 'none', wordBreak: 'break-all' }}>{value}</a>
         ) : (
-          <div style={{ color: EC.navy, fontWeight: 500, fontSize: '.9rem' }}>{value}</div>
+          <div style={{ color: '#0f172a', fontWeight: 600, fontSize: '.92rem' }}>{value}</div>
         )}
       </div>
     </div>

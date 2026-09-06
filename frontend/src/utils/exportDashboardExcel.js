@@ -1,4 +1,7 @@
-import ExcelJS from 'exceljs';
+async function loadExcelJS() {
+  const mod = await import('exceljs');
+  return mod.default || mod;
+}
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 const COLORS = {
@@ -91,6 +94,7 @@ function styleDataCell(cell, value, opts = {}) {
  * @param {object} chartData  — réponse de GET /api/admin/kpis/revenue-chart
  */
 export async function exportDashboardToExcel(kpis, chartData) {
+  const ExcelJS = await loadExcelJS();
   const wb = new ExcelJS.Workbook();
   wb.creator = 'DeskyWork — Flex Office & Coworking';
   wb.created = new Date();

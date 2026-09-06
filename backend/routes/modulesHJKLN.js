@@ -93,8 +93,14 @@ router.post('/guests/booking', async (req, res) => {
     const { data: reservation, error: rErr } = await supabaseAdmin
       .from('reservations')
       .insert({
-        guest_id: guest.id, tenant_id: tenant_id || null,
-        espace_id, date_debut, date_fin, statut: 'pending', mode: 'online'
+        user_id: null,
+        guest_id: guest.id,
+        tenant_id: tenant_id || null,
+        espace_id,
+        date_debut,
+        date_fin,
+        statut: 'pending',
+        mode: 'online'
       })
       .select('*, espaces(nom, type)').single();
 
@@ -155,7 +161,9 @@ router.post('/guests/formation', async (req, res) => {
     const { data: inscription, error: iErr } = await supabaseAdmin
       .from('inscriptions_formations')
       .insert({
-        formation_id, guest_id: guest.id,
+        formation_id,
+        user_id: null,
+        guest_id: guest.id,
         statut: 'confirmee',
         statut_paiement: formation.prix_inscription > 0 ? 'en_attente' : 'gratuit'
       })

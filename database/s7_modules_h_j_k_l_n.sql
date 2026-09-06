@@ -52,9 +52,11 @@ CREATE POLICY "guests_update_staff" ON public.guests
 
 -- Colonne guest_id sur réservations (nullable)
 ALTER TABLE public.reservations
+    ALTER COLUMN user_id DROP NOT NULL,
     ADD COLUMN IF NOT EXISTS guest_id UUID REFERENCES public.guests(id) ON DELETE SET NULL;
 
 ALTER TABLE public.inscriptions_formations
+    ALTER COLUMN user_id DROP NOT NULL,
     ADD COLUMN IF NOT EXISTS guest_id UUID REFERENCES public.guests(id) ON DELETE SET NULL;
 
 -- ─────────────────────────────────────────────────────────────────────────

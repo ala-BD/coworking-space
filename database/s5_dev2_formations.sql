@@ -53,7 +53,8 @@ CREATE INDEX IF NOT EXISTS idx_formations_statut ON public.formations(statut);
 CREATE TABLE IF NOT EXISTS public.inscriptions_formations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     formation_id UUID NOT NULL REFERENCES public.formations(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    guest_id UUID REFERENCES public.guests(id) ON DELETE SET NULL,
     
     -- Statut de l'inscription
     statut TEXT NOT NULL DEFAULT 'confirmee' CHECK (

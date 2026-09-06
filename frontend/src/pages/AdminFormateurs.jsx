@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { formationApi } from '../services/api';
+import { formationApi, bookingApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
 
 /* ─── Shared helpers ─────────────────────────────────────────────────────── */
 const inputCls =
-  'w-full px-4 py-2.5 rounded-xl border border-outline-variant/40 text-sm text-primary bg-white ' +
-  'focus:outline-none focus:ring-2 focus:ring-secondary/30 focus:border-secondary transition-all ' +
-  'placeholder:text-on-surface-variant/50';
+  'w-full px-4 py-2.75 rounded-2xl border border-slate-200 text-sm text-slate-800 bg-slate-50 ' +
+  'focus:outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-300 transition-all shadow-sm ' +
+  'placeholder:text-slate-400';
 
 function Field({ label, required, children }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+      <label className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">
         {label}
-        {required && <span className="text-error ml-0.5">*</span>}
+        {required && <span className="text-orange-500 ml-0.5">*</span>}
       </label>
       {children}
     </div>
@@ -33,47 +33,42 @@ function Modal({ open, onClose, title, subtitle, icon, children, footer, maxWidt
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-slate-950/35 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-950/35 backdrop-blur-[2px]"
         onClick={onClose}
         style={{ animation: 'fadeIn 0.2s ease' }}
       />
 
-      {/* Panel */}
       <div
-        className={`relative w-full ${maxWidth} mx-auto bg-white rounded-4xl shadow-[0_40px_100px_rgba(15,23,42,0.18)] flex flex-col max-h-[90vh] overflow-hidden`}
+        className={`relative w-full ${maxWidth} mx-auto bg-white rounded-3xl shadow-[0_24px_80px_rgba(15,23,42,0.18)] border border-slate-200/80 flex flex-col max-h-[85vh] overflow-hidden`}
         style={{ animation: 'popIn 0.25s cubic-bezier(.34,1.56,.64,1)' }}
       >
-        {/* Header */}
-        <div className="flex flex-col gap-4 p-7 border-b border-outline-variant/15 bg-slate-50 shrink-0">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4">
-              {icon && (
-                <div className="w-12 h-12 rounded-3xl bg-secondary/10 flex items-center justify-center shrink-0 shadow-sm">
-                  <span className="material-symbols-outlined text-secondary" style={{ fontSize: 24 }}>{icon}</span>
-                </div>
-              )}
-              <div className="min-w-0">
-                <h2 className="font-sora font-bold text-primary text-3xl leading-tight">{title}</h2>
-                {subtitle && <p className="text-sm text-on-surface-variant mt-2 max-w-2xl">{subtitle}</p>}
+        <div className="flex items-start justify-between gap-4 p-5 border-b border-slate-200 bg-gradient-to-r from-white via-orange-50/30 to-white shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            {icon && (
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-400 flex items-center justify-center shrink-0 shadow-sm shadow-orange-200">
+                <span className="material-symbols-outlined text-white" style={{ fontSize: 22 }}>{icon}</span>
               </div>
+            )}
+            <div className="min-w-0">
+              <h2 className="font-sora font-bold text-slate-900 text-2xl leading-tight">{title}</h2>
+              {subtitle && <p className="text-sm text-slate-500 mt-1 max-w-xl">{subtitle}</p>}
             </div>
-            <button
-              onClick={onClose}
-              className="w-11 h-11 rounded-3xl hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant transition-colors"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
-            </button>
           </div>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors flex-shrink-0"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+          </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-7 space-y-7">{children}</div>
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">{children}</div>
 
-        {/* Footer */}
         {footer && (
-          <div className="p-6 border-t border-outline-variant/15 bg-surface-container-low rounded-b-[32px] shrink-0">{footer}</div>
+          <div className="p-4 border-t border-slate-200 bg-slate-50 shrink-0">
+            {footer}
+          </div>
         )}
       </div>
 
@@ -96,6 +91,7 @@ export default function AdminFormateurs({ session }) {
   const [formateurs, setFormateurs] = useState([]);
   const [remunerations, setRemunerations] = useState([]);
   const [formations, setFormations] = useState([]); // needed for remuneration select
+  const [trainerBookings, setTrainerBookings] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -137,16 +133,47 @@ export default function AdminFormateurs({ session }) {
 
   const refreshData = async () => {
     try {
-      const [tRes, rRes, fRes] = await Promise.all([
+      const [tRes, rRes, fRes, bookingsRes] = await Promise.all([
         formationApi.getFormateurs(),
         supabase.from('remuneration_formateurs')
           .select('*, profiles!formateur_id(nom, prenom), formations(titre)')
           .order('created_at', { ascending: false }),
         formationApi.getAll(),
+        bookingApi.getAll(),
       ]);
-      setFormateurs(tRes.formateurs || []);
+
+      const rawFormateurs = tRes.formateurs || [];
+      const bookingsMap = {};
+      for (const booking of bookingsRes.reservations || []) {
+        const owner = booking.profiles || {};
+        if (owner.role !== 'formateur' || !booking.user_id) continue;
+        if (!bookingsMap[booking.user_id]) bookingsMap[booking.user_id] = [];
+        bookingsMap[booking.user_id].push(booking);
+      }
+
+      const mergedFormateurs = [...rawFormateurs];
+      for (const booking of bookingsRes.reservations || []) {
+        const owner = booking.profiles || {};
+        if (owner.role !== 'formateur' || !booking.user_id) continue;
+        if (!mergedFormateurs.some((p) => p.id === booking.user_id)) {
+          mergedFormateurs.push({
+            id: booking.user_id,
+            nom: owner.nom || '',
+            prenom: owner.prenom || '',
+            email: owner.email || '',
+            telephone: owner.telephone || '',
+            specialite: '',
+            biographie: '',
+            statut_compte: 'actif',
+            created_at: booking.created_at || new Date().toISOString(),
+          });
+        }
+      }
+
+      setFormateurs(mergedFormateurs.sort((a, b) => (a.nom || '').localeCompare(b.nom || '')));
       setRemunerations(rRes.data || []);
       setFormations(fRes.formations || []);
+      setTrainerBookings(bookingsMap);
     } catch (e) { setError('Erreur chargement : ' + e.message); }
     finally { setLoading(false); }
   };
@@ -231,9 +258,9 @@ export default function AdminFormateurs({ session }) {
               <span className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
                 <span className="material-symbols-outlined text-violet-600" style={{ fontSize: 16 }}>school</span>
               </span>
-              <span className="text-xs font-bold uppercase tracking-widest text-violet-600">Gestion Formateurs</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-800">Gestion Formateurs</span>
             </div>
-            <h1 className="font-sora font-bold text-primary text-2xl sm:text-3xl">Formateurs</h1>
+            <h1 className="font-sora font-bold text-slate-900 text-2xl sm:text-3xl">Formateurs</h1>
             <p className="text-sm text-on-surface-variant mt-0.5">Gérer vos intervenants et leurs honoraires.</p>
           </div>
           <button
@@ -248,10 +275,10 @@ export default function AdminFormateurs({ session }) {
         {/* ── KPIs ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {[
-            { label: 'Total formateurs', value: formateurs.length, icon: 'group', color: 'text-secondary bg-secondary/10' },
-            { label: 'Comptes actifs', value: actifs, icon: 'check_circle', color: 'text-emerald-600 bg-emerald-50' },
-            { label: 'Honoraires en att.', value: `${pending.toFixed(0)} DT`, icon: 'pending_actions', color: 'text-amber-600 bg-amber-50' },
-            { label: 'Honoraires versés', value: `${paid.toFixed(0)} DT`, icon: 'payments', color: 'text-sky-600 bg-sky-50' },
+            { label: 'Total formateurs', value: formateurs.length, icon: 'group', color: 'text-slate-800 bg-slate-100' },
+            { label: 'Comptes actifs', value: actifs, icon: 'check_circle', color: 'text-emerald-700 bg-emerald-50' },
+            { label: 'Honoraires en att.', value: `${pending.toFixed(0)} DT`, icon: 'pending_actions', color: 'text-amber-700 bg-amber-50' },
+            { label: 'Honoraires versés', value: `${paid.toFixed(0)} DT`, icon: 'payments', color: 'text-slate-800 bg-slate-100' },
           ].map(({ label, value, icon, color }) => (
             <div key={label} className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-outline-variant/20 shadow-sm flex items-center gap-3">
               <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${color}`}>
@@ -259,7 +286,7 @@ export default function AdminFormateurs({ session }) {
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant leading-tight">{label}</p>
-                <p className="font-sora font-bold text-primary text-xl leading-tight mt-0.5">{value}</p>
+                <p className="font-sora font-bold text-slate-900 text-xl leading-tight mt-0.5">{value}</p>
               </div>
             </div>
           ))}
@@ -288,7 +315,7 @@ export default function AdminFormateurs({ session }) {
             <div className="w-16 h-16 rounded-3xl bg-surface-container-low flex items-center justify-center mx-auto mb-4">
               <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: 32 }}>person_off</span>
             </div>
-            <h3 className="font-sora font-bold text-primary text-base mb-2">Aucun formateur enregistré</h3>
+            <h3 className="font-sora font-bold text-slate-900 text-base mb-2">Aucun formateur enregistré</h3>
             <p className="text-sm text-on-surface-variant mb-6">Ajoutez votre premier formateur pour commencer à planifier des formations.</p>
             <button
               onClick={() => { setFormateurForm(emptyFormateur); setShowCreateModal(true); }}
@@ -300,98 +327,111 @@ export default function AdminFormateurs({ session }) {
           </div>
         ) : (
           <>
-            {/* Grid Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
-              {formateurs.map((t) => {
-                const initials = (t.prenom?.[0] || '') + (t.nom?.[0] || '');
-                const remu = remunerations.filter(r => r.profiles && r.profiles.nom === t.nom && r.profiles.prenom === t.prenom);
-                const pending = remu.filter(r => r.statut === 'en_attente').reduce((s, r) => s + parseFloat(r.montant || 0), 0);
-                return (
-                  <div
-                    key={t.id}
-                    className="bg-white rounded-3xl border border-outline-variant/20 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-                  >
-                    {/* Top row */}
-                    <div className="flex items-start gap-3 mb-4">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-secondary/20 to-violet-100 flex items-center justify-center font-sora font-bold text-secondary text-base shrink-0">
-                        {initials}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-sora font-bold text-primary truncate">{t.prenom} {t.nom}</p>
-                        <p className="text-xs text-on-surface-variant truncate">{t.email}</p>
-                      </div>
-                      <span className={`text-[9px] font-bold px-2.5 py-1 rounded-full shrink-0 ${t.statut_compte === 'actif' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                        {t.statut_compte === 'actif' ? '● Actif' : '● Suspendu'}
-                      </span>
-                    </div>
+            <div className="mb-8 overflow-hidden rounded-3xl border border-outline-variant/20 bg-white shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-surface-container-low text-[11px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-outline-variant/20">
+                      <th className="p-4">Formateur</th>
+                      <th className="p-4">Contact</th>
+                      <th className="p-4">Spécialité</th>
+                      <th className="p-4">Réservations</th>
+                      <th className="p-4">Statut</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10 text-sm">
+                    {formateurs.map((t) => {
+                      const initials = (t.prenom?.[0] || '') + (t.nom?.[0] || '');
+                      const remu = remunerations.filter(r => r.profiles && r.profiles.nom === t.nom && r.profiles.prenom === t.prenom);
+                      const pending = remu.filter(r => r.statut === 'en_attente').reduce((s, r) => s + parseFloat(r.montant || 0), 0);
+                      const reservations = trainerBookings[t.id] || [];
+                      const reservationLabel = reservations.length > 0
+                        ? `${reservations.length} ${reservations.length > 1 ? 'réservations' : 'réservation'}`
+                        : 'Aucune réservation';
 
-                    {/* Info pills */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {t.specialite && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-secondary bg-secondary/8 px-2.5 py-1 rounded-full">
-                          <span className="material-symbols-outlined" style={{ fontSize: 11 }}>star</span>
-                          {t.specialite}
-                        </span>
-                      )}
-                      {t.telephone && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-on-surface-variant bg-surface-container-low px-2.5 py-1 rounded-full">
-                          <span className="material-symbols-outlined" style={{ fontSize: 11 }}>phone</span>
-                          {t.telephone}
-                        </span>
-                      )}
-                    </div>
+                      return (
+                        <tr key={t.id} className="hover:bg-surface-container-low/40 transition-colors">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-200 to-slate-100 flex items-center justify-center font-sora font-bold text-slate-800 text-sm shrink-0">
+                                {initials}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-sora font-bold text-slate-900 truncate">{t.prenom} {t.nom}</p>
+                                <p className="text-xs text-on-surface-variant truncate">{t.email || '—'}</p>
+                              </div>
+                            </div>
+                          </td>
 
-                    {t.biographie && (
-                      <p className="text-xs text-on-surface-variant italic line-clamp-2 mb-4">{t.biographie}</p>
-                    )}
+                          <td className="p-4 text-xs text-on-surface-variant">
+                            <div className="flex flex-col gap-1">
+                              <span>{t.telephone || '—'}</span>
+                              <span>{t.email || '—'}</span>
+                            </div>
+                          </td>
 
-                    {/* Honoraires badge */}
-                    {pending > 0 && (
-                      <div className="flex items-center gap-2 p-3 rounded-2xl bg-amber-50 border border-amber-200 mb-4">
-                        <span className="material-symbols-outlined text-amber-500" style={{ fontSize: 16 }}>pending_actions</span>
-                        <span className="text-xs font-semibold text-amber-800">{pending.toFixed(2)} DT à régler</span>
-                      </div>
-                    )}
+                          <td className="p-4">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-800 px-2.5 py-1 text-[10px] font-semibold">
+                              <span className="material-symbols-outlined" style={{ fontSize: 11 }}>star</span>
+                              {t.specialite || '—'}
+                            </span>
+                          </td>
 
-                    {/* Actions */}
-                    <div className="flex gap-2 pt-3 border-t border-outline-variant/10">
-                      <button
-                        onClick={() => handleOpenRemu(t.id)}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-colors"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>payments</span>
-                        Rémunérer
-                      </button>
-                      <button
-                        onClick={() => { setSelectedFormateur(t); setShowDetailModal(true); }}
-                        className="flex items-center justify-center p-2 rounded-xl border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container transition-colors"
-                        title="Voir les honoraires"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>receipt_long</span>
-                      </button>
-                      <button
-                        onClick={() => handleToggleStatus(t.id, t.statut_compte)}
-                        className={`flex items-center justify-center p-2 rounded-xl border transition-colors ${t.statut_compte === 'actif'
-                          ? 'border-red-200 text-error bg-red-50 hover:bg-red-100'
-                          : 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                          }`}
-                        title={t.statut_compte === 'actif' ? 'Suspendre' : 'Activer'}
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                          {t.statut_compte === 'actif' ? 'block' : 'check_circle'}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                          <td className="p-4">
+                            <div className="inline-flex items-center gap-2 rounded-2xl border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 px-3 py-2 text-orange-800 shadow-sm">
+                              <span className="material-symbols-outlined text-base" style={{ fontSize: 16 }}>event</span>
+                              <div>
+                                <div className="text-[9px] font-bold uppercase tracking-[0.12em] opacity-75">Réservations</div>
+                                <div className="text-sm font-bold leading-tight">{reservations.length}</div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="p-4">
+                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold ${t.statut_compte === 'actif' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                              <span className="material-symbols-outlined" style={{ fontSize: 11 }}>{t.statut_compte === 'actif' ? 'check_circle' : 'block'}</span>
+                              {t.statut_compte === 'actif' ? 'Actif' : 'Suspendu'}
+                            </span>
+                          </td>
+
+                          <td className="p-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleOpenRemu(t.id)}
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100"
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 13 }}>payments</span>
+                                Rémunérer
+                              </button>
+                              <button
+                                onClick={() => { setSelectedFormateur(t); setShowDetailModal(true); }}
+                                className="inline-flex items-center justify-center rounded-xl border border-outline-variant/30 p-2 text-on-surface-variant hover:bg-surface-container"
+                                title="Voir les honoraires"
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>receipt_long</span>
+                              </button>
+                              <button
+                                onClick={() => handleToggleStatus(t.id, t.statut_compte)}
+                                className={`inline-flex items-center justify-center rounded-xl border p-2 ${t.statut_compte === 'actif' ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100' : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
+                                title={t.statut_compte === 'actif' ? 'Suspendre' : 'Activer'}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{t.statut_compte === 'actif' ? 'block' : 'check_circle'}</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* ════════════════════ TABLEAU HONORAIRES ════════════════════ */}
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-sora font-semibold text-primary text-base flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary" style={{ fontSize: 18 }}>payments</span>
+              <h2 className="font-sora font-semibold text-slate-900 text-base flex items-center gap-2">
+                <span className="material-symbols-outlined text-slate-700" style={{ fontSize: 18 }}>payments</span>
                 Historique des rémunérations
               </h2>
               <button
@@ -414,7 +454,7 @@ export default function AdminFormateurs({ session }) {
                   {remunerations.map((r) => (
                     <div key={r.id} className="bg-white rounded-3xl border border-outline-variant/20 p-4 shadow-sm">
                       <div className="flex justify-between items-start mb-1.5">
-                        <p className="font-semibold text-primary text-sm">{r.profiles?.prenom} {r.profiles?.nom}</p>
+                        <p className="font-semibold text-slate-900 text-sm">{r.profiles?.prenom} {r.profiles?.nom}</p>
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${r.statut === 'paye' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
                           {r.statut === 'paye' ? 'Payé' : 'En attente'}
                         </span>
@@ -447,7 +487,7 @@ export default function AdminFormateurs({ session }) {
                     <tbody className="divide-y divide-outline-variant/10">
                       {remunerations.map((r) => (
                         <tr key={r.id} className="hover:bg-surface-container-lowest transition-colors group">
-                          <td className="p-4 font-semibold text-primary">{r.profiles?.prenom} {r.profiles?.nom}</td>
+                          <td className="p-4 font-semibold text-slate-900">{r.profiles?.prenom} {r.profiles?.nom}</td>
                           <td className="p-4 text-xs text-on-surface-variant">{r.formations?.titre || '—'}</td>
                           <td className="p-4 font-bold text-emerald-700">{parseFloat(r.montant).toFixed(2)} DT</td>
                           <td className="p-4">
@@ -587,40 +627,52 @@ export default function AdminFormateurs({ session }) {
           </div>
         }
       >
-        <form id="remuForm" onSubmit={handleSaveRemu} className="space-y-4">
-          <Field label="Formateur" required>
-            <select className={inputCls} required value={remuForm.formateur_id}
-              onChange={e => setRemuForm(p => ({ ...p, formateur_id: e.target.value }))}>
-              <option value="">— Choisir un formateur —</option>
-              {formateurs.map(t => <option key={t.id} value={t.id}>{t.prenom} {t.nom}</option>)}
-            </select>
-          </Field>
+        <form id="remuForm" onSubmit={handleSaveRemu} className="space-y-5">
+          <div className="rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 p-3.5">
+            <div className="flex items-center gap-2 text-emerald-800">
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>info</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.08em]">Rémunération</span>
+            </div>
+            <p className="mt-1 text-sm text-slate-700">Enregistrez le montant dû pour cette session ou pour un forfait global.</p>
+          </div>
 
-          <Field label="Formation concernée">
-            <select className={inputCls} value={remuForm.formation_id}
-              onChange={e => setRemuForm(p => ({ ...p, formation_id: e.target.value }))}>
-              <option value="">— Honoraires généraux —</option>
-              {formations.map(f => <option key={f.id} value={f.id}>{f.titre}</option>)}
-            </select>
-          </Field>
+          <div className="grid gap-4">
+            <Field label="Formateur" required>
+              <select className={inputCls} required value={remuForm.formateur_id}
+                onChange={e => setRemuForm(p => ({ ...p, formateur_id: e.target.value }))}>
+                <option value="">— Choisir un formateur —</option>
+                {formateurs.map(t => <option key={t.id} value={t.id}>{t.prenom} {t.nom}</option>)}
+              </select>
+            </Field>
 
-          <Field label="Montant (DT)" required>
-            <input type="number" min={0} step="0.5" className={inputCls} placeholder="150.00" required
-              value={remuForm.montant} onChange={e => setRemuForm(p => ({ ...p, montant: e.target.value }))} />
-          </Field>
+            <Field label="Formation concernée">
+              <select className={inputCls} value={remuForm.formation_id}
+                onChange={e => setRemuForm(p => ({ ...p, formation_id: e.target.value }))}>
+                <option value="">— Honoraires généraux —</option>
+                {formations.map(f => <option key={f.id} value={f.id}>{f.titre}</option>)}
+              </select>
+            </Field>
 
-          <Field label="Statut du versement">
-            <select className={inputCls} value={remuForm.statut}
-              onChange={e => setRemuForm(p => ({ ...p, statut: e.target.value }))}>
-              <option value="en_attente">En attente de versement</option>
-              <option value="paye">Versé immédiatement</option>
-            </select>
-          </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Montant (DT)" required>
+                <input type="number" min={0} step="0.5" className={inputCls} placeholder="150.00" required
+                  value={remuForm.montant} onChange={e => setRemuForm(p => ({ ...p, montant: e.target.value }))} />
+              </Field>
 
-          <Field label="Note / Référence">
-            <input className={inputCls} placeholder="Ex: Virement N° 00123"
-              value={remuForm.note} onChange={e => setRemuForm(p => ({ ...p, note: e.target.value }))} />
-          </Field>
+              <Field label="Statut du versement">
+                <select className={inputCls} value={remuForm.statut}
+                  onChange={e => setRemuForm(p => ({ ...p, statut: e.target.value }))}>
+                  <option value="en_attente">En attente</option>
+                  <option value="paye">Versé</option>
+                </select>
+              </Field>
+            </div>
+
+            <Field label="Note / Référence">
+              <input className={inputCls} placeholder="Ex: Virement N° 00123"
+                value={remuForm.note} onChange={e => setRemuForm(p => ({ ...p, note: e.target.value }))} />
+            </Field>
+          </div>
 
           {error && showRemuModal && (
             <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{error}</div>

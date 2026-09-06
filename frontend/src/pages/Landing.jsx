@@ -466,6 +466,8 @@ export default function Landing({ session }) {
                     <img
                       src={tenant.cover_url || tenant.logo_url || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=600&fit=crop"}
                       alt={tenant.nom}
+                      loading="lazy"
+                      decoding="async"
                     />
                     <div className="space-overlay" />
                     <div className="space-body">
@@ -661,46 +663,76 @@ export default function Landing({ session }) {
       </section>
 
       {/* ══ FOOTER ══ */}
-      <footer className="ec-footer pt-5 pb-4">
+      <footer className="ec-footer pt-5 pb-4" style={{ background: '#0d1117', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="container">
-          <div className="row g-4 mb-5">
+          <div className="row g-4 mb-5 align-items-start">
             <div className="col-lg-4 col-md-6">
               <div style={{ marginBottom: '1.25rem' }}>
                 <img src="/logo 2.png" alt="DeskyWork" style={{ height: 54, width: 'auto', objectFit: 'contain', transform: 'scale(2.2)', transformOrigin: 'left center' }} />
               </div>
-              <p style={{ color: EC.onNavy, fontSize: '.875rem', lineHeight: 1.8, maxWidth: 300 }}>
+              <p style={{ color: '#f8fafc', fontSize: '.95rem', lineHeight: 1.8, maxWidth: 330, margin: 0, fontWeight: 500 }}>
                 Espaces de travail premium pour les professionnels modernes. Situé au cœur de Tunis depuis 2021.
               </p>
-              <div className="mt-3">
-                {['public', 'alternate_email', 'chat'].map(icon => (
-                  <a key={icon} href="#" className="soc-btn">
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{icon}</span>
-                  </a>
-                ))}
+              <div className="mt-4 d-flex gap-3">
+                <a href="#contact" aria-label="Contact" className="soc-btn" style={{ border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>public</span>
+                </a>
+                <a href="mailto:contact@deskywork.tn" aria-label="Email" className="soc-btn" style={{ border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>alternate_email</span>
+                </a>
+                <a href="#contact" aria-label="Messagerie" className="soc-btn" style={{ border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chat</span>
+                </a>
               </div>
             </div>
 
-            {[
-              { title: 'Explorer', links: ['Trouver un espace', 'Réunions & Événements', 'Plans Membres', 'Solutions Entreprises'] },
-              { title: 'Société', links: ['À propos', 'Carrières', 'Blog', 'Réseau Partenaires'] },
-              { title: 'Légal', links: ["Politique de confidentialité", "Conditions d'utilisation", 'Cookies', 'Plan du site'] },
-            ].map(({ title, links }) => (
-              <div key={title} className="col-lg-2 col-md-3 col-6">
-                <h6 className="fw-bold mb-3" style={{ color: EC.white, fontSize: '.8rem', textTransform: 'uppercase', letterSpacing: '.07em' }}>{title}</h6>
-                <ul className="list-unstyled d-flex flex-column gap-2 mb-0">
-                  {links.map(l => <li key={l}><a href="#">{l}</a></li>)}
-                </ul>
-              </div>
-            ))}
+            <div className="col-lg-2 col-md-3 col-6">
+              <h6 className="fw-bold mb-3" style={{ color: '#ffffff', fontSize: '.8rem', textTransform: 'uppercase', letterSpacing: '.08em' }}>Explorer</h6>
+              <ul className="list-unstyled d-flex flex-column gap-2 mb-0">
+                <li><a href="#espaces" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>Trouver un espace</a></li>
+                <li><a href="#contact" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>Réunions & Événements</a></li>
+                <li><a href="#tarifs" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>Plans Membres</a></li>
+                <li><a href="#contact" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>Solutions Entreprises</a></li>
+              </ul>
+            </div>
+
+            <div className="col-lg-2 col-md-3 col-6">
+              <h6 className="fw-bold mb-3" style={{ color: '#ffffff', fontSize: '.8rem', textTransform: 'uppercase', letterSpacing: '.08em' }}>Société</h6>
+              <ul className="list-unstyled d-flex flex-column gap-2 mb-0">
+                <li><a href="#avantages" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>À propos</a></li>
+                <li><a href="#contact" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>Carrières</a></li>
+                <li><a href="#temoignages" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>Blog</a></li>
+                <li><a href="#contact" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>Réseau Partenaires</a></li>
+              </ul>
+            </div>
+
+            <div className="col-lg-2 col-md-3 col-6">
+              <h6 className="fw-bold mb-3" style={{ color: '#ffffff', fontSize: '.8rem', textTransform: 'uppercase', letterSpacing: '.08em' }}>Légal</h6>
+              <ul className="list-unstyled d-flex flex-column gap-2 mb-0">
+                <li><a href="#contact" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>Politique de confidentialité</a></li>
+                <li><a href="#contact" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>Conditions d'utilisation</a></li>
+                <li><a href="#contact" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>Cookies</a></li>
+                <li><a href="#top" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>Plan du site</a></li>
+              </ul>
+            </div>
+
+            <div className="col-lg-2 col-md-3 col-6">
+              <h6 className="fw-bold mb-3" style={{ color: '#ffffff', fontSize: '.8rem', textTransform: 'uppercase', letterSpacing: '.08em' }}>Contact</h6>
+              <ul className="list-unstyled d-flex flex-column gap-2 mb-0">
+                <li><a href="tel:+21600000000" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>+216 00 000 000</a></li>
+                <li><a href="mailto:contact@deskywork.tn" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>contact@deskywork.tn</a></li>
+                <li><a href="#contact" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>Tunis, Tunisie</a></li>
+              </ul>
+            </div>
           </div>
 
-          <hr style={{ borderColor: 'rgba(255,255,255,.08)', margin: 0 }} />
+          <hr style={{ borderColor: 'rgba(255,255,255,.12)', margin: 0 }} />
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-center pt-4 gap-2">
-            <p className="mb-0" style={{ color: EC.onNavy, fontSize: '.8rem' }}>
+            <p className="mb-0" style={{ color: '#f8fafc', fontSize: '.85rem', fontWeight: 500 }}>
               © {new Date().getFullYear()} DeskyWork. Tous droits réservés.
             </p>
-            <p className="mb-0" style={{ color: EC.onNavy, fontSize: '.8rem' }}>
-              Conçu avec <span style={{ color: EC.cobaltDim }}>♥</span> à Tunis
+            <p className="mb-0" style={{ color: '#f8fafc', fontSize: '.85rem', fontWeight: 500 }}>
+              Conçu avec <span style={{ color: EC.cobalt }}>♥</span> à Tunis
             </p>
           </div>
         </div>

@@ -208,11 +208,15 @@ export default function TrainerDashboard({ session }) {
   };
 
   /* KPIs */
-  const totalFormations = formations.length;
-  const upcomingFormations = formations.filter(f => f.statut === 'planifiee').length;
-  const totalReservations = reservations.length;
-  const activeReservations = reservations.filter(r => r.statut === 'confirmed').length;
-  const totalInscrits = Object.values(inscriptions).reduce((sum, arr) => sum + arr.filter(i => i.statut !== 'annulee').length, 0);
+  const safeFormations = Array.isArray(formations) ? formations : [];
+  const safeReservations = Array.isArray(reservations) ? reservations : [];
+  const safeInscriptions = inscriptions && typeof inscriptions === 'object' ? inscriptions : {};
+
+  const totalFormations = safeFormations.length;
+  const upcomingFormations = safeFormations.filter(f => f.statut === 'planifiee').length;
+  const totalReservations = safeReservations.length;
+  const activeReservations = safeReservations.filter(r => r.statut === 'confirmed').length;
+  const totalInscrits = Object.values(safeInscriptions).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.filter(i => i.statut !== 'annulee').length : 0), 0);
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center">
@@ -315,10 +319,10 @@ export default function TrainerDashboard({ session }) {
             </div>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart
-                data={formations.map(f => ({
-                  name: f.titre.length > 15 ? f.titre.slice(0, 15) + '…' : f.titre,
-                  inscrits: (inscriptions[f.id] || []).filter(i => i.statut !== 'annulee').length,
-                  capacite: f.capacite_max || 10,
+                data={safeFormations.map(f => ({
+                  name: (f.titre || '').length > 15 ? (f.titre || '').slice(0, 15) + '…' : (f.titre || ''),
+                  inscrits: (safeInscriptions[f.id] || []).filter(i => i.statut !== 'annulee').length,
+                  capacite: Number(f.capacite_max) || 10,
                 }))}
                 margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
               >
@@ -351,10 +355,11 @@ export default function TrainerDashboard({ session }) {
               </div>
             ) : (
               <div className="space-y-3">
-                {formations.map((f) => {
-                  const formInscrits = (inscriptions[f.id] || []).filter(i => i.statut !== 'annulee');
+                {safeFormations.map((f) => {
+                  const formInscrits = (safeInscriptions[f.id] || []).filter(i => i.statut !== 'annulee');
                   const nbInscrits = formInscrits.length;
-                  const fillPct = f.capacite_max > 0 ? Math.min(100, Math.round((nbInscrits / f.capacite_max) * 100)) : 0;
+                  const capacity = Number(f.capacite_max) || 10;
+                  const fillPct = capacity > 0 ? Math.min(100, Math.round((nbInscrits / capacity) * 100)) : 0;
                   const fillColor = fillPct >= 90 ? 'bg-red-500' : fillPct >= 60 ? 'bg-amber-500' : 'bg-emerald-500';
                   return (
                     <div key={f.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-4 shadow-sm">

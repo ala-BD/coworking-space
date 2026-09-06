@@ -8,16 +8,48 @@ async function listFormateurs(req, res) {
     const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
     let query = supabaseAdmin
       .from('profiles')
-      .select('id, nom, prenom, email, telephone, specialite, biographie, statut_compte, created_at')
+      .select('id, nom, prenom, email, telephone, specialite, biographie, statut_compte, created_at, tenant_id')
       .eq('role', 'formateur')
       .order('nom', { ascending: true });
 
     if (!isStaff) query = query.eq('statut_compte', 'actif');
     query = applyTenantFilter(query, req);
 
-    const { data, error } = await query;
+    const { data: formateurs, error } = await query;
     if (error) return res.status(500).json({ error: error.message });
-    res.json({ formateurs: data });
+
+    let trainerIdsFromReservations = [];
+    if (req.tenantId) {
+      const { data: reservationOwners, error: bookingError } = await supabaseAdmin
+        .from('reservations')
+        .select('user_id')
+        .eq('tenant_id', req.tenantId)
+        .not('user_id', 'is', null);
+
+      if (!bookingError && reservationOwners) {
+        trainerIdsFromReservations = [...new Set(reservationOwners.map((r) => r.user_id).filter(Boolean))];
+      }
+    }
+
+    let fallbackFormateurs = [];
+    if (trainerIdsFromReservations.length > 0) {
+      const { data: fallbackProfiles, error: fallbackError } = await supabaseAdmin
+        .from('profiles')
+        .select('id, nom, prenom, email, telephone, specialite, biographie, statut_compte, created_at, tenant_id')
+        .in('id', trainerIdsFromReservations)
+        .eq('role', 'formateur');
+
+      if (!fallbackError) fallbackFormateurs = fallbackProfiles || [];
+    }
+
+    const merged = [...(formateurs || []), ...fallbackFormateurs].reduce((acc, current) => {
+      const key = current.id;
+      if (!acc[key]) acc[key] = current;
+      return acc;
+    }, {});
+
+    const finalList = Object.values(merged).sort((a, b) => (a.nom || '').localeCompare(b.nom || ''));
+    res.json({ formateurs: finalList });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

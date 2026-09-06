@@ -51,7 +51,7 @@ CREATE TABLE public.abonnements (
 -- Reservations Table
 CREATE TABLE public.reservations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     espace_id UUID NOT NULL REFERENCES public.espaces(id) ON DELETE CASCADE,
     date_debut TIMESTAMPTZ NOT NULL,
     date_fin TIMESTAMPTZ NOT NULL,

@@ -155,7 +155,6 @@ export const ADMIN_NAV = [
     group: 'Communication',
     items: [
       { id: 'admin_messages', label: 'Messagerie', icon: 'chat', to: '/admin/messages' },
-      { id: 'admin_formations', label: 'Formations', icon: 'school', to: '/admin/formations' },
       { id: 'admin_formateurs', label: 'Formateurs', icon: 'groups', to: '/admin/formateurs' },
     ],
   },

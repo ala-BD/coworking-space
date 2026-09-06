@@ -84,11 +84,19 @@ export default function SuperAdminDashboard({ session }) {
     );
   }
 
+  const safeStats = stats || {
+    totalTenants: 0,
+    mrr: 0,
+    totalMembers: 0,
+    activeTenants: 0,
+    monthlyGrowth: [],
+  };
+
   const cards = [
-    { label: 'Total Coworkings', value: stats?.totalTenants ?? 0, icon: 'domain', color: '#f95d00', bg: 'rgba(249,93,0,0.08)' },
-    { label: 'MRR Total', value: `${(stats?.mrr || 0).toLocaleString('fr-TN')} DT`, icon: 'payments', color: '#f95d00', bg: 'rgba(249,93,0,0.08)' },
-    { label: 'Total Membres', value: stats?.totalMembers ?? 0, icon: 'groups', color: '#100f0d', bg: 'rgba(16,15,13,0.06)' },
-    { label: 'Coworkings Actifs', value: stats?.activeTenants ?? 0, icon: 'check_circle', color: '#f95d00', bg: 'rgba(249,93,0,0.08)' },
+    { label: 'Total Coworkings', value: safeStats.totalTenants ?? 0, icon: 'domain', color: '#f95d00', bg: 'rgba(249,93,0,0.08)' },
+    { label: 'MRR Total', value: `${(safeStats.mrr || 0).toLocaleString('fr-TN')} DT`, icon: 'payments', color: '#f95d00', bg: 'rgba(249,93,0,0.08)' },
+    { label: 'Total Membres', value: safeStats.totalMembers ?? 0, icon: 'groups', color: '#100f0d', bg: 'rgba(16,15,13,0.06)' },
+    { label: 'Coworkings Actifs', value: safeStats.activeTenants ?? 0, icon: 'check_circle', color: '#f95d00', bg: 'rgba(249,93,0,0.08)' },
   ];
 
   return (
@@ -257,9 +265,9 @@ export default function SuperAdminDashboard({ session }) {
                 <span className="text-xs font-semibold text-on-surface-variant">Évolution du MRR (DT)</span>
                 <span className="text-xs text-secondary font-bold">Actifs : {stats?.activeTenants || 0} coworkings</span>
               </div>
-              {stats?.monthlyGrowth && stats.monthlyGrowth.length > 0 ? (
+              {Array.isArray(safeStats.monthlyGrowth) && safeStats.monthlyGrowth.length > 0 ? (
                 <ResponsiveContainer width="100%" height={160}>
-                  <AreaChart data={stats.monthlyGrowth} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                  <AreaChart data={safeStats.monthlyGrowth} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorMrr" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#f95d00" stopOpacity={0.3}/>

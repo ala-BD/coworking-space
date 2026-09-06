@@ -322,7 +322,7 @@ async function listBookings(req, res) {
   try {
     let query = supabaseAdmin
       .from('reservations')
-      .select('*, espaces(nom, type, tarif_horaire, tenant_id), profiles(nom, prenom, email), paiements(id, statut, mode, montant)')
+      .select('*, espaces(nom, type, tarif_horaire, tenant_id), profiles(nom, prenom, email, telephone, role), guests(nom, prenom, email, telephone), paiements(id, statut, mode, montant)')
       .order('created_at', { ascending: false });
 
     if (isSuperAdmin) {

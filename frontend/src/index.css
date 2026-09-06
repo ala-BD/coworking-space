@@ -212,6 +212,32 @@ h6 {
   color: #f95d00 !important;
 }
 
+/* Global neutralization of blue-violet text across the platform */
+.text-primary,
+.text-blue-500,
+.text-blue-600,
+.text-blue-700,
+.text-sky-500,
+.text-sky-600,
+.text-sky-700,
+.text-indigo-500,
+.text-indigo-600,
+.text-indigo-700,
+.text-violet-500,
+.text-violet-600,
+.text-violet-700,
+.text-cyan-500,
+.text-cyan-600,
+.text-cyan-700,
+.text-info,
+.text-link,
+.text-anchor,
+.link,
+a[href],
+button.link {
+  color: var(--color-on-surface) !important;
+}
+
 .bg-secondary {
   background-color: #f95d00 !important;
 }

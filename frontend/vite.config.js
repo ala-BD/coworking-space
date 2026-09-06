@@ -1,7 +1,22 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('recharts')) return 'charts';
+            if (id.includes('exceljs')) return 'excel';
+            if (id.includes('qrcode.react')) return 'qr';
+            if (id.includes('socket.io-client')) return 'socket';
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) return 'react';
+          }
+        },
+      },
+    },
+  },
 })

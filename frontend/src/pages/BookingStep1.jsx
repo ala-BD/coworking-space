@@ -37,21 +37,87 @@ export default function BookingStep1() {
   const fetchSpaces = async () => {
     try {
       setLoading(true);
-      let query = supabase.from('espaces').select('*');
-      
+      let query = supabase
+        .from('espaces')
+        .select(`
+          id,
+          nom,
+          type,
+          capacite,
+          tarif_horaire,
+          photo_url,
+          photos_urls,
+          tenant_id,
+          tenants!tenant_id(
+            id,
+            nom,
+            ville,
+            adresse,
+            pays,
+            cover_url,
+            logo_url,
+            latitude,
+            longitude
+          )
+        `);
+
       if (selectedTenant) {
         query = query.eq('tenant_id', selectedTenant);
       }
-      
-      const { data, error } = await query.order('tarif_horaire', { ascending: true });
 
+      const { data, error } = await query.order('tarif_horaire', { ascending: true });
       if (error) throw error;
-      setSpaces(data || []);
+
+      const spacesData = data || [];
+      const tenantIds = [...new Set(spacesData.map((s) => s.tenant_id).filter(Boolean))];
+
+      let tenantMap = {};
+      if (tenantIds.length > 0) {
+        const { data: tenantsData, error: tenantsError } = await supabase
+          .from('tenants')
+          .select('id, nom, ville, adresse, pays, cover_url, logo_url, latitude, longitude')
+          .in('id', tenantIds);
+
+        if (tenantsError) throw tenantsError;
+
+        tenantMap = Object.fromEntries((tenantsData || []).map((tenant) => [tenant.id, tenant]));
+      }
+
+      const enrichedSpaces = spacesData.map((space) => {
+        const directTenant = Array.isArray(space.tenants) ? space.tenants[0] : space.tenants;
+        return {
+          ...space,
+          tenant: directTenant || tenantMap[space.tenant_id] || null,
+        };
+      });
+
+      setSpaces(enrichedSpaces);
     } catch (e) {
       console.error('Error fetching spaces:', e.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getSpaceImage = (space) => {
+    const photoList = Array.isArray(space.photos_urls) ? space.photos_urls : [];
+    return space.photo_url || photoList[0] || space.tenant?.cover_url || space.tenant?.logo_url || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=400&fit=crop';
+  };
+
+  const getCoworkingName = (space) => {
+    const tenant = space?.tenant || (Array.isArray(space?.tenants) ? space.tenants[0] : space?.tenants) || null;
+    if (tenant?.nom) return tenant.nom;
+    if (space?.tenant_id) {
+      const fallback = spaces.find((s) => s.tenant_id === space.tenant_id)?.tenant?.nom;
+      if (fallback) return fallback;
+    }
+    return 'Coworking';
+  };
+
+  const getCoworkingLabel = (space) => {
+    const tenant = space.tenant || (Array.isArray(space?.tenants) ? space.tenants[0] : space?.tenants) || null;
+    if (!tenant) return 'Coworking';
+    return [tenant.nom, tenant.ville || tenant.pays || 'Tunisie'].filter(Boolean).join(' · ');
   };
 
   const handleSelectSpace = (spaceId) => {
@@ -187,8 +253,8 @@ export default function BookingStep1() {
         {/* Grid List — Clean Bootstrap Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
           {filteredSpaces.map((space) => (
-            <div 
-              key={space.id} 
+            <div
+              key={space.id}
               style={{
                 backgroundColor: '#ffffff',
                 borderRadius: '20px',
@@ -201,30 +267,63 @@ export default function BookingStep1() {
                 transition: 'transform 0.2s ease, box-shadow 0.2s ease',
               }}
             >
-              <div style={{ padding: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <span style={{ backgroundColor: '#dae2ff', color: '#001847', padding: '4px 12px', borderRadius: '99px', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {space.type ? space.type.replace('_', ' ') : 'Espace'}
-                  </span>
-                  <span style={{ fontFamily: 'Sora, sans-serif', fontSize: '20px', fontWeight: 800, color: '#f95d00' }}>
-                    {parseFloat(space.tarif_horaire).toFixed(2)} DT <span style={{ fontSize: '12px', fontWeight: 400, color: '#6b7280' }}>/ h</span>
-                  </span>
-                </div>
+              <div>
+                <img
+                  src={getSpaceImage(space)}
+                  alt={space.nom}
+                  loading="lazy"
+                  decoding="async"
+                  style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block', backgroundColor: '#e2e8f0' }}
+                />
 
-                <div>
-                  <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '18px', fontWeight: 700, color: '#000d23', marginBottom: '6px' }}>
-                    {space.nom}
-                  </h3>
-                  <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
-                    Capacité : jusqu&apos;à <strong style={{ color: '#000d23' }}>{space.capacite}</strong> personnes.
-                    {space.type === 'open_space'
-                      ? ' Places partagées : plusieurs réservations au même horaire.'
-                      : ' Réservation exclusive : un seul client par créneau.'}
-                  </p>
+                <div style={{ padding: '20px 20px 18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span style={{ backgroundColor: '#dae2ff', color: '#001847', padding: '4px 12px', borderRadius: '99px', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {space.type ? space.type.replace('_', ' ') : 'Espace'}
+                    </span>
+                    <span style={{ fontFamily: 'Sora, sans-serif', fontSize: '20px', fontWeight: 800, color: '#f95d00' }}>
+                      {parseFloat(space.tarif_horaire).toFixed(2)} DT <span style={{ fontSize: '12px', fontWeight: 400, color: '#6b7280' }}>/ h</span>
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 style={{ fontFamily: 'Sora, sans-serif', fontSize: '18px', fontWeight: 700, color: '#000d23', marginBottom: '6px' }}>
+                      {space.nom}
+                    </h3>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '8px',
+                        background: '#e0ebff',
+                        color: '#2347a8',
+                        fontSize: '16px',
+                        lineHeight: 1,
+                      }} aria-label="Bâtiment"
+                        className="material-symbols-outlined"
+                      >
+                        apartment
+                      </span>
+                      <span style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>
+                        {getCoworkingName(space) || 'Ala Coworking'}
+                      </span>
+                    </div>
+
+                    <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: 1.6 }}>
+                      Capacité : jusqu&apos;à <strong style={{ color: '#000d23' }}>{space.capacite}</strong> personnes.
+                      {space.type === 'open_space'
+                        ? ' Places partagées : plusieurs réservations au même horaire.'
+                        : ' Réservation exclusive : un seul client par créneau.'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div style={{ padding: '16px 24px', backgroundColor: '#f8fafc', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '16px 20px', backgroundColor: '#f8fafc', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
                   Disponible aujourd&apos;hui
