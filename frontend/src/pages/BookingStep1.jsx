@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { guestApi } from '../services/api';
 import BrandLogo from '../components/layout/BrandLogo';
 import { getBookerNav } from '../utils/roles';
 
@@ -9,6 +10,7 @@ export default function BookingStep1() {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
   const [selectedTenant, setSelectedTenant] = useState(null);
+  const [coworking, setCoworking] = useState(null);
   const [nav, setNav] = useState(getBookerNav('member'));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -25,6 +27,9 @@ export default function BookingStep1() {
     const tenantId = searchParams.get('tenantId');
     if (tenantId) {
       setSelectedTenant(tenantId);
+      guestApi.getCoworking(tenantId)
+        .then(res => { if (res.coworking) setCoworking(res.coworking); })
+        .catch(() => {});
     }
     fetchSpaces();
   }, [searchParams]);
@@ -98,6 +103,55 @@ export default function BookingStep1() {
             Sélectionnez la salle ou le poste qui correspond à vos besoins de travail.
           </p>
         </div>
+
+        {/* Carte du coworking (image + coordonnées) */}
+        {coworking && (
+          <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', overflow: 'hidden', marginBottom: '32px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '20px 24px', flexWrap: 'wrap' }}>
+              <img
+                src={coworking.cover_url || coworking.logo_url || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=400&fit=crop'}
+                alt={coworking.nom}
+                style={{ width: '100%', maxWidth: 280, height: 140, objectFit: 'cover', borderRadius: 14, flexShrink: 0 }}
+              />
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: '20px', fontWeight: 700, color: '#100f0d', margin: 0 }}>{coworking.nom}</h2>
+                  <span style={{ background: '#ffedd8', color: '#f95d00', padding: '3px 10px', borderRadius: 99, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>
+                    {(coworking.ville || coworking.pays || 'Tunisie')}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '13px', color: '#4e4a46' }}>
+                  {coworking.adresse && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#f95d00' }}>location_on</span>
+                      {coworking.adresse}{coworking.ville ? `, ${coworking.ville}` : ''}
+                    </span>
+                  )}
+                  {coworking.telephone && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#f95d00' }}>phone</span>
+                      {coworking.telephone}
+                    </span>
+                  )}
+                  {coworking.latitude && coworking.longitude && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#f95d00' }}>place</span>
+                      GPS : {coworking.latitude}, {coworking.longitude}
+                      <a
+                        href={`https://www.google.com/maps?q=${coworking.latitude},${coworking.longitude}`}
+                        target="_blank" rel="noreferrer"
+                        style={{ color: '#f95d00', fontWeight: 600, textDecoration: 'none' }}
+                      >Voir sur la carte</a>
+                    </span>
+                  )}
+                  {coworking.description && (
+                    <span style={{ lineHeight: 1.6, marginTop: 4 }}>{coworking.description}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Filter Badges — Clean Bootstrap-style Pills */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center', marginBottom: '40px' }}>

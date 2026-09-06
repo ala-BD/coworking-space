@@ -79,9 +79,10 @@ function ImageUploadZone({ label, hint, imageUrl, onUpload, uploading, onRemove,
 export default function AdminCoworkingProfile({ session }) {
   const [profile, setProfile] = useState(null);
   const [tenant, setTenant] = useState(null);
-  const [form, setForm] = useState({
+const [form, setForm] = useState({
     nom: '', description: '', adresse: '', ville: '', pays: 'Tunisie',
     telephone: '', email: '', site_web: '', logo_url: '', cover_url: '',
+    latitude: '', longitude: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -114,6 +115,8 @@ export default function AdminCoworkingProfile({ session }) {
         site_web: t.site_web || '',
         logo_url: t.logo_url || '',
         cover_url: t.cover_url || '',
+        latitude: t.latitude != null ? String(t.latitude) : '',
+        longitude: t.longitude != null ? String(t.longitude) : '',
       });
     } catch (e) { showError(e.message); }
     finally { setLoading(false); }
@@ -147,7 +150,12 @@ export default function AdminCoworkingProfile({ session }) {
     if (!form.nom.trim()) { showError('Le nom du coworking est requis.'); return; }
     setSaving(true);
     try {
-      await tenantAdminApi.updateTenant(form);
+      const payload = { ...form };
+      if (payload.latitude === '') payload.latitude = null;
+      if (payload.longitude === '') payload.longitude = null;
+      if (payload.latitude != null && isNaN(parseFloat(payload.latitude))) { showError('Latitude invalide.'); setSaving(false); return; }
+      if (payload.longitude != null && isNaN(parseFloat(payload.longitude))) { showError('Longitude invalide.'); setSaving(false); return; }
+      await tenantAdminApi.updateTenant(payload);
       showToast('Profil du coworking mis à jour avec succès !');
       await loadData();
     } catch (e) { showError(e.message); }
@@ -266,6 +274,8 @@ export default function AdminCoworkingProfile({ session }) {
                 { key: 'telephone', label: 'Téléphone',   placeholder: '+216 XX XXX XXX', col: 1 },
                 { key: 'email',     label: 'Email',       placeholder: 'contact@coworking.tn', col: 1 },
                 { key: 'site_web',  label: 'Site web',    placeholder: 'https://votre-site.tn', col: 2 },
+                { key: 'latitude',  label: 'Latitude (GPS)', placeholder: 'Ex : 36.806496', col: 1 },
+                { key: 'longitude', label: 'Longitude (GPS)', placeholder: 'Ex : 10.181532', col: 1 },
               ].map(({ key, label, placeholder, col }) => (
                 <div key={key} className={col === 2 ? 'sm:col-span-2' : ''}>
                   <label className="block text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant mb-1.5">{label}</label>

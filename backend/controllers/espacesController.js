@@ -50,7 +50,7 @@ async function updateAdminTenant(req, res) {
   try {
     if (!req.tenantId) return res.status(404).json({ error: 'Aucun coworking associé à votre compte.' });
 
-    const allowed = ['nom', 'description', 'adresse', 'ville', 'pays', 'email', 'telephone', 'site_web', 'logo_url', 'cover_url'];
+    const allowed = ['nom', 'description', 'adresse', 'ville', 'pays', 'email', 'telephone', 'site_web', 'logo_url', 'cover_url', 'latitude', 'longitude'];
     const updates = { updated_at: new Date().toISOString() };
 
     for (const field of allowed) {

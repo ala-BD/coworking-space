@@ -51,6 +51,7 @@ const SuperAdminMonitoring = lazy(() => import('./pages/SuperAdminMonitoring'));
 const SuperAdminUsers = lazy(() => import('./pages/SuperAdminUsers'));
 const AdminEspaces = lazy(() => import('./pages/AdminEspaces'));
 const AdminCoworkingProfile = lazy(() => import('./pages/AdminCoworkingProfile'));
+const CoworkingDetail = lazy(() => import('./pages/CoworkingDetail'));
 
 function LoadingFallback() {
   return (
@@ -845,6 +846,7 @@ export default function App() {
 
           {/* ── Modules H, K, L, N — Pages publiques & membre ── */}
           <Route path="/book-guest" element={<GuestBookingPage />} />
+          <Route path="/coworking/:id" element={<CoworkingDetail />} />
           <Route path="/sign/:token" element={<SignDocumentPage />} />
 
           <Route path="/dashboard/documents" element={

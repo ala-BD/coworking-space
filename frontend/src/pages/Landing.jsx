@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import { Link } from 'react-router-dom';
+import { guestApi } from '../services/api';
 import Navbar from '../components/layout/Navbar';
 
 /* ─── Charte DeskyWork ——— */
@@ -193,14 +193,9 @@ export default function Landing({ session }) {
 
   const fetchTenants = async () => {
     try {
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('*')
-        .eq('statut', 'actif')
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setTenants(data || []);
+      const res = await guestApi.getCoworkings();
+      if (res.error) throw new Error(res.error);
+      setTenants(res.coworkings || []);
     } catch (e) {
       console.error('Error fetching tenants:', e.message);
     }
@@ -355,7 +350,7 @@ export default function Landing({ session }) {
               </div>
 
               <div className="d-flex flex-wrap gap-3 fa fa-2">
-                <Link to={session ? '/dashboard' : '/register'} className="btn d-inline-flex align-items-center gap-2"
+<Link to={session ? '/dashboard' : '/book-guest'} className="btn d-inline-flex align-items-center gap-2"
                   style={{ backgroundColor: EC.cobalt, color: 'white', borderRadius: 12, padding: '13px 30px', fontWeight: 700, border: 'none', fontSize: '1rem', transition: 'all .25s' }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,84,203,.35)'; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
@@ -467,28 +462,58 @@ export default function Landing({ session }) {
             <div className="row g-4">
               {tenants.map((tenant) => (
                 <div key={tenant.id} className="col-lg-4">
-                  <div className="space-card" style={{ height: 320 }}>
+                  <div className="space-card" style={{ height: 380 }}>
                     <img
-                      src={tenant.logo_url || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=600&fit=crop"}
+                      src={tenant.cover_url || tenant.logo_url || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=600&fit=crop"}
                       alt={tenant.nom}
                     />
                     <div className="space-overlay" />
                     <div className="space-body">
                       <span style={{ backgroundColor: EC.cobalt, color: 'white', borderRadius: 8, padding: '4px 12px', fontSize: '.72rem', fontWeight: 700, display: 'inline-block', marginBottom: 8 }}>
-                        {tenant.ville || 'Tunisie'}
+                        {tenant.ville || tenant.pays || 'Tunisie'}
                       </span>
                       <h3 className="sora fw-bold text-white mb-2">{tenant.nom}</h3>
-                      <p className="mb-0" style={{ color: EC.onNavy, fontSize: '.9rem', maxWidth: 460 }}>
+                      <p className="mb-1" style={{ color: EC.onNavy, fontSize: '.9rem', maxWidth: 460 }}>
                         {tenant.description || 'Espace de coworking premium pour professionnels ambitieux.'}
                       </p>
-                      <Link
-                        to={`/book/step1?tenantId=${tenant.id}`}
-                        className="btn mt-3 d-inline-flex align-items-center gap-2"
-                        style={{ backgroundColor: EC.cobalt, color: 'white', borderRadius: 12, padding: '10px 20px', fontWeight: 700, border: 'none', fontSize: '.9rem', transition: 'all .25s' }}
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>event_available</span>
-                        Réserver
-                      </Link>
+                      <div className="d-flex align-items-center gap-3 mb-3" style={{ color: EC.onNavy, fontSize: '.8rem' }}>
+                        {tenant.adresse && (
+                          <span className="d-inline-flex align-items-center gap-1">
+                            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>location_on</span>
+                            {tenant.adresse}
+                          </span>
+                        )}
+                        {tenant.telephone && (
+                          <span className="d-inline-flex align-items-center gap-1">
+                            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>phone</span>
+                            {tenant.telephone}
+                          </span>
+                        )}
+                        {tenant.latitude && tenant.longitude && (
+                          <span className="d-inline-flex align-items-center gap-1">
+                            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>place</span>
+                            {tenant.latitude}, {tenant.longitude}
+                          </span>
+                        )}
+                      </div>
+                      <div className="d-flex flex-wrap gap-2">
+                        <Link
+                          to={`/coworking/${tenant.id}`}
+                          className="btn d-inline-flex align-items-center gap-2"
+                          style={{ backgroundColor: EC.cobalt, color: 'white', borderRadius: 12, padding: '10px 20px', fontWeight: 700, border: 'none', fontSize: '.9rem', transition: 'all .25s' }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>visibility</span>
+                          Voir plus
+                        </Link>
+                        <Link
+                          to={`/book-guest?tenantId=${tenant.id}`}
+                          className="btn d-inline-flex align-items-center gap-2"
+                          style={{ backgroundColor: 'transparent', color: 'white', border: '2px solid rgba(255,255,255,.5)', borderRadius: 12, padding: '10px 20px', fontWeight: 700, fontSize: '.9rem', transition: 'all .25s' }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>event_available</span>
+                          Réserver
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>

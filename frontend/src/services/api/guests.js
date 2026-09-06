@@ -13,4 +13,12 @@ export const guestApi = {
   getAll: () => apiFetch('/api/guests'),
   convert: (id, payload) =>
     apiFetch(`/api/guests/${id}/convert`, { method: 'POST', body: JSON.stringify(payload) }),
+
+  // API publique — coworkings visibles (landing, "Voir plus", étape 1 invité)
+  getCoworkings: () =>
+    fetch(`${API_URL}/api/public/coworkings`).then(r => r.json()),
+  getCoworking: (id) =>
+    fetch(`${API_URL}/api/public/coworkings/${id}`).then(r => r.json()),
+  getPublicEspaces: (tenantId) =>
+    fetch(`${API_URL}/api/public/espaces${tenantId ? `?tenant_id=${tenantId}` : ''}`).then(r => r.json()),
 };

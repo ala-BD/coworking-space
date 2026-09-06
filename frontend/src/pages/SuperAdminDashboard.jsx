@@ -21,6 +21,7 @@ export default function SuperAdminDashboard({ session }) {
   const [stats, setStats] = useState(null);
   const [allFormations, setAllFormations] = useState([]);
   const [pendingTenants, setPendingTenants] = useState([]);
+  const [coworkings, setCoworkings] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,6 +38,8 @@ export default function SuperAdminDashboard({ session }) {
         setAllFormations(fRes.formations || []);
         const ptRes = await superAdminApi.getTenants({ statut: 'suspendu' });
         setPendingTenants(ptRes.tenants || []);
+        const cwRes = await superAdminApi.getTenants({ statut: 'actif', limit: 50 });
+        setCoworkings(cwRes.tenants || []);
       } catch (e) { console.error(e); }
       setLoading(false);
     }
@@ -107,6 +110,72 @@ export default function SuperAdminDashboard({ session }) {
           </div>
         ))}
       </div>
+
+      {/* ─── SECTION: Coworkings actifs (galerie avec images) ─── */}
+      {coworkings.length > 0 && (
+        <div className="bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/10 mb-8 shadow-[0px_4px_12px_rgba(16,35,63,0.05)]">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-secondary" style={{ fontSize: 22 }}>domain</span>
+              <h2 className="font-sora text-lg font-semibold text-primary">Coworkings actifs</h2>
+              <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                style={{ background: '#f95d00' }}>{coworkings.length}</span>
+            </div>
+            <button onClick={() => navigate('/super-admin/tenants')}
+              className="flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-full text-xs font-semibold hover:bg-secondary/90 transition-colors">
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>domain</span>
+              Gérer les Tenants
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {coworkings.slice(0, 8).map((t) => (
+              <div key={t.id} className="rounded-2xl overflow-hidden border border-outline-variant/10 bg-surface-container-lowest hover:shadow-[0px_8px_20px_rgba(16,35,63,0.1)] transition-shadow">
+                <div className="h-28 overflow-hidden">
+                  <img
+                    src={t.cover_url || t.logo_url || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&h=300&fit=crop'}
+                    alt={t.nom}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-sora font-bold text-primary text-sm truncate">{t.nom}</p>
+                    <span className="shrink-0 w-2 h-2 rounded-full bg-emerald-500" title="Actif" />
+                  </div>
+                  <p className="text-[11px] text-on-surface-variant flex items-center gap-1 mb-2">
+                    <span className="material-symbols-outlined" style={{ fontSize: 13 }}>location_on</span>
+                    {[t.adresse, t.ville, t.pays].filter(Boolean).join(', ') || 'Tunisie'}
+                  </p>
+                  {(t.latitude && t.longitude) && (
+                    <p className="text-[10px] text-on-surface-variant/80 mb-2">
+                      📍 {t.latitude}, {t.longitude}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-3 text-[11px] text-on-surface-variant">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>meeting_room</span>
+                      {t.space_count ?? 0} espaces
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>groups</span>
+                      {t.member_count ?? 0} membres
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {coworkings.length > 8 && (
+            <p className="text-center text-xs text-on-surface-variant mt-4">
+              + {coworkings.length - 8} autre(s) coworking(s) — consultez la <button
+                className="text-secondary font-semibold hover:underline"
+                onClick={() => navigate('/super-admin/tenants')}>gestion des tenants</button>
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ─── SECTION: Demandes d'inscription de Coworkings ─── */}
       {pendingTenants.length > 0 && (

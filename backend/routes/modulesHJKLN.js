@@ -248,6 +248,86 @@ router.delete('/guests/booking/:token', async (req, res) => {
 });
 
 // =========================================================================
+// API PUBLIQUE — Coworkings visibles sur la landing & parcours invité
+// (Landing page, "Voir plus", étape 1 de réservation guest)
+// =========================================================================
+
+// GET /api/public/coworkings — Liste des coworkings actifs (landing page)
+router.get('/public/coworkings', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('tenants')
+      .select('id, nom, slug, description, adresse, ville, pays, email, telephone, site_web, logo_url, cover_url, latitude, longitude, created_at')
+      .eq('statut', 'actif')
+      .order('nom', { ascending: true });
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    const enriched = await Promise.all((data || []).map(async (t) => {
+      const [{ count: spaceCount }, { count: membersCount }] = await Promise.all([
+        supabaseAdmin.from('espaces').select('*', { count: 'exact', head: true }).eq('tenant_id', t.id),
+        supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).eq('tenant_id', t.id).in('role', ['member', 'guest']),
+      ]);
+      return { ...t, space_count: spaceCount || 0, member_count: membersCount || 0 };
+    }));
+
+    res.json({ coworkings: enriched || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/public/coworkings/:id — Détail d'un coworking actif + ses espaces
+router.get('/public/coworkings/:id', async (req, res) => {
+  try {
+    const { data: tenant } = await supabaseAdmin
+      .from('tenants')
+      .select('id, nom, slug, description, adresse, ville, pays, email, telephone, site_web, logo_url, cover_url, latitude, longitude, settings, created_at')
+      .eq('id', req.params.id)
+      .eq('statut', 'actif')
+      .single();
+    if (!tenant) return res.status(404).json({ error: 'Coworking introuvable.' });
+
+    const { data: espaces } = await supabaseAdmin
+      .from('espaces')
+      .select('id, nom, type, capacite, tarif_horaire, photo_url, photos_urls')
+      .eq('tenant_id', tenant.id)
+      .order('tarif_horaire', { ascending: true });
+
+    res.json({ coworking: { ...tenant, espaces: espaces || [] } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/public/espaces — Espaces des coworkings actifs (public / guest)
+router.get('/public/espaces', async (req, res) => {
+  try {
+    let query = supabaseAdmin
+      .from('espaces')
+      .select('id, nom, type, capacite, tarif_horaire, photo_url, photos_urls, tenant_id, tenants!tenant_id(nom, ville, adresse, pays, cover_url, logo_url, latitude, longitude)')
+      .order('tarif_horaire', { ascending: true });
+
+    if (req.query.tenant_id) {
+      const { data: tenant } = await supabaseAdmin
+        .from('tenants').select('id').eq('id', req.query.tenant_id).eq('statut', 'actif').single();
+      if (!tenant) return res.status(404).json({ error: 'Coworking introuvable.' });
+      query = query.eq('tenant_id', req.query.tenant_id);
+    } else {
+      const { data: activeIds } = await supabaseAdmin
+        .from('tenants').select('id').eq('statut', 'actif');
+      query = query.in('tenant_id', (activeIds || []).map(t => t.id));
+    }
+
+    const { data, error } = await query;
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ espaces: data || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =========================================================================
 // MODULE J — Politique annulation avancée + Crédit portefeuille
 // =========================================================================
 

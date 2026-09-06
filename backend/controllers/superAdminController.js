@@ -74,7 +74,7 @@ async function createTenant(req, res) {
 
 // PATCH /api/super-admin/tenants/:id
 async function updateTenant(req, res) {
-  const allowed = ['nom', 'description', 'adresse', 'ville', 'pays', 'email', 'telephone', 'site_web', 'logo_url', 'statut', 'plan', 'tier', 'montant_mensuel', 'derniere_facture', 'prochaine_echeance', 'limite_membres', 'limite_espaces', 'settings'];
+  const allowed = ['nom', 'description', 'adresse', 'ville', 'pays', 'email', 'telephone', 'site_web', 'logo_url', 'cover_url', 'latitude', 'longitude', 'statut', 'plan', 'tier', 'montant_mensuel', 'derniere_facture', 'prochaine_echeance', 'limite_membres', 'limite_espaces', 'settings'];
   const updates = { updated_at: new Date().toISOString() };
   for (const field of allowed) {
     if (req.body[field] !== undefined) updates[field] = req.body[field];

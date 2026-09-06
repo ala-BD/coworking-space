@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { kpiApi, formationApi, memberApi } from '../services/api';
+import { kpiApi, formationApi, memberApi, tenantAdminApi, guestApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
 import { getRoleLabel } from '../utils/roles';
 import { exportDashboardToExcel } from '../utils/exportDashboardExcel';
@@ -109,6 +109,8 @@ export default function AdminDashboard({ session }) {
   const [formations, setFormations] = useState([]);
   const [pendingAccounts, setPendingAccounts] = useState([]);
   const [approvingId, setApprovingId] = useState(null);
+  const [coworking, setCoworking] = useState(null);
+  const [guests, setGuests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastRefresh, setLastRefresh] = useState(null);
@@ -171,6 +173,14 @@ export default function AdminDashboard({ session }) {
       });
     
     fetchKpis(false);
+
+    // Mon Coworking (image + coordonnées) & réservations invités (guests)
+    tenantAdminApi.getTenant()
+      .then(res => { if (res.tenant) setCoworking(res.tenant); })
+      .catch(() => {});
+    guestApi.getAll()
+      .then(res => { if (res.guests) setGuests(res.guests); })
+      .catch(() => {});
 
     kpiTimerRef.current = setInterval(() => fetchKpis(true), REFRESH_KPI_MS);
     sessionTimerRef.current = setInterval(fetchSessionsOnly, REFRESH_SESSIONS_MS);
@@ -354,6 +364,58 @@ export default function AdminDashboard({ session }) {
           accent="#8b5cf6"
         />
       </div>
+
+      {/* ── Mon Coworking (image + coordonnées) ────────────────────────── */}
+      {coworking && (
+        <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/10 mb-6 animate-fade-up"
+          style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)', overflow: 'hidden' }}>
+          <div className="flex items-center gap-5 p-5 flex-wrap">
+            <img
+              src={coworking.cover_url || coworking.logo_url || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=400&fit=crop'}
+              alt={coworking.nom}
+              className="w-full sm:w-64 h-32 object-cover rounded-2xl shrink-0"
+            />
+            <div className="flex-1 min-w-[220px]">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="material-symbols-outlined text-secondary" style={{ fontSize: 20 }}>domain</span>
+                <h2 className="font-sora font-bold text-primary text-base">Mon Coworking</h2>
+              </div>
+              <p className="font-sora font-bold text-primary" style={{ fontSize: 18 }}>{coworking.nom}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mt-1 text-xs text-on-surface-variant">
+                {(coworking.adresse || coworking.ville) && (
+                  <span className="flex items-center gap-1">
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>location_on</span>
+                    {[coworking.adresse, coworking.ville, coworking.pays].filter(Boolean).join(', ')}
+                  </span>
+                )}
+                {coworking.telephone && (
+                  <span className="flex items-center gap-1">
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>phone</span>
+                    {coworking.telephone}
+                  </span>
+                )}
+                {coworking.latitude && coworking.longitude && (
+                  <span className="flex items-center gap-1">
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>place</span>
+                    GPS {coworking.latitude}, {coworking.longitude}
+                  </span>
+                )}
+                {coworking.email && (
+                  <span className="flex items-center gap-1 truncate">
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>mail</span>
+                    {coworking.email}
+                  </span>
+                )}
+              </div>
+            </div>
+            <Link to="/admin/profile-coworking"
+              className="flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-full text-xs font-semibold hover:bg-secondary/90 transition-colors shrink-0">
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>settings</span>
+              Modifier le profil
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* ── Graphiques ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 animate-fade-up">
@@ -645,6 +707,80 @@ export default function AdminDashboard({ session }) {
                       </td>
                       <td className="py-3 text-right font-bold text-secondary">
                         {f.prix_inscription > 0 ? `${f.prix_inscription} DT` : 'Gratuit'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Réservations invités (guests) ──────────────────────────────── */}
+      <div className="bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10 mb-6 animate-fade-up"
+        style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-secondary" style={{ fontSize: 20 }}>person_off</span>
+            <h2 className="font-sora font-bold text-primary text-base">Réservations invités (guests)</h2>
+          </div>
+          {guests.length > 0 && (
+            <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white"
+              style={{ background: '#f95d00' }}>{guests.length}</span>
+          )}
+        </div>
+
+        {guests.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <span className="material-symbols-outlined text-[38px] text-on-surface-variant/40 mb-2">group_off</span>
+            <p className="text-sm text-on-surface-variant">Aucune réservation invité pour le moment.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-outline-variant/10">
+                  <th className="pb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Invitée(e)</th>
+                  <th className="pb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Contact</th>
+                  <th className="pb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Espace réservé</th>
+                  <th className="pb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Date</th>
+                  <th className="pb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant text-right">Statut</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/10">
+                {guests.slice(0, 10).map((g) => {
+                  const res = g.reservations?.[0];
+                  return (
+                    <tr key={g.id} className="hover:bg-surface-container-low/30 transition-colors">
+                      <td className="py-3">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-[rgba(249,93,0,0.09)] text-secondary font-bold text-xs">
+                            {(g.prenom?.[0] || '?').toUpperCase()}{(g.nom?.[0] || '').toUpperCase()}
+                          </span>
+                          <span className="font-semibold text-primary">{g.prenom} {g.nom}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 text-on-surface-variant">
+                        <div className="truncate max-w-[200px]">{g.email}</div>
+                        {g.telephone && <div className="text-[10px] text-on-surface-variant/70">{g.telephone}</div>}
+                      </td>
+                      <td className="py-3 text-on-surface-variant">{res?.espaces?.nom || '—'}</td>
+                      <td className="py-3 text-on-surface-variant">
+                        {res?.date_debut ? new Date(res.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '—'}
+                      </td>
+                      <td className="py-3 text-right">
+                        <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight ${
+                          res?.statut === 'confirmed' ? 'bg-emerald-100 text-emerald-800'
+                            : res?.statut === 'pending' ? 'bg-amber-100 text-amber-800'
+                              : res?.statut === 'cancelled' ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {res?.statut === 'confirmed' ? 'Confirmée'
+                            : res?.statut === 'pending' ? 'En attente'
+                              : res?.statut === 'cancelled' ? 'Annulée'
+                                : '—'}
+                        </span>
                       </td>
                     </tr>
                   );
