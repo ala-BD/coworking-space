@@ -184,12 +184,38 @@ function TestiCard({ quote, name, role, initial }) {
 /* ══════════════════════════════
    COMPOSANT PRINCIPAL
 ══════════════════════════════ */
+const HERO_SLIDES = [
+  { src: '/images/coworking/space-1.jpg',   title: 'Open Space',         tag: 'Travail collaboratif' },
+  { src: '/images/coworking/space-2.jpg',   title: 'Bureaux privatifs',  tag: 'Concentration totale' },
+  { src: '/images/coworking/space-3.jpg',   title: 'Bureaux dédiés',     tag: 'Équipes & startups' },
+  { src: '/images/coworking/space-4.jpg',   title: 'Salles de réunion',  tag: 'Réunions & workshops' },
+  { src: '/images/coworking/space-5.jpg',   title: 'Espace lounge',      tag: 'Pause & networking' },
+];
+
 export default function Landing({ session }) {
   const [tenants, setTenants] = useState([]);
+  const [slide, setSlide] = useState(0);
+  const [hovering, setHovering] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const paused = hovering || hidden;
 
   useEffect(() => {
     fetchTenants();
   }, []);
+
+  useEffect(() => {
+    const onVis = () => setHidden(document.hidden);
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
+  useEffect(() => {
+    if (paused) return;
+    const t = setInterval(() => setSlide((s) => (s + 1) % HERO_SLIDES.length), 3000);
+    return () => clearInterval(t);
+  }, [paused]);
+
+  const goSlide = (dir) => setSlide((s) => (s + dir + HERO_SLIDES.length) % HERO_SLIDES.length);
 
   const fetchTenants = async () => {
     try {
@@ -251,20 +277,48 @@ export default function Landing({ session }) {
 
         /* NAV — styles gérés dans Navbar.jsx */
 
-        /* HERO */
-        .hero-wrap { background:linear-gradient(155deg,#fbffff 0%,#ffedd8 55%,#ffdcd0 100%); min-height:92vh; display:flex; align-items:center; padding-top:90px; position:relative; overflow:hidden; }
-        .hero-blob { position:absolute; border-radius:50%; filter:blur(80px); opacity:.22; pointer-events:none; }
-        .hero-img { border-radius:22px; overflow:hidden; box-shadow:0 28px 70px rgba(16,15,13,.2); transform:rotate(1.5deg); transition:transform .5s; }
-        .hero-img:hover { transform:rotate(0deg); }
-        .live-badge {
-          position:absolute; bottom:-18px; left:-18px;
-          background:rgba(251,255,255,.97); backdrop-filter:blur(12px);
-          border-radius:16px; padding:14px 18px; min-width:220px;
-          box-shadow:0 8px 28px rgba(16,15,13,.14); border:1.5px solid rgba(249,93,0,.15);
-          display:flex; align-items:center; gap:12px;
-          animation:float 4s ease-in-out infinite;
+        /* HERO — Background plein écran + slideshow */
+        .hero-wrap {
+          position:relative; min-height:92vh; display:flex; align-items:center; padding-top:90px; overflow:hidden; background:#100f0d;
         }
-        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+        .hero-bg { position:absolute; inset:0; z-index:0; }
+        .hero-bg-slide { position:absolute; inset:0; opacity:0; visibility:hidden; transition:opacity 1.4s cubic-bezier(.25,.46,.45,.94), visibility 1.4s; }
+        .hero-bg-slide.active { opacity:1; visibility:visible; }
+        .hero-bg-slide img { width:100%; height:100%; object-fit:cover; display:block; transform:scale(1.02); }
+        .hero-bg-slide.active img.kb-a { animation:kbA 9s ease-out forwards; }
+        .hero-bg-slide.active img.kb-b { animation:kbB 9s ease-out forwards; }
+        @keyframes kbA { from{transform:scale(1.02) translate(0,0)} to{transform:scale(1.2) translate(-1.8%,-1.3%)} }
+        @keyframes kbB { from{transform:scale(1.2) translate(-1.8%,-1.3%)} to{transform:scale(1.03) translate(.6%,.8%)} }
+        .hero-shade { position:absolute; inset:0; z-index:1; background:linear-gradient(105deg, rgba(16,15,13,.9) 30%, rgba(16,15,13,.55) 58%, rgba(16,15,13,.25) 100%); }
+        .hero-vignette { position:absolute; inset:0; z-index:2; background:radial-gradient(ellipse at 20% 60%, rgba(16,15,13,0) 0%, rgba(16,15,13,.45) 100%); }
+        .hero-content { position:relative; z-index:5; width:100%; }
+        .hero-cap-badge { display:inline-flex; align-items:center; gap:8px; background:rgba(251,255,255,.1); backdrop-filter:blur(10px); color:#fff; font-size:.72rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; padding:7px 16px; border-radius:100px; border:1px solid rgba(255,255,255,.18); }
+        .hero-cap-badge .live-dot { background:#2fbe8f; }
+        .hero-title { color:#fff; text-shadow:0 4px 30px rgba(16,15,13,.5); }
+        .hero-title .accent { color:#ff8a3d; }
+        .hero-rule { width:76px; height:4px; border-radius:4px; background:linear-gradient(90deg,#f95d00,#ffb285); margin:20px 0 26px; transform-origin:left center; opacity:0; animation:ruleGrow .9s cubic-bezier(.2,.7,.2,1) 1.05s forwards; box-shadow:0 2px 14px rgba(249,93,0,.5); }
+        @keyframes ruleGrow { from{transform:scaleX(0); opacity:0} to{transform:scaleX(1); opacity:1} }
+        .hero-sub { color:rgba(255,255,255,.82); text-shadow:0 2px 12px rgba(16,15,13,.4); }
+        .hero-meta { color:rgba(255,255,255,.86); }
+        .hero-meta strong { color:#fff; }
+        .hero-fly { animation:heroFly 1s cubic-bezier(.2,.7,.2,1) both; }
+        .hero-fly-1 { animation-delay:.15s; }
+        .hero-fly-2 { animation-delay:.3s; }
+        .hero-fly-3 { animation-delay:.45s; }
+        @keyframes heroFly { from{opacity:0; transform:translateY(26px); filter:blur(8px)} to{opacity:1; transform:translateY(0); filter:blur(0)} }
+        .hero-title .fl-word { display:inline-block; opacity:0; transform:translateY(40px) scale(.96); animation:wordUp .7s cubic-bezier(.2,.7,.2,1) forwards; }
+        .hero-title .fl-accent { display:inline-block; color:#ff8a3d; opacity:0; animation:wordUp .8s .85s cubic-bezier(.2,.7,.2,1) both, accentGlow 3.4s ease-in-out 2s infinite; text-shadow:0 0 18px rgba(255,138,61,.4); }
+        @keyframes wordUp { from{opacity:0; transform:translateY(40px) scale(.96); filter:blur(6px)} to{opacity:1; transform:translateY(0) scale(1); filter:blur(0)} }
+        @keyframes accentGlow { 0%,100%{text-shadow:0 0 14px rgba(255,138,61,.3)} 50%{text-shadow:0 0 34px rgba(255,138,61,.8)} }
+        .btn-primary-hero { background:#f95d00; color:#fff; border:none; border-radius:12px; padding:13px 30px; font-weight:700; font-size:1rem; transition:all .25s; display:inline-flex; align-items:center; gap:10px; box-shadow:0 10px 30px rgba(249,93,0,.4); }
+        .btn-primary-hero:hover { transform:translateY(-2px); box-shadow:0 14px 36px rgba(249,93,0,.5); }
+        .btn-ghost-hero { background:rgba(255,255,255,.06); color:#fff; border:2px solid rgba(255,255,255,.45); border-radius:12px; padding:12px 30px; font-weight:700; font-size:1rem; transition:all .25s; display:inline-flex; align-items:center; gap:10px; backdrop-filter:blur(6px); }
+        .btn-ghost-hero:hover { background:#fff; color:#100f0d; border-color:#fff; }
+        .font-sora { font-family:'Sora',sans-serif !important; }
+        .hero-arrow { position:absolute; top:50%; transform:translateY(-50%); z-index:6; width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,255,255,.35); background:rgba(16,15,13,.32); color:#fff; backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; cursor:pointer; opacity:.8; transition:opacity .25s, background .25s, transform .25s; }
+        .hero-arrow.prev { left:16px; }
+        .hero-arrow.next { right:16px; }
+        .hero-arrow:hover { background:rgba(249,93,0,.85); border-color:transparent; opacity:1; transform:translateY(-50%) scale(1.08); }
         .live-dot { width:10px; height:10px; border-radius:50%; background:#2fbe8f; animation:pulse 2s infinite; flex-shrink:0; }
         @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(47,190,143,.45)} 50%{box-shadow:0 0 0 8px rgba(47,190,143,0)} }
 
@@ -298,8 +352,10 @@ export default function Landing({ session }) {
 
         /* FOOTER */
         .ec-footer { background:#100f0d; }
-        .ec-footer a { color:#a3a09b; text-decoration:none; font-size:.875rem; transition:color .2s; }
-        .ec-footer a:hover { color:#f95d00; }
+        .ec-footer a { color:#ffffff !important; text-decoration:none; font-size:.875rem; transition:color .2s; }
+        .ec-footer a:hover { color:#f95d00 !important; }
+        .ec-footer p { color:#ffffff !important; }
+        .ec-footer h6 { color:#ffffff !important; }
         .soc-btn { width:38px; height:38px; border-radius:50%; background:rgba(251,255,255,.08); display:inline-flex; align-items:center; justify-content:center; color:#a3a09b; text-decoration:none; transition:all .2s; margin-right:8px; }
         .soc-btn:hover { background:#f95d00; color:#fbffff; }
 
@@ -310,9 +366,15 @@ export default function Landing({ session }) {
         .fa-2 { animation-delay:.24s; }
 
         @media(max-width:767px) {
-          .hero-wrap { min-height:auto; padding:100px 0 60px; }
-          .live-badge { display:none !important; }
-          .hero-right { display:none !important; }
+          .hero-wrap { min-height:86vh; padding:110px 0 70px; }
+          .hero-bg-slide img.kb-a, .hero-bg-slide img.kb-b { animation:none; }
+          .hero-shade { background:linear-gradient(180deg, rgba(16,15,13,.78) 0%, rgba(16,15,13,.6) 100%); }
+          .hero-arrow { display:none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .hero-bg-slide.active img.kb-a, .hero-bg-slide.active img.kb-b { animation:none; }
+          .hero-bg-slide { transition:none; }
+          .hero-title .fl-word, .hero-title .fl-accent, .hero-fly { animation:none; opacity:1; transform:none; filter:none; }
         }
       `}</style>
 
@@ -321,77 +383,75 @@ export default function Landing({ session }) {
 
       {/* ══ HERO ══ */}
       <section className="hero-wrap">
-        <div className="hero-blob" style={{ width: 500, height: 500, background: EC.cobalt, top: -150, right: -80 }} />
-        <div className="hero-blob" style={{ width: 300, height: 300, background: '#c4d4ff', bottom: -60, left: -100 }} />
-        <div className="container">
+        {/* Slideshow plein écran en arrière-plan */}
+        <div className="hero-bg" onMouseEnter={() => setHovering(true)} onMouseLeave={() => setHovering(false)}>
+          {HERO_SLIDES.map((s, i) => (
+            <div key={s.src} className={`hero-bg-slide ${i === slide ? 'active' : ''}`} aria-hidden={i !== slide}>
+              <img
+                src={s.src}
+                alt={''}
+                loading={i === 0 ? 'eager' : 'lazy'}
+                className={i % 2 === 0 ? 'kb-a' : 'kb-b'}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="hero-shade" />
+        <div className="hero-vignette" />
+
+        <div className="hero-content container">
           <div className="row align-items-center g-5">
-            {/* Left */}
-            <div className="col-lg-6">
-              <span className="sec-badge fa">✦ Coworking Premium · Tunis</span>
-              <h1 className="sora fw-bold fa fa-1 mb-4" style={{ fontSize: 'clamp(2.3rem,5vw,3.4rem)', color: EC.navy, lineHeight: 1.17, letterSpacing: '-.025em' }}>
-                Réservez votre espace idéal en{' '}
-                <span style={{ color: EC.cobalt }}>3 clics</span>
+            <div className="col-lg-7">
+              <span className="hero-cap-badge hero-fly hero-fly-1">
+                <span className="live-dot" /> Coworking Premium · Tunis
+              </span>
+
+              <h1 className="sora fw-bold hero-title mb-0" style={{ fontSize: 'clamp(2.4rem,5.4vw,4rem)', lineHeight: 1.12, letterSpacing: '-.025em', marginTop: '1.1rem' }}>
+                {'Réservez votre espace idéal en'.split(' ').map((w, wi) => (
+                  <span key={wi} className="fl-word" style={{ animationDelay: `${0.4 + wi * 0.08}s` }}>{w}&nbsp;</span>
+                ))}
+                <span className="fl-accent">3&nbsp;clics</span>
               </h1>
-              <p className="fa fa-2 mb-4" style={{ color: EC.muted, fontSize: '1.1rem', lineHeight: 1.8, maxWidth: 520 }}>
-                DeskyWork offre des espaces de travail conçus pour les professionnels ambitieux.
-                Rejoignez une communauté d'excellence au cœur de Tunis.
+              <div className="hero-rule" />
+
+              <p className="hero-sub hero-fly hero-fly-2 mb-4" style={{ fontSize: '1.15rem', lineHeight: 1.8, maxWidth: 540 }}>
+                <span className="hero-fly hero-fly-2">DeskyWork offre des espaces de travail conçus pour les professionnels ambitieux.</span>
+                <br className="d-none d-md-block" />
+                <span className="hero-fly hero-fly-2" style={{ animationDelay: '.55s' }}>Rejoignez une communauté d'excellence au cœur de Tunis.</span>
               </p>
 
-              {/* social proof */}
-              <div className="d-flex align-items-center gap-3 mb-4 fa fa-2">
+              <div className="d-flex align-items-center gap-3 mb-4 hero-fly hero-fly-2">
                 <div className="d-flex">
                   {['S', 'M', 'N', 'K'].map((l, i) => (
-                    <div key={i} style={{ width: 34, height: 34, borderRadius: '50%', background: i % 2 === 0 ? EC.cobaltLight : EC.cobalt, color: i % 2 === 0 ? EC.cobalt : EC.white, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '.78rem', marginLeft: i > 0 ? -8 : 0, border: '2px solid white' }}>{l}</div>
+                    <div key={i} style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,.18)', border: '2px solid rgba(255,255,255,.6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '.78rem', marginLeft: i > 0 ? -8 : 0 }}>{l}</div>
                   ))}
                 </div>
-                <p className="mb-0" style={{ color: EC.muted, fontSize: '.88rem' }}>
-                  <strong style={{ color: EC.navy }}>+200 membres</strong> nous font confiance
+                <p className="hero-meta mb-0" style={{ fontSize: '.9rem' }}>
+                  <strong>+200 membres</strong> nous font confiance
                 </p>
               </div>
 
-              <div className="d-flex flex-wrap gap-3 fa fa-2">
-<Link to={session ? '/dashboard' : '/book-guest'} className="btn d-inline-flex align-items-center gap-2"
-                  style={{ backgroundColor: EC.cobalt, color: 'white', borderRadius: 12, padding: '13px 30px', fontWeight: 700, border: 'none', fontSize: '1rem', transition: 'all .25s' }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,84,203,.35)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
+              <div className="d-flex flex-wrap gap-3 hero-fly hero-fly-3">
+                <Link to={session ? '/dashboard' : '/book-guest'} className="btn-primary-hero">
                   <span className="material-symbols-outlined" style={{ fontSize: 20 }}>event_available</span>
                   {session ? 'Accéder au Portail' : 'Réserver sans compte'}
                 </Link>
-                <Link to="/register" className="btn d-inline-flex align-items-center gap-2"
-                  style={{ backgroundColor: 'transparent', color: EC.navy, border: `2px solid ${EC.navyMid}`, borderRadius: 12, padding: '13px 30px', fontWeight: 700, fontSize: '1rem', transition: 'all .25s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = EC.navy; e.currentTarget.style.color = 'white'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = EC.navy; }}>
+                <Link to="/register" className="btn-ghost-hero">
                   Devenir membre
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_forward</span>
                 </Link>
               </div>
             </div>
-
-            {/* Right */}
-            <div className="col-lg-6 position-relative hero-right">
-              <div className="hero-img">
-                <img
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCVxReLMTSMnl6dGnhZC8U2cLeyd7FtFsetmMaUKMaoAceHh7a0kXW5dNxnZeMDJTD0ZC7EU0xtx3pylkcAPy228LQE7bNxpOgM7o7sglIcWvOrD4dca-cPLOkMKvWJc1Ce1j7YaS05HV7qQaimKxnHRqFXnbPbh_1y7ZBZsbltE2xFSrnXrBROVuMdwtQro7QM3Xm0iqu7sCNpt1zft2wOC61tQP8-JVp8GuSj1IhhcBsWfdILcYdrB0L7VzyRgtZKELpt8iCR7Y"
-                  alt="Espace de coworking DeskyWork"
-                  style={{ width: '100%', height: 430, objectFit: 'cover', display: 'block' }}
-                />
-              </div>
-              {/* Live badge */}
-              <div className="live-badge">
-                <div style={{ width: 42, height: 42, borderRadius: 12, background: EC.cobalt, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span className="material-symbols-outlined" style={{ color: 'white', fontSize: 22 }}>bolt</span>
-                </div>
-                <div>
-                  <div className="d-flex align-items-center gap-2 mb-1">
-                    <div className="live-dot" />
-                    <span style={{ fontSize: '.75rem', fontWeight: 700, color: EC.navy }}>Disponibilité en direct</span>
-                  </div>
-                  <p className="mb-0" style={{ fontSize: '.75rem', color: EC.muted }}>15 postes libres maintenant</p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
+
+        {/* Flèches ancrés sur les côtés du hero */}
+        <button type="button" className="hero-arrow prev" onClick={() => goSlide(-1)} aria-label="Image précédente">
+          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_left</span>
+        </button>
+        <button type="button" className="hero-arrow next" onClick={() => goSlide(1)} aria-label="Image suivante">
+          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_right</span>
+        </button>
       </section>
 
       {/* ══ TRUST BAR ══ */}
@@ -401,9 +461,8 @@ export default function Landing({ session }) {
             Ils nous font confiance
           </p>
           <div className="d-flex flex-wrap justify-content-center align-items-center gap-5">
-            {['BFI Group', 'InnoVision', 'DevFactory', 'PixelStudio', 'NovaTech'].map(b => (
-              <div key={b} className="trust-name">{b}</div>
-            ))}
+            <a href="https://thirtythreespace.com/" target="_blank" rel="noopener noreferrer" className="trust-name">Thirty Three Space</a>
+            <span className="trust-name">néro coworking space</span>
           </div>
         </div>
       </section>
@@ -579,9 +638,9 @@ export default function Landing({ session }) {
               Réserver un Pass Jour
             </Link>
             <Link to="/register" className="btn d-inline-flex align-items-center gap-2"
-              style={{ backgroundColor: 'transparent', color: 'white', border: '2px solid rgba(255,255,255,.3)', borderRadius: 12, padding: '15px 36px', fontWeight: 700, fontSize: '1rem', transition: 'all .25s' }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = 'white'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,.3)'}>
+              style={{ backgroundColor: '#ffffff', color: EC.navy, border: 'none', borderRadius: 12, padding: '15px 36px', fontWeight: 700, fontSize: '1rem', transition: 'all .25s', boxShadow: '0 8px 24px rgba(0,0,0,.25)' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.backgroundColor = '#fff3ec'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.backgroundColor = '#ffffff'; }}>
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>person_add</span>
               Devenir Membre
             </Link>
