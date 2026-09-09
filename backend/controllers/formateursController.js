@@ -174,10 +174,92 @@ async function addRemuneration(req, res) {
   }
 }
 
+// ── GET /api/formateurs/me/coworkings ────────────────────────────────────
+async function trainerCoworkings(req, res) {
+  try {
+    const userId = req.user.id;
+    const tenantIds = new Set();
+
+    // Tenant du profil
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('tenant_id')
+      .eq('id', userId)
+      .single();
+    if (profile?.tenant_id) tenantIds.add(profile.tenant_id);
+
+    // Tenants de ses formations (via les espaces)
+    const { data: formationSpaces } = await supabaseAdmin
+      .from('formations')
+      .select('espaces(tenant_id)')
+      .eq('formateur_id', userId);
+    (formationSpaces || []).forEach(fs => {
+      if (fs.espaces?.tenant_id) tenantIds.add(fs.espaces.tenant_id);
+    });
+
+    // Tenants de ses réservations
+    const { data: reservationTenants } = await supabaseAdmin
+      .from('reservations')
+      .select('tenant_id')
+      .eq('user_id', userId);
+    (reservationTenants || []).forEach(r => {
+      if (r.tenant_id) tenantIds.add(r.tenant_id);
+    });
+
+    if (tenantIds.size === 0) return res.json({ coworkings: [] });
+
+    const { data: tenants, error: tenantErr } = await supabaseAdmin
+      .from('tenants')
+      .select('id, nom, ville, adresse, statut, logo_url')
+      .in('id', [...tenantIds]);
+
+    if (tenantErr) return res.status(500).json({ error: tenantErr.message });
+
+    // Nombre de formations et réservations par coworking
+    const [formationCounts, reservationCounts] = await Promise.all([
+      supabaseAdmin
+        .from('formations')
+        .select('espaces!inner(tenant_id)')
+        .eq('formateur_id', userId),
+      supabaseAdmin
+        .from('reservations')
+        .select('tenant_id')
+        .eq('user_id', userId)
+        .neq('statut', 'cancelled'),
+    ]);
+
+    const formPerTenant = {};
+    (formationCounts.data || []).forEach(x => {
+      const tid = x.espaces?.tenant_id;
+      if (tid) formPerTenant[tid] = (formPerTenant[tid] || 0) + 1;
+    });
+    const resPerTenant = {};
+    (reservationCounts.data || []).forEach(x => {
+      if (x.tenant_id) resPerTenant[x.tenant_id] = (resPerTenant[x.tenant_id] || 0) + 1;
+    });
+
+    const coworkings = (tenants || []).map(t => ({
+      id: t.id,
+      nom: t.nom,
+      ville: t.ville,
+      adresse: t.adresse,
+      statut: t.statut,
+      logo_url: t.logo_url,
+      nb_formations: formPerTenant[t.id] || 0,
+      nb_reservations: resPerTenant[t.id] || 0,
+    }));
+
+    res.json({ coworkings, total: coworkings.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   listFormateurs,
   getFormateur,
   createFormateur,
   updateFormateur,
   addRemuneration,
+  trainerCoworkings,
 };

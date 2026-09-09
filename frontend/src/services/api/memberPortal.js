@@ -7,6 +7,7 @@ export const memberPortalApi = {
     return apiFetch(`/api/bookings/history?${qs}`);
   },
   getStats: () => apiFetch('/api/member/stats'),
+  getNearbySpaces: () => apiFetch('/api/member/spaces-nearby'),
   getNotifications: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return apiFetch(`/api/member/notifications?${qs}`);

@@ -24,6 +24,9 @@ export const bookingApi = {
   cancel: (id) =>
     apiFetch(`/api/bookings/${id}`, { method: 'DELETE' }),
 
+  getCancelInfo: (id) =>
+    apiFetch(`/api/bookings/${id}/cancel-info`),
+
   getOccupation: (params) => {
     const qs = new URLSearchParams(params).toString();
     return apiFetch(`/api/bookings/occupation?${qs}`);

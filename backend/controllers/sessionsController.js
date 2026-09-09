@@ -24,7 +24,7 @@ async function updateCancellationPolicyRoute(req, res) {
     } = req.body;
 
     const current = await getCancellationPolicy(req.tenantId);
-    const updates = {
+    const values = {
       delai_heures: delai_heures ?? current.delai_heures,
       penalite_pct: penalite_pct ?? current.penalite_pct,
       annulation_membre_autorisee: annulation_membre_autorisee ?? current.annulation_membre_autorisee,
@@ -33,12 +33,22 @@ async function updateCancellationPolicyRoute(req, res) {
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabaseAdmin
-      .from('politique_annulation')
-      .update(updates)
-      .eq('id', current.id)
-      .select()
-      .single();
+    let data, error;
+    if (current.id) {
+      ({ data, error } = await supabaseAdmin
+        .from('politique_annulation')
+        .update(values)
+        .eq('id', current.id)
+        .select()
+        .single());
+    } else {
+      // Aucune ligne pour ce tenant : création (politique configurable par l'Admin Coworking)
+      ({ data, error } = await supabaseAdmin
+        .from('politique_annulation')
+        .insert({ ...values, tenant_id: req.tenantId || null })
+        .select()
+        .single());
+    }
 
     if (error) {
       return res.status(400).json({ error: error.message });
@@ -172,12 +182,24 @@ async function checkIn(req, res) {
   try {
     let targetUserId = req.user.id;
     let reservation;
+    let checkedInMember;
 
     if (qr_token && isStaff) {
+      // Le QR scanné peut être le token brut ou le payload JSON complet
+      let token = String(qr_token).trim();
+      if (token.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(token);
+          token = parsed.qr_token || parsed.token || token;
+        } catch {
+          // token brut
+        }
+      }
+
       const { data: memberProfile, error: profErr } = await supabaseAdmin
         .from('profiles')
-        .select('id, nom, prenom, statut_compte')
-        .eq('qr_token', qr_token)
+        .select('id, nom, prenom, email, statut_compte')
+        .eq('qr_token', token)
         .single();
 
       if (profErr || !memberProfile) {
@@ -185,26 +207,40 @@ async function checkIn(req, res) {
       }
 
       targetUserId = memberProfile.id;
+      checkedInMember = {
+        id: memberProfile.id,
+        nom: memberProfile.nom,
+        prenom: memberProfile.prenom,
+        email: memberProfile.email,
+        statut_compte: memberProfile.statut_compte,
+      };
 
+      const now = new Date();
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       const todayEnd = new Date();
       todayEnd.setHours(23, 59, 59, 999);
 
-      const { data: todayReservations } = await supabaseAdmin
+      const { data: candidateReservations } = await supabaseAdmin
         .from('reservations')
         .select('*, espaces(nom, type)')
         .eq('user_id', targetUserId)
         .eq('statut', 'confirmed')
-        .gte('date_debut', todayStart.toISOString())
-        .lte('date_debut', todayEnd.toISOString())
+        .gte('date_fin', todayStart.toISOString())
         .order('date_debut', { ascending: true })
-        .limit(1);
+        .limit(10);
 
-      reservation = todayReservations?.[0];
+      const inProgress = (candidateReservations || []).find(
+        (r) => new Date(r.date_debut) <= now && new Date(r.date_fin) >= now
+      );
+      const todayBooking = (candidateReservations || []).find(
+        (r) => new Date(r.date_debut) >= todayStart && new Date(r.date_debut) <= todayEnd
+      );
+      reservation = inProgress || todayBooking || (candidateReservations || [])?.[0];
+
       if (!reservation) {
         return res.status(404).json({
-          error: "Aucune réservation confirmée aujourd'hui pour ce membre.",
+          error: "Aucune réservation confirmée en cours ou à venir pour ce membre.",
           member: memberProfile,
         });
       }
@@ -294,6 +330,7 @@ async function checkIn(req, res) {
 
     res.status(201).json({
       session: { ...session, temps_restant: remaining },
+      member: checkedInMember || undefined,
       warning: !hasSub ? 'Check-in effectué sans abonnement actif.' : null,
     });
 

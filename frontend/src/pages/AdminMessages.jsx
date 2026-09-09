@@ -221,17 +221,27 @@ export default function AdminMessages() {
 
   const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
 
-  const handleSearchMembers = async (query) => {
-    setMemberSearch(query);
-    if (query.trim().length < 2) { setMembers([]); return; }
+  const loadAllMembers = async () => {
     setSearchingMembers(true);
     try {
       const token = (await supabase.auth.getSession()).data.session?.access_token;
-      const res = await fetch(`${SOCKET_URL}/api/admin/members?search=${encodeURIComponent(query)}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${SOCKET_URL}/api/admin/members`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       setMembers(data.members || []);
-    } catch (err) { console.error('Failed to search members:', err); } finally { setSearchingMembers(false); }
+    } catch (err) { console.error('Failed to load members:', err); } finally { setSearchingMembers(false); }
   };
+
+  const openNewConvModal = async () => {
+    setMemberSearch('');
+    setShowNewConvModal(true);
+    loadAllMembers();
+  };
+
+  const filteredMembers = members.filter(m => {
+    if (!memberSearch.trim()) return true;
+    const s = memberSearch.toLowerCase();
+    return `${m.prenom || ''} ${m.nom || ''}`.toLowerCase().includes(s) || (m.email || '').toLowerCase().includes(s);
+  });
 
   const handleStartConversation = async (member) => {
     setCreatingConv(true);
@@ -268,7 +278,7 @@ export default function AdminMessages() {
             <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: 'Sora, sans-serif' }}>Messagerie</h1>
             {totalUnread > 0 && <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full text-xs font-bold text-white" style={{ background: '#f95d00' }}>{totalUnread}</span>}
           </div>
-          <button onClick={() => setShowNewConvModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: 'linear-gradient(135deg, #f95d00, #ff7a28)', boxShadow: '0 4px 12px rgba(249,93,0,0.2)' }}>
+          <button onClick={openNewConvModal} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: 'linear-gradient(135deg, #f95d00, #ff7a28)', boxShadow: '0 4px 12px rgba(249,93,0,0.2)' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>Nouvelle conversation
           </button>
         </div>
@@ -372,14 +382,18 @@ export default function AdminMessages() {
               </div>
               <div className="relative mb-4">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" style={{ fontSize: 20 }}>search</span>
-                <input type="text" value={memberSearch} onChange={(e) => handleSearchMembers(e.target.value)} placeholder="Rechercher par nom ou email..." autoFocus className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-variant/20 border border-outline-variant/15 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:border-secondary/40 transition-colors" />
+                <input type="text" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} placeholder="Rechercher un utilisateur..." autoFocus className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-variant/20 border border-outline-variant/15 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:border-secondary/40 transition-colors" />
+              </div>
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs font-semibold text-on-surface-variant/60">Utilisateurs du coworking</p>
+                <span className="text-[11px] text-on-surface-variant/40">{filteredMembers.length} utilisateur{filteredMembers.length !== 1 ? 's' : ''}</span>
               </div>
               <div className="max-h-[300px] overflow-y-auto space-y-1">
                 {searchingMembers ? (
                   <div className="flex items-center justify-center py-8"><span className="material-symbols-outlined animate-spin text-secondary" style={{ fontSize: 24 }}>progress_activity</span></div>
-                ) : members.length === 0 ? (
-                  <p className="text-sm text-on-surface-variant/50 text-center py-8">{memberSearch.trim().length < 2 ? 'Tapez au moins 2 caractères...' : 'Aucun membre trouvé'}</p>
-                ) : members.map(member => (
+                ) : filteredMembers.length === 0 ? (
+                  <p className="text-sm text-on-surface-variant/50 text-center py-8">Aucun utilisateur trouvé</p>
+                ) : filteredMembers.map(member => (
                   <button key={member.id} onClick={() => handleStartConversation(member)} disabled={creatingConv} className="w-full text-left flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/20 transition-all disabled:opacity-50">
                     <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0" style={{ background: 'linear-gradient(135deg, #2FBE8F, #28a745)' }}>
                       {(member.prenom || member.nom || '?').charAt(0).toUpperCase()}

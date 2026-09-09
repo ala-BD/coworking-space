@@ -223,24 +223,40 @@ export default function AdminOnboarding({ session }) {
                   />
                 </div>
                 <div>
-                  <label className="text-label-sm font-semibold text-on-surface-variant">Adresse</label>
-                  <input
-                    value={tenantForm.adresse}
-                    onChange={(e) => setTenantForm({ ...tenantForm, adresse: e.target.value })}
-                    className="form-input mt-1"
-                    placeholder="12 Rue de la Liberté"
-                  />
+                  <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Localisation</label>
+                  <div className="mt-2 space-y-4">
+                    <div>
+                      <label className="text-label-sm font-semibold text-on-surface-variant">Adresse</label>
+                      <input
+                        value={tenantForm.adresse}
+                        onChange={(e) => setTenantForm({ ...tenantForm, adresse: e.target.value })}
+                        className="form-input mt-1"
+                        placeholder="12 Rue de la Liberté"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-label-sm font-semibold text-on-surface-variant">Ville</label>
+                        <input
+                          value={tenantForm.ville}
+                          onChange={(e) => setTenantForm({ ...tenantForm, ville: e.target.value })}
+                          className="form-input mt-1"
+                          placeholder="Tunis"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-label-sm font-semibold text-on-surface-variant">Pays</label>
+                        <input
+                          value={tenantForm.pays}
+                          onChange={(e) => setTenantForm({ ...tenantForm, pays: e.target.value })}
+                          className="form-input mt-1"
+                          placeholder="Tunisie"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-label-sm font-semibold text-on-surface-variant">Ville</label>
-                    <input
-                      value={tenantForm.ville}
-                      onChange={(e) => setTenantForm({ ...tenantForm, ville: e.target.value })}
-                      className="form-input mt-1"
-                      placeholder="Tunis"
-                    />
-                  </div>
                   <div>
                     <label className="text-label-sm font-semibold text-on-surface-variant">Téléphone</label>
                     <input
@@ -250,16 +266,16 @@ export default function AdminOnboarding({ session }) {
                       placeholder="+216 99 999 999"
                     />
                   </div>
-                </div>
-                <div>
-                  <label className="text-label-sm font-semibold text-on-surface-variant">Email de contact</label>
-                  <input
-                    type="email"
-                    value={tenantForm.email}
-                    onChange={(e) => setTenantForm({ ...tenantForm, email: e.target.value })}
-                    className="form-input mt-1"
-                    placeholder="contact@moncoworking.tn"
-                  />
+                  <div>
+                    <label className="text-label-sm font-semibold text-on-surface-variant">Email de contact</label>
+                    <input
+                      type="email"
+                      value={tenantForm.email}
+                      onChange={(e) => setTenantForm({ ...tenantForm, email: e.target.value })}
+                      className="form-input mt-1"
+                      placeholder="contact@moncoworking.tn"
+                    />
+                  </div>
                 </div>
               </div>
               <button

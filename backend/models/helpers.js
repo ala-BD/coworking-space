@@ -21,7 +21,7 @@ function applyPromoDiscount(prix, promo) {
   return { prixFinal: Math.max(0, prix - reduction), reduction };
 }
 
-async function findActiveTarif(typeAbonnement, planTarifaire, tenantId) {
+async function findActiveTarif(typeAbonnement, planTarifaire, tenantId, typeEspace) {
   const today = todayISO();
   let q = supabaseAdmin
     .from('tarifs_abonnements')
@@ -33,8 +33,16 @@ async function findActiveTarif(typeAbonnement, planTarifaire, tenantId) {
   if (tenantId) q = q.eq('tenant_id', tenantId);
   const { data, error } = await q.order('date_debut', { ascending: false });
   if (error) throw error;
-  const tarif = (data || []).find((t) => !t.date_fin || t.date_fin >= today);
-  return tarif || null;
+  const active = (data || []).filter((t) => !t.date_fin || t.date_fin >= today);
+  if (active.length === 0) return null;
+  if (typeEspace) {
+    return (
+      active.find((t) => t.type_espace === typeEspace)
+      || active.find((t) => !t.type_espace)
+      || null
+    );
+  }
+  return active.find((t) => !t.type_espace) || active[0];
 }
 
 async function findValidPromoCode(code, tenantId) {
@@ -87,6 +95,79 @@ function evaluateCancellation(reservation, policy, isStaff) {
     };
   }
   return { allowed: true, penalite_pct: Number(policy.penalite_pct || 0) };
+}
+
+// Règle spécifique à un type d'espace (politique_annulation_espaces) si elle existe
+async function getCancellationPolicyForEspace(tenantId, espaceType) {
+  if (!espaceType) return null;
+  let q = supabaseAdmin
+    .from('politique_annulation_espaces')
+    .select('*')
+    .eq('type_espace', espaceType);
+  if (tenantId) q = q.eq('tenant_id', tenantId);
+  const { data, error } = await q.maybeSingle();
+  if (error) return null;
+  return data || null;
+}
+
+// Calcule les conditions d'annulation d'une réservation :
+// pénalité, montant retenu, montant remboursé (cash) ou converti en crédit.
+function buildCancellationInfo(reservation, policy, espacePolicy, isStaff, montantPaye) {
+  const hoursUntilStart = (new Date(reservation.date_debut).getTime() - Date.now()) / 3600000;
+  const montant = Math.round((Number(montantPaye || 0)) * 100) / 100;
+
+  const base = { montantPaye: montant, montantRembourse: 0, montantCredit: 0, montantRetenu: 0, mode: 'aucun', hoursUntilStart: Number(hoursUntilStart.toFixed(1)) };
+
+  if (isStaff) {
+    return { ...base, allowed: true, penalite_pct: 0, montantRembourse: montant, mode: montant > 0 ? 'remboursement' : 'aucun' };
+  }
+
+  if (!policy.annulation_membre_autorisee) {
+    return { ...base, allowed: false, reason: "Les annulations en ligne sont désactivées. Contactez l'accueil." };
+  }
+
+  let penalite = Number(policy.penalite_pct || 0);
+  if (!espacePolicy) {
+    if (hoursUntilStart < policy.delai_heures) {
+      return {
+        ...base,
+        allowed: false,
+        reason: `Annulation impossible moins de ${policy.delai_heures} h avant le début.`,
+      };
+    }
+  } else {
+    const libre = Number(espacePolicy.tranche_libre_heures ?? 24);
+    const tardive = Number(espacePolicy.tranche_tardive_heures ?? 12);
+    if (hoursUntilStart >= libre) penalite = 0;
+    else if (hoursUntilStart >= tardive) penalite = Number(espacePolicy.penalite_tardive_pct ?? 50);
+    else penalite = Number(espacePolicy.penalite_tres_tardive_pct ?? 100);
+  }
+
+  const montantRetenu = Math.round(montant * penalite / 100 * 100) / 100;
+  const remboursable = Math.max(0, Math.round((montant - montantRetenu) * 100) / 100);
+
+  let mode = 'aucun';
+  let montantRembourse = 0;
+  let montantCredit = 0;
+  if (remboursable > 0) {
+    if (espacePolicy?.credit_portefeuille_auto) {
+      mode = 'credit';
+      montantCredit = remboursable;
+    } else if (policy.remboursement_auto) {
+      mode = 'remboursement';
+      montantRembourse = remboursable;
+    }
+  }
+
+  return {
+    ...base,
+    allowed: true,
+    penalite_pct: penalite,
+    montantRetenu,
+    montantRembourse,
+    montantCredit,
+    mode,
+  };
 }
 
 async function hasActiveSubscription(userId) {
@@ -278,6 +359,8 @@ module.exports = {
   sanitizeProfileForClient,
   getCancellationPolicy,
   evaluateCancellation,
+  getCancellationPolicyForEspace,
+  buildCancellationInfo,
   hasActiveSubscription,
   ensureQrToken,
   computeRemainingMinutes,

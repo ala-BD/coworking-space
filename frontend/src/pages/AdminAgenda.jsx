@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { bookingApi, sessionApi } from '../services/api';
@@ -74,6 +74,9 @@ export default function AdminAgenda({ session }) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [qrInput, setQrInput] = useState('');
+  const qrScannerRef = useRef(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannerError, setScannerError] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState(null);
   const [error, setError] = useState('');
@@ -97,6 +100,7 @@ export default function AdminAgenda({ session }) {
     ];
 
     return () => {
+      clearQrScanner();
       unsubs.forEach((fn) => fn());
       disconnectSocket();
     };
@@ -216,26 +220,108 @@ export default function AdminAgenda({ session }) {
     }
   };
 
-  const handleQrCheckIn = async (e) => {
-    e.preventDefault();
-    if (!qrInput.trim()) return;
+  const extractQrToken = (raw) => {
+    let token = (raw || '').trim();
+    if (!token) return null;
+    try {
+      const parsed = JSON.parse(token);
+      token = parsed.qr_token || parsed.token || token;
+    } catch {
+      // token brut
+    }
+    return token;
+  };
+
+  const runQrCheckIn = async (token, source) => {
+    if (actionId === 'qr') return;
     setActionId('qr');
     try {
-      let token = qrInput.trim();
-      try {
-        const parsed = JSON.parse(qrInput.trim());
-        token = parsed.qr_token || parsed.token || qrInput.trim();
-      } catch {
-        // raw token
-      }
       const result = await sessionApi.checkIn({ qr_token: token, force: true });
-      setSuccess(result.warning || 'Check-in QR effectué.');
+      const memberLabel = result.member
+        ? `${result.member.prenom || ''} ${result.member.nom || ''}`.trim()
+        : '';
+      const prefix = source === 'camera' ? 'Check-in QR (caméra) effectué.' : 'Check-in QR effectué.';
+      setSuccess(`${prefix}${memberLabel ? ` Entrée vérifiée : ${memberLabel}.` : ''}${result.warning ? ` ${result.warning}` : ''}`);
       setQrInput('');
       await loadCalendar();
     } catch (e) {
       setError(e.message);
+      const member = e.body?.member;
+      if (member) setSuccess(`Membre identifié : ${member.prenom} ${member.nom}`);
     } finally {
       setActionId(null);
+    }
+  };
+
+  const handleQrCheckIn = (e) => {
+    e.preventDefault();
+    const token = extractQrToken(qrInput);
+    if (!token) return;
+    runQrCheckIn(token, 'manual');
+  };
+
+  const clearQrScanner = () => {
+    if (qrScannerRef.current) {
+      try {
+        qrScannerRef.current.stop();
+      } catch {
+        /* déjà arrêté */
+      }
+      try {
+        qrScannerRef.current.clear();
+      } catch {
+        /* déjà nettoyé */
+      }
+      qrScannerRef.current = null;
+    }
+    const el = document.getElementById('qr-reader');
+    if (el) el.innerHTML = '';
+  };
+
+  const startCameraScan = async () => {
+    setScannerError('');
+    setShowScanner(true);
+    await new Promise((r) => setTimeout(r, 100));
+    try {
+      const { Html5QrcodeScanner } = await import('html5-qrcode');
+      const el = document.getElementById('qr-reader');
+      if (!el) return;
+      el.innerHTML = '';
+      const scanner = new Html5QrcodeScanner(
+        'qr-reader',
+        {
+          fps: 10,
+          qrbox: { width: 220, height: 220 },
+          aspectRatio: 1.0,
+          showTorchButtonIfSupported: true,
+        },
+        false
+      );
+      qrScannerRef.current = scanner;
+      scanner.render(
+        (decodedText) => {
+          const token = extractQrToken(decodedText);
+          if (!token) return;
+          clearQrScanner();
+          setShowScanner(false);
+          runQrCheckIn(token, 'camera');
+        },
+        () => {
+          /* erreurs de décodage ignorées (scanne en continu) */
+        }
+      );
+    } catch (err) {
+      setScannerError(`Caméra inaccessible : ${err.message}`);
+      setShowScanner(false);
+    }
+  };
+
+  const toggleCameraScan = () => {
+    if (qrScannerRef.current) {
+      clearQrScanner();
+      setShowScanner(false);
+    } else {
+      startCameraScan();
     }
   };
 
@@ -300,12 +386,30 @@ export default function AdminAgenda({ session }) {
       <form onSubmit={handleQrCheckIn} className="mb-md bg-surface-container-lowest rounded-xl p-md border border-outline-variant/10 flex flex-col sm:flex-row gap-sm items-end">
         <div className="flex-grow">
           <label className="block text-label-sm mb-xs">Check-in rapide par QR (staff)</label>
-          <input
-            value={qrInput}
-            onChange={(e) => setQrInput(e.target.value)}
-            placeholder="Coller le token QR ou scanner le payload JSON"
-            className="w-full border rounded-xl px-sm py-xs font-mono text-body-sm"
-          />
+          <div className="flex gap-xs">
+            <input
+              value={qrInput}
+              onChange={(e) => setQrInput(e.target.value)}
+              placeholder="Coller le token QR ou scanner le payload JSON"
+              className="w-full border rounded-xl px-sm py-xs font-mono text-body-sm"
+            />
+            <button
+              type="button"
+              onClick={toggleCameraScan}
+              className={`shrink-0 px-md py-xs rounded-xl font-semibold border ${
+                showScanner
+                  ? 'bg-error-container text-on-error-container border-error/20'
+                  : 'bg-white border-outline-variant/30 text-primary hover:bg-surface-container-low'
+              }`}
+            >
+              <span className="flex items-center gap-xs">
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  {showScanner ? 'videocam_off' : 'qr_code_scanner'}
+                </span>
+                {showScanner ? 'Arrêter' : 'Scanner caméra'}
+              </span>
+            </button>
+          </div>
         </div>
         <button
           type="submit"
@@ -315,6 +419,17 @@ export default function AdminAgenda({ session }) {
           Check-in QR
         </button>
       </form>
+
+      <div
+        id="qr-reader"
+        className="mx-auto max-w-sm mb-md"
+        style={{ display: showScanner ? 'block' : 'none' }}
+      />
+      {scannerError && (
+        <div className="mb-md p-sm bg-error-container text-on-error-container text-body-sm rounded-xl">
+          {scannerError}
+        </div>
+      )}
 
       <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/10 overflow-x-auto custom-shadow">
         <div className="min-w-[800px]">

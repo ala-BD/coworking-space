@@ -2,6 +2,7 @@
 const { supabaseAdmin } = require('../config/supabase');
 const { applyTenantFilter } = require('../middleware/guards');
 const { emitToUser } = require('../services/socketService');
+const { ensureConversationLinks, notifyNewMessage } = require('../services/messagingService');
 
 async function listConversations(req, res) {
   try {
@@ -61,7 +62,7 @@ async function createConversation(req, res) {
 
     const { data: conv, error } = await supabaseAdmin
       .from('conversations')
-      .insert({ title: title || 'Support 33S', type, created_by: req.user.id })
+      .insert({ title: title || 'Support 33S', type, created_by: req.user.id, tenant_id: req.tenantId })
       .select()
       .single();
 
@@ -70,6 +71,11 @@ async function createConversation(req, res) {
     await supabaseAdmin.from('conversation_members').insert({
       conversation_id: conv.id,
       user_id: req.user.id,
+    });
+
+    const { added } = await ensureConversationLinks(supabaseAdmin, conv.id, req.tenantId);
+    (added || []).forEach(m => {
+      emitToUser(m, 'conversation:update', { conversation_id: conv.id, last_message: null, title: conv.title });
     });
 
     res.json({ conversation: conv });
@@ -119,7 +125,7 @@ async function listMessages(req, res) {
 
     const { data: messages, error, count } = await supabaseAdmin
       .from('messages')
-      .select('*, profiles!sender_id (id, nom, prenom, avatar_url, role)', { count: 'exact' })
+      .select('*, profiles!sender_id (id, nom, prenom, photo_url, role)', { count: 'exact' })
       .eq('conversation_id', req.params.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + parseInt(limit) - 1);
@@ -149,12 +155,14 @@ async function createMessage(req, res) {
     const { data: message, error } = await supabaseAdmin
       .from('messages')
       .insert({ conversation_id: req.params.id, sender_id: req.user.id, content: content.trim() })
-      .select('*, profiles!sender_id (id, nom, prenom, avatar_url, role)')
+      .select('*, profiles!sender_id (id, nom, prenom, photo_url, role)')
       .single();
 
     if (error) return res.status(400).json({ error: error.message });
 
     await supabaseAdmin.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', req.params.id);
+
+    await ensureConversationLinks(supabaseAdmin, req.params.id, req.tenantId);
 
     const { data: otherMembers } = await supabaseAdmin
       .from('conversation_members')
@@ -164,7 +172,10 @@ async function createMessage(req, res) {
 
     (otherMembers || []).forEach(m => {
       emitToUser(m.user_id, 'message:received', { conversation_id: req.params.id, message });
+      emitToUser(m.user_id, 'conversation:update', { conversation_id: req.params.id, last_message: message });
     });
+
+    await notifyNewMessage(supabaseAdmin, req.params.id, message, req.user.id);
 
     res.json({ message });
   } catch (err) {
@@ -209,6 +220,22 @@ async function getUnreadCount(req, res) {
     }
 
     res.json({ count: totalUnread });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// Équipe du coworking (admin/staff dédiés) visible par le membre / le formateur
+async function listTeam(req, res) {
+  try {
+    const { data: team } = await supabaseAdmin
+      .from('profiles')
+      .select('id, nom, prenom, email, telephone, role, photo_url')
+      .in('role', ['super_admin', 'admin', 'staff'])
+      .eq('tenant_id', req.tenantId)
+      .order('prenom', { ascending: true });
+
+    res.json({ team: team || [] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -387,6 +414,7 @@ module.exports = {
   markRead,
   getUnreadCount,
   listAdminMembers,
+  listTeam,
   createAdminConversation,
   listAdminConversations,
 };

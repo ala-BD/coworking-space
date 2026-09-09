@@ -19,6 +19,14 @@ const PLAN_LABELS = {
   entreprise: 'Entreprise',
 };
 
+const ESPACE_TYPE_LABELS = {
+  open_space: 'Open space',
+  private_office: 'Bureau privé',
+  meeting_room: 'Salle de réunion',
+  training_room: 'Salle de formation',
+  event_space: 'Espace événementiel',
+};
+
 export default function AdminPricing({ session }) {
   const [profile, setProfile] = useState(null);
   const [tarifs, setTarifs] = useState([]);
@@ -33,6 +41,7 @@ export default function AdminPricing({ session }) {
   const [newTarif, setNewTarif] = useState({
     type_abonnement: 'mensuel',
     plan_tarifaire: 'standard',
+    type_espace: '',
     prix: '',
     tva_pct: '19',
   });
@@ -102,7 +111,7 @@ export default function AdminPricing({ session }) {
         prix: Number(newTarif.prix),
         tva_pct: Number(newTarif.tva_pct),
       });
-      setNewTarif({ type_abonnement: 'mensuel', plan_tarifaire: 'standard', prix: '', tva_pct: '19' });
+      setNewTarif({ type_abonnement: 'mensuel', plan_tarifaire: 'standard', type_espace: '', prix: '', tva_pct: '19' });
       await loadData();
     } catch (e) {
       setError(e.message);
@@ -185,7 +194,7 @@ export default function AdminPricing({ session }) {
 
       {tab === 'tarifs' && (
         <div className="space-y-md">
-          <form onSubmit={handleCreateTarif} className="bg-white rounded-xl p-lg custom-shadow border border-outline-variant/10 grid sm:grid-cols-2 lg:grid-cols-5 gap-md items-end">
+          <form onSubmit={handleCreateTarif} className="bg-white rounded-xl p-lg custom-shadow border border-outline-variant/10 grid sm:grid-cols-2 lg:grid-cols-6 gap-md items-end">
             <div>
               <label className="block text-label-sm mb-xs">Type</label>
               <select
@@ -206,6 +215,19 @@ export default function AdminPricing({ session }) {
                 className="w-full border rounded-xl px-sm py-xs"
               >
                 {Object.entries(PLAN_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-label-sm mb-xs">Type d'espace</label>
+              <select
+                value={newTarif.type_espace}
+                onChange={(e) => setNewTarif({ ...newTarif, type_espace: e.target.value })}
+                className="w-full border rounded-xl px-sm py-xs"
+              >
+                <option value="">Tous les espaces</option>
+                {Object.entries(ESPACE_TYPE_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
                 ))}
               </select>
@@ -243,6 +265,7 @@ export default function AdminPricing({ session }) {
                 <tr>
                   <th className="p-sm">Type</th>
                   <th className="p-sm">Plan</th>
+                  <th className="p-sm">Type d'espace</th>
                   <th className="p-sm">Prix</th>
                   <th className="p-sm">TVA</th>
                   <th className="p-sm">Statut</th>
@@ -254,6 +277,11 @@ export default function AdminPricing({ session }) {
                   <tr key={t.id} className="border-t border-outline-variant/10">
                     <td className="p-sm">{SUBSCRIPTION_LABELS[t.type_abonnement] || t.type_abonnement}</td>
                     <td className="p-sm">{PLAN_LABELS[t.plan_tarifaire] || t.plan_tarifaire}</td>
+                    <td className="p-sm">
+                      {t.type_espace
+                        ? (ESPACE_TYPE_LABELS[t.type_espace] || t.type_espace)
+                        : 'Tous les espaces'}
+                    </td>
                     <td className="p-sm font-semibold">{Number(t.prix).toFixed(2)} DT</td>
                     <td className="p-sm">{t.tva_pct}%</td>
                     <td className="p-sm">

@@ -104,6 +104,7 @@ function MessageBubble({ msg, isOwn, showSender }) {
 export default function MemberMessages() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
+  const [team, setTeam] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [activeConv, setActiveConv] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -158,6 +159,43 @@ export default function MemberMessages() {
   }, [profile?.id, profile]);
 
   useEffect(() => { if (profile) fetchConversations(); }, [profile, fetchConversations]);
+
+  const fetchTeam = useCallback(async () => {
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch(`${SOCKET_URL}/api/conversations/team`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setTeam(data.team || []);
+    } catch (err) {
+      console.error('Failed to fetch team:', err);
+    }
+  }, []);
+
+  useEffect(() => { if (profile) fetchTeam(); }, [profile, fetchTeam]);
+
+  const openTeamChat = async () => {
+    let conv = activeConv || conversations.find(c => c.type === 'support');
+    if (!conv) {
+      try {
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const createRes = await fetch(`${SOCKET_URL}/api/conversations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ title: 'Support 33S', type: 'support' }),
+        });
+        const createData = await createRes.json();
+        if (createData.conversation) {
+          conv = { ...createData.conversation, currentUserId: profile.id, last_message: null, unread_count: 0 };
+          setConversations(prev => [conv, ...prev]);
+        }
+      } catch (err) {
+        console.error('Failed to create support conversation:', err);
+      }
+    }
+    if (conv) selectConversation(conv);
+  };
+
+  const teamLabel = team.map(t => `${t.prenom || ''} ${t.nom || ''}`.trim()).filter(Boolean).join(', ');
 
   // Stable socket — never reconnects
   useEffect(() => {
@@ -300,6 +338,24 @@ export default function MemberMessages() {
         <div className="flex rounded-3xl overflow-hidden border border-outline-variant/10 bg-white" style={{ height: 'calc(100vh - 200px)', minHeight: '500px', boxShadow: '0 8px 32px rgba(16,35,63,0.08)' }}>
           {/* Left */}
           <div className={`w-full md:w-[340px] shrink-0 border-r border-outline-variant/10 flex flex-col bg-surface-variant/10 ${showMobileChat ? 'hidden md:flex' : 'flex'}`}>
+            {team.length > 0 && (
+              <div className="p-3 border-b border-outline-variant/10">
+                <button onClick={openTeamChat} className="w-full flex items-center gap-3 p-3 rounded-2xl text-left transition-all hover:scale-[1.01] active:scale-[0.99]" style={{ background: 'linear-gradient(135deg, rgba(249,93,0,0.08), rgba(255,122,40,0.05))', border: '1px solid rgba(249,93,0,0.18)', boxShadow: '0 2px 8px rgba(249,93,0,0.06)' }}>
+                  <div className="flex -space-x-2 shrink-0">
+                    {team.slice(0, 3).map(t => (
+                      <div key={t.id} className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold text-white border-2 border-white" style={{ background: 'linear-gradient(135deg, #f95d00, #ff7a28)' }}>
+                        {(t.prenom || t.nom || '?').charAt(0)}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-primary truncate" style={{ fontFamily: 'Sora, sans-serif' }}>Équipe du coworking</p>
+                    <p className="text-[11px] text-on-surface-variant/50 truncate">{teamLabel}</p>
+                  </div>
+                  <span className="material-symbols-outlined text-secondary shrink-0" style={{ fontSize: 18 }}>forum</span>
+                </button>
+              </div>
+            )}
             <div className="p-4 border-b border-outline-variant/10">
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" style={{ fontSize: 20 }}>search</span>
@@ -342,7 +398,7 @@ export default function MemberMessages() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-primary" style={{ fontFamily: 'Sora, sans-serif' }}>{activeConv.title}</p>
-                    <p className="text-xs text-on-surface-variant/50">En ligne</p>
+                    <p className="text-xs text-on-surface-variant/50">{activeConv.type === 'support' && teamLabel ? `${teamLabel} · En ligne` : 'En ligne'}</p>
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto px-5 py-4" style={{ background: '#F8F9FB' }}>

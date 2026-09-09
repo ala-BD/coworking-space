@@ -1,5 +1,6 @@
 const { Server } = require('socket.io');
 const { createClient } = require('@supabase/supabase-js');
+const { ensureConversationLinks, notifyNewMessage } = require('./messagingService');
 
 let io = null;
 
@@ -47,7 +48,7 @@ function initSocket(server, supabaseUrl, supabaseServiceKey) {
       const { data: message, error } = await supabaseAdmin
         .from('messages')
         .insert({ conversation_id: conversationId, sender_id: senderId, content: content.trim() })
-        .select('*, profiles!sender_id (id, nom, prenom, avatar_url, role)')
+        .select('*, profiles!sender_id (id, nom, prenom, photo_url, role)')
         .single();
 
       if (error) {
@@ -59,6 +60,20 @@ function initSocket(server, supabaseUrl, supabaseServiceKey) {
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', conversationId);
+
+      const { data: senderProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', senderId)
+        .single();
+
+      const { added } = await ensureConversationLinks(supabaseAdmin, conversationId, senderProfile?.tenant_id || null);
+      added.forEach(staffId => {
+        io.to(`user:${staffId}`).emit('conversation:update', {
+          conversation_id: conversationId,
+          last_message: { id: message.id, content: message.content, sender_id: senderId, created_at: message.created_at },
+        });
+      });
 
       io.to(`conv:${conversationId}`).emit('message:received', {
         conversation_id: conversationId,
@@ -77,6 +92,8 @@ function initSocket(server, supabaseUrl, supabaseServiceKey) {
           last_message: { id: message.id, content: message.content, sender_id: senderId, created_at: message.created_at },
         });
       });
+
+      await notifyNewMessage(supabaseAdmin, conversationId, message, senderId);
     });
 
     socket.on('disconnect', () => {

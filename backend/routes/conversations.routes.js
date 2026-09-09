@@ -8,6 +8,7 @@ const ctrl = require('../controllers/conversationsController');
 // Routes conversations membres
 router.get('/conversations', authenticate, ctrl.listConversations);
 router.post('/conversations', authenticate, ctrl.createConversation);
+router.get('/conversations/team', authenticate, ctrl.listTeam);
 router.get('/conversations/:id', authenticate, ctrl.getConversation);
 router.get('/conversations/:id/messages', authenticate, ctrl.listMessages);
 router.post('/conversations/:id/messages', authenticate, ctrl.createMessage);

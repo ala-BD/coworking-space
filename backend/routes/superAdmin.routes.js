@@ -5,6 +5,9 @@ const { authenticate } = require('../middleware/authenticate');
 const { requireSuperAdmin } = require('../middleware/guards');
 const ctrl = require('../controllers/superAdminController');
 
+// Rapport intelligent (IA embarquée) — Super Admin
+router.get('/super-admin/report', authenticate, requireSuperAdmin, require('../controllers/reportController').getSuperAdminReport);
+
 // Tenants
 router.get('/super-admin/tenants', authenticate, requireSuperAdmin, ctrl.listTenants);
 router.get('/super-admin/tenants/:id', authenticate, requireSuperAdmin, ctrl.getTenant);

@@ -7,6 +7,7 @@ const ctrl = require('../controllers/formateursController');
 
 // Routes listes et profils formateurs
 router.get('/formateurs', authenticate, ctrl.listFormateurs);
+router.get('/formateurs/me/coworkings', authenticate, ctrl.trainerCoworkings);
 router.get('/formateurs/:id', authenticate, ctrl.getFormateur);
 
 // Création et édition de formateur par l'admin

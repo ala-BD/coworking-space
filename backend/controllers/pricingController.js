@@ -4,12 +4,22 @@ const { SUBSCRIPTION_DURATIONS, MEMBER_TYPE_TO_PLAN, SUBSCRIPTION_LABELS } = req
 const { todayISO, findActiveTarif, findValidPromoCode, applyPromoDiscount } = require('../models/helpers');
 const { applyTenantFilter } = require('../middleware/guards');
 
+const ESPACE_TYPES = ['open_space', 'private_office', 'meeting_room', 'training_room', 'event_space'];
+
+function normalizeTypeEspace(value) {
+  if (value == null || value === '') return null;
+  const v = String(value);
+  if (!ESPACE_TYPES.includes(v)) return null;
+  return v;
+}
+
 async function getPricing(req, res) {
   try {
     const plan = req.query.plan_tarifaire
       || MEMBER_TYPE_TO_PLAN[req.profile.type_membre]
       || 'standard';
     const today = todayISO();
+    const typeEspace = normalizeTypeEspace(req.query.type_espace);
 
     let q = supabaseAdmin
       .from('tarifs_abonnements')
@@ -18,6 +28,11 @@ async function getPricing(req, res) {
       .eq('actif', true)
       .lte('date_debut', today);
     if (req.tenantId) q = q.eq('tenant_id', req.tenantId);
+    // Si un type d'espace est précisé : montrer les formules qui lui sont
+    // dédiées, ainsi que les formules génériques (tous types d'espaces).
+    if (typeEspace) {
+      q = q.or(`type_espace.is.null,type_espace.eq.${typeEspace}`);
+    }
     const { data, error } = await q.order('type_abonnement', { ascending: true });
 
     if (error) {
@@ -57,9 +72,14 @@ async function getPricingAll(req, res) {
 async function createPricing(req, res) {
   try {
     const { type_abonnement, plan_tarifaire, prix, tva_pct, date_debut, date_fin, actif } = req.body;
+    const type_espace = normalizeTypeEspace(req.body.type_espace);
 
     if (!type_abonnement || !plan_tarifaire || prix == null) {
       return res.status(400).json({ error: 'type_abonnement, plan_tarifaire et prix sont requis.' });
+    }
+
+    if (req.body.type_espace != null && req.body.type_espace !== '' && !type_espace) {
+      return res.status(400).json({ error: 'type_espace invalide. Valeurs possibles : ' + ESPACE_TYPES.join(', ') + '.' });
     }
 
     const { data, error } = await supabaseAdmin
@@ -73,6 +93,7 @@ async function createPricing(req, res) {
         date_debut: date_debut || todayISO(),
         date_fin: date_fin || null,
         actif: actif !== false,
+        type_espace,
       })
       .select()
       .single();
@@ -86,10 +107,16 @@ async function createPricing(req, res) {
 
 async function updatePricing(req, res) {
   try {
-    const allowed = ['prix', 'tva_pct', 'date_debut', 'date_fin', 'actif'];
+    const allowed = ['prix', 'tva_pct', 'date_debut', 'date_fin', 'actif', 'type_espace'];
     const updates = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+    if (updates.type_espace !== undefined) {
+      updates.type_espace = normalizeTypeEspace(updates.type_espace);
+      if (req.body.type_espace != null && req.body.type_espace !== '' && !updates.type_espace) {
+        return res.status(400).json({ error: 'type_espace invalide. Valeurs possibles : ' + ESPACE_TYPES.join(', ') + '.' });
+      }
     }
 
     if (Object.keys(updates).length === 0) {
@@ -113,6 +140,7 @@ async function updatePricing(req, res) {
 async function validatePromoCode(req, res) {
   try {
     const { code, type_abonnement, plan_tarifaire } = req.body;
+    const type_espace = normalizeTypeEspace(req.body.type_espace);
 
     if (!code || !type_abonnement) {
       return res.status(400).json({ error: 'code et type_abonnement sont requis.' });
@@ -127,7 +155,7 @@ async function validatePromoCode(req, res) {
       return res.status(404).json({ valid: false, error: 'Code promo invalide ou expiré.' });
     }
 
-    const tarif = await findActiveTarif(type_abonnement, plan, req.tenantId);
+    const tarif = await findActiveTarif(type_abonnement, plan, req.tenantId, type_espace);
     if (!tarif) {
       return res.status(404).json({ valid: false, error: 'Tarif introuvable pour cet abonnement.' });
     }

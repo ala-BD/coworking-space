@@ -127,44 +127,168 @@ async function onboardTenant(req, res) {
   res.json({ message: `Invitation envoyée à ${email} pour gérer "${tenant.nom}".`, user: { id: authUser.user.id, email } });
 }
 
-// GET /api/super-admin/stats
-async function getStats(_req, res) {
+// GET /api/super-admin/stats?period=jour|mois|annee|tout
+function getPeriodWindow(period, now = new Date()) {
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  let fromJ, toJ, bucket;
+  switch (period) {
+    case 'jour':
+      fromJ = new Date(y, m, now.getDate(), 0, 0, 0, 0);
+      toJ = new Date(y, m, now.getDate(), 23, 59, 59, 999);
+      bucket = 'hour';
+      break;
+    case 'annee':
+      fromJ = new Date(y, 0, 1, 0, 0, 0, 0);
+      toJ = new Date(y, 11, 31, 23, 59, 59, 999);
+      bucket = 'month';
+      break;
+    case 'tout':
+      fromJ = new Date(2020, 0, 1, 0, 0, 0, 0);
+      toJ = new Date(y, m, now.getDate(), 23, 59, 59, 999);
+      bucket = 'year';
+      break;
+    case 'mois':
+    default:
+      fromJ = new Date(y, m, 1, 0, 0, 0, 0);
+      toJ = new Date(y, m + 1, 0, 23, 59, 59, 999);
+      bucket = 'day';
+      break;
+  }
+  return { period, from: fromJ.toISOString(), to: toJ.toISOString(), fromJ, toJ, bucket };
+}
+
+function buildBuckets(win) {
+  const out = [];
+  const start = win.fromJ;
+  if (win.bucket === 'hour') {
+    for (let h = 0; h < 24; h++) {
+      const s = new Date(start.getFullYear(), start.getMonth(), start.getDate(), h, 0, 0, 0);
+      const e = new Date(start.getFullYear(), start.getMonth(), start.getDate(), h, 59, 59, 999);
+      out.push({ label: `${String(h).padStart(2, '0')}h`, start: s, end: e });
+    }
+  } else if (win.bucket === 'day') {
+    const y = start.getFullYear(); const m = start.getMonth();
+    const last = new Date(y, m + 1, 0).getDate();
+    for (let d = 1; d <= last; d++) {
+      out.push({ label: String(d), start: new Date(y, m, d, 0, 0, 0, 0), end: new Date(y, m, d, 23, 59, 59, 999) });
+    }
+  } else if (win.bucket === 'month') {
+    const y = start.getFullYear();
+    for (let i = 0; i < 12; i++) {
+      const s = new Date(y, i, 1);
+      out.push({ label: s.toLocaleDateString('fr-FR', { month: 'short' }), start: s, end: new Date(y, i + 1, 0, 23, 59, 59, 999) });
+    }
+  } else {
+    for (let yr = start.getFullYear(); yr <= win.toJ.getFullYear(); yr++) {
+      out.push({ label: String(yr), start: new Date(yr, 0, 1), end: new Date(yr, 11, 31, 23, 59, 59, 999) });
+    }
+  }
+  return out;
+}
+
+function pctChange(cur, prev) {
+  if (prev > 0) return Math.round(((cur - prev) / prev) * 100);
+  return cur > 0 ? 100 : 0;
+}
+
+async function getStats(req, res) {
   try {
-    const [{ count: totalTenants }, { count: activeTenants }, { count: suspendedTenants }, { count: totalMembers }] = await Promise.all([
+    const period = String(req.query.period || 'mois');
+    const win = getPeriodWindow(period);
+    const prevEnd = new Date(win.fromJ.getTime() - 1);
+    const prevFrom = new Date(prevEnd.getTime() - (win.toJ.getTime() - win.fromJ.getTime()));
+    const prevWin = { from: prevFrom.toISOString(), to: prevEnd.toISOString() };
+
+    const [allTenantsRes, newTenantsRes, prevTenantsRes, activeTenantsRes, suspendedTenantsRes,
+      allMembersRes, newMembersRes, prevMembersRes] = await Promise.all([
       supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }),
-      supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }).eq('statut', 'actif'),
-      supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }).eq('statut', 'suspendu'),
+      supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }).gte('created_at', win.from).lte('created_at', win.to),
+      supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }).gte('created_at', prevWin.from).lte('created_at', prevWin.to),
+      supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }).eq('statut', 'actif').lte('created_at', win.to),
+      supabaseAdmin.from('tenants').select('*', { count: 'exact', head: true }).eq('statut', 'suspendu').gte('created_at', win.from).lte('created_at', win.to),
       supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).in('role', ['member', 'guest']),
+      supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).in('role', ['member', 'guest']).gte('created_at', win.from).lte('created_at', win.to),
+      supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).in('role', ['member', 'guest']).gte('created_at', prevWin.from).lte('created_at', prevWin.to),
     ]);
 
-    const { data: tenants } = await supabaseAdmin.from('tenants').select('id, nom, montant_mensuel, statut, plan, created_at');
-    const mrr = (tenants || []).filter(t => t.statut === 'actif').reduce((acc, t) => acc + (parseFloat(t.montant_mensuel) || 0), 0);
+    const { data: tenants } = await supabaseAdmin
+      .from('tenants')
+      .select('id, nom, montant_mensuel, statut, plan, prochaine_echeance, created_at');
 
-    // Evolution mensuelle des coworkings et du MRR (6 derniers mois)
-    const now = new Date();
-    const monthlyGrowth = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const label = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
-      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+    const todayStr = new Date().toISOString().split('T')[0];
 
-      const activeInMonth = (tenants || []).filter(t => new Date(t.created_at || '2020-01-01') <= monthEnd && t.statut === 'actif');
-      const monthMrr = activeInMonth.reduce((acc, t) => acc + (parseFloat(t.montant_mensuel) || 0), 0);
+    // ── Abonnements VC LOW des coworkings ────────────────────────────────
+    const actifs = (tenants || []).filter((t) => t.statut === 'actif');
+    const planBreakdown = {};
+    actifs.forEach((t) => {
+      planBreakdown[t.plan] = (planBreakdown[t.plan] || 0) + 1;
+    });
 
-      monthlyGrowth.push({
-        mois: label,
-        coworkings: activeInMonth.length,
-        mrr: Math.round(monthMrr * 100) / 100,
-      });
-    }
+    const impayes = (tenants || []).filter((t) =>
+      t.statut !== 'actif' || (t.prochaine_echeance && t.prochaine_echeance < todayStr));
+    const overdueAmount = impayes.reduce((acc, t) => acc + (parseFloat(t.montant_mensuel) || 0), 0);
+
+    const mrr = actifs.reduce((acc, t) => acc + (parseFloat(t.montant_mensuel) || 0), 0);
+
+    // Evolution coworkings / MRR découpée selon la période sélectionnée
+    const buckets = buildBuckets(win);
+    const monthlyGrowth = buckets.map((b) => {
+      const activeInBucket = (tenants || []).filter(t =>
+        t.statut === 'actif' && new Date(t.created_at || '2020-01-01') <= b.end);
+      const bucketMrr = activeInBucket.reduce((acc, t) => acc + (parseFloat(t.montant_mensuel) || 0), 0);
+      return {
+        mois: b.label,
+        coworkings: activeInBucket.length,
+        mrr: Math.round(bucketMrr * 100) / 100,
+      };
+    });
+
+    // ── Coworkings les plus performants (CA généré par tenant sur la période) ──
+    const tenantNames = {};
+    (tenants || []).forEach((t) => { tenantNames[t.id] = t.nom; });
+    const perfMap = {};
+
+    const { data: topPaiements } = await supabaseAdmin
+      .from('paiements').select('tenant_id, montant').eq('statut', 'paid')
+      .gte('date_paiement', win.from).lte('date_paiement', win.to);
+    (topPaiements || []).forEach((p) => {
+      if (!p.tenant_id) return;
+      if (!perfMap[p.tenant_id]) perfMap[p.tenant_id] = { nom: tenantNames[p.tenant_id] || 'Inconnu', ca: 0, bookings: 0 };
+      perfMap[p.tenant_id].ca += parseFloat(p.montant || 0);
+    });
+
+    const { data: topReservations } = await supabaseAdmin
+      .from('reservations').select('tenant_id').in('statut', ['confirmed', 'pending'])
+      .gte('date_debut', win.from).lte('date_debut', win.to);
+    (topReservations || []).forEach((r) => {
+      if (!r.tenant_id) return;
+      if (!perfMap[r.tenant_id]) perfMap[r.tenant_id] = { nom: tenantNames[r.tenant_id] || 'Inconnu', ca: 0, bookings: 0 };
+      perfMap[r.tenant_id].bookings += 1;
+    });
+
+    const topCoworkings = Object.values(perfMap)
+      .sort((a, b) => b.ca - a.ca || b.bookings - a.bookings)
+      .slice(0, 5)
+      .map((t) => ({ ...t, ca: Math.round(t.ca * 100) / 100 }));
 
     res.json({
-      totalTenants: totalTenants || 0,
-      activeTenants: activeTenants || 0,
-      suspendedTenants: suspendedTenants || 0,
-      totalMembers: totalMembers || 0,
+      totalTenants: allTenantsRes.count ?? 0,
+      nouveauxTenants: newTenantsRes.count ?? 0,
+      tenantEvolution: pctChange(newTenantsRes.count ?? 0, prevTenantsRes.count ?? 0),
+      activeTenants: activeTenantsRes.count ?? 0,
+      suspendedTenants: suspendedTenantsRes.count ?? 0,
+      totalMembers: allMembersRes.count ?? 0,
+      nouveauxMembres: newMembersRes.count ?? 0,
+      memberEvolution: pctChange(newMembersRes.count ?? 0, prevMembersRes.count ?? 0),
+      activeSubscriptions: actifs.length,
+      planBreakdown,
+      expiredSubscriptions: impayes.length,
+      overdueAmount: Math.round(overdueAmount * 100) / 100,
       mrr: Math.round(mrr * 100) / 100,
       monthlyGrowth,
+      topCoworkings,
+      periode: { key: win.period, from: win.from, to: win.to, bucket: win.bucket },
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

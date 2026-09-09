@@ -762,6 +762,22 @@ export default function App() {
 
           <Route
 
+            path="/trainer/messages"
+
+            element={
+
+              <TrainerRoute>
+
+                <MemberMessages session={session} />
+
+              </TrainerRoute>
+
+            }
+
+          />
+
+          <Route
+
             path="/super-admin/dashboard"
 
             element={

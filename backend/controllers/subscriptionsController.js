@@ -50,6 +50,7 @@ async function getMyActiveSubscription(req, res) {
 async function createSubscription(req, res) {
   try {
     const { user_id, type, date_debut, renouvellement_auto, code_promo, plan_tarifaire } = req.body;
+    const type_espace = req.body.type_espace || null;
 
     if (!user_id || !type || !date_debut) {
       return res.status(400).json({ error: 'user_id, type et date_debut sont requis.' });
@@ -86,7 +87,7 @@ async function createSubscription(req, res) {
     let promoInfo = null;
 
     try {
-      const tarif = await findActiveTarif(type, plan, req.tenantId);
+      const tarif = await findActiveTarif(type, plan, req.tenantId, type_espace);
       if (tarif) {
         tarifInfo = tarif;
         if (code_promo) {
@@ -110,6 +111,7 @@ async function createSubscription(req, res) {
         date_fin,
         renouvellement_auto: Boolean(renouvellement_auto),
         statut: 'active',
+        type_espace: tarifInfo?.type_espace || type_espace || null,
       })
       .select()
       .single();
@@ -129,6 +131,7 @@ async function createSubscription(req, res) {
         reduction,
         tva_pct: Number(tarifInfo.tva_pct),
         code_promo: promoInfo?.code || null,
+        type_espace: tarifInfo.type_espace || null,
       };
 
       await supabaseAdmin.from('historique_tarifs').insert({
@@ -158,6 +161,7 @@ async function createSubscription(req, res) {
 async function subscribeSelf(req, res) {
   try {
     const { type, code_promo, renouvellement_auto } = req.body;
+    const type_espace = req.body.type_espace || null;
     const userId = req.user.id;
 
     if (!type) {
@@ -196,7 +200,7 @@ async function subscribeSelf(req, res) {
     let promoInfo = null;
 
     try {
-      tarifInfo = await findActiveTarif(type, plan, req.tenantId);
+      tarifInfo = await findActiveTarif(type, plan, req.tenantId, type_espace);
       if (code_promo && tarifInfo) {
         promoInfo = await findValidPromoCode(code_promo, req.tenantId);
         if (!promoInfo) {
@@ -216,6 +220,7 @@ async function subscribeSelf(req, res) {
         date_fin,
         renouvellement_auto: Boolean(renouvellement_auto),
         statut: 'active',
+        type_espace: tarifInfo?.type_espace || type_espace || null,
       })
       .select()
       .single();
@@ -233,6 +238,7 @@ async function subscribeSelf(req, res) {
         reduction,
         tva_pct: Number(tarifInfo.tva_pct),
         code_promo: promoInfo?.code || null,
+        type_espace: tarifInfo.type_espace || null,
       };
 
       await supabaseAdmin.from('historique_tarifs').insert({

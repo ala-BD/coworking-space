@@ -1,12 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { kpiApi, formationApi, memberApi, tenantAdminApi, guestApi } from '../services/api';
+import { kpiApi, memberApi, tenantAdminApi, guestApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
 import { getRoleLabel } from '../utils/roles';
 import { exportDashboardToExcel } from '../utils/exportDashboardExcel';
+import PeriodFilter from '../components/dashboard/PeriodFilter';
+import AIReportPanel from '../components/dashboard/AIReportPanel';
 import {
-  LineChart, Line, BarChart, Bar,
+  DEFAULT_PERIOD, periodWindow, windowLabel, trendBadge, CHART_COLORS, inWindow,
+} from '../utils/dashboardPeriod';
+import {
+  ComposedChart, LineChart, BarChart, Bar, Line, Area,
+  PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 
@@ -42,19 +48,36 @@ function formatTimeShort(dateStr) {
   return new Date(dateStr).toLocaleTimeString('fr-FR', { timeStyle: 'short' });
 }
 
-// ─── Composant StatCard ──────────────────────────────────────────────────────
-function StatCard({ label, value, sub, icon, accent = '#f95d00', to, badge, pulse }) {
+function relTime(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'à l\'instant';
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `il y a ${h}h`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `il y a ${d}j`;
+  return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+// ─── Composant StatCard PowerBI ─────────────────────────────────────────────
+function StatCard({ label, value, sub, icon, accent = '#f95d00', to, badge, pulse, trend }) {
   const bg = accent === '#2fbe8f' ? 'rgba(47,190,143,0.1)'
     : accent === '#ba1a1a' ? 'rgba(186,26,26,0.09)'
       : accent === '#f59e0b' ? 'rgba(245,158,11,0.1)'
         : accent === '#8b5cf6' ? 'rgba(139,92,246,0.1)'
-          : 'rgba(249,93,0,0.09)';
+          : accent === '#0ea5e9' ? 'rgba(14,165,233,0.09)'
+            : 'rgba(249,93,0,0.09)';
+
+  const trendColor = trend?.dir === 'up' ? '#2fbe8f' : trend?.dir === 'down' ? '#ba1a1a' : '#64748b';
 
   const inner = (
     <div
-      className="bg-surface-container-lowest rounded-3xl border border-outline-variant/10 h-full transition-all duration-300 hover:-translate-y-1 relative overflow-hidden"
+      className="bg-surface-container-lowest rounded-3xl border border-outline-variant/10 h-full transition-all duration-300 hover:-translate-y-1 relative overflow-hidden group"
       style={{ padding: '18px 20px', boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}
     >
+      <span className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${accent}, transparent)` }} />
       {pulse && (
         <span className="absolute top-3 right-3 flex h-2.5 w-2.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: accent }} />
@@ -62,13 +85,18 @@ function StatCard({ label, value, sub, icon, accent = '#f95d00', to, badge, puls
         </span>
       )}
       <div className="flex items-center gap-2.5 mb-2.5">
-        <span className="flex items-center justify-center w-8 h-8 rounded-xl shrink-0"
+        <span className="flex items-center justify-center w-8 h-8 rounded-xl shrink-0 group-hover:scale-110 transition-transform"
           style={{ background: bg, color: accent }}>
           <span className="material-symbols-outlined" style={{ fontSize: 17 }}>{icon}</span>
         </span>
         <span className="text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant leading-tight">{label}</span>
       </div>
       <p className="font-sora font-bold text-primary" style={{ fontSize: 22 }}>{value}</p>
+      {trend && (
+        <p className="text-[11px] font-bold mt-1 flex items-center gap-1" style={{ color: trendColor }}>
+          {trend.text}
+        </p>
+      )}
       {sub && <p className="text-[11px] text-on-surface-variant mt-1 font-medium">{sub}</p>}
       {badge != null && (
         <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold"
@@ -93,9 +121,64 @@ function CustomTooltip({ active, payload, label }) {
       {payload.map((p, i) => (
         <p key={i} style={{ color: p.color }}>
           {p.name} : <strong>{typeof p.value === 'number' ? p.value.toLocaleString('fr-FR') : p.value}</strong>
-          {p.name === 'CA (DT)' ? ' DT' : p.name === 'Occupation (%)' ? '%' : ''}
+          {p.name === 'CA (DT)' || p.name === 'CA' ? ' DT' : p.name === 'Occupation (%)' || p.name === 'taux' ? '%' : ''}
         </p>
       ))}
+    </div>
+  );
+}
+
+// ─── Petit donut réutilisable ────────────────────────────────────────────────
+function DonutBySpace({ data, title, sub, totalFormatter }) {
+  const total = (data || []).reduce((s, d) => s + (d.value || 0), 0);
+  return (
+    <div className="bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
+      style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="font-sora font-bold text-primary text-base">{title}</h2>
+          <p className="text-xs text-on-surface-variant">{sub}</p>
+        </div>
+        <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-[rgba(139,92,246,0.1)]">
+          <span className="material-symbols-outlined text-[#8b5cf6]" style={{ fontSize: 17 }}>donut_small</span>
+        </span>
+      </div>
+      {data && data.length > 0 ? (
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="relative w-[150px] h-[150px] shrink-0 mx-auto">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                  innerRadius={48} outerRadius={70} paddingAngle={2} cornerRadius={4} stroke="none">
+                  {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="font-sora font-bold text-primary text-lg leading-none">{totalFormatter ? totalFormatter(total) : total}</span>
+              <span className="text-[9px] text-on-surface-variant font-medium mt-0.5">Total</span>
+            </div>
+          </div>
+          <div className="flex-1 min-w-[140px]">
+            {data.map((d) => {
+              const p = total > 0 ? Math.round((d.value / total) * 100) : 0;
+              return (
+                <div key={d.name} className="flex items-center gap-2 py-1">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.color }} />
+                  <span className="text-xs text-on-surface-variant truncate flex-1">{d.name}</span>
+                  <span className="text-[10px] font-bold text-on-surface-variant/70">{p}%</span>
+                </div>
+              );
+            })}
+            {data.length === 0 && <p className="text-xs text-on-surface-variant">Aucune donnée</p>}
+          </div>
+        </div>
+      ) : (
+        <div className="h-[150px] flex items-center justify-center text-sm text-on-surface-variant">
+          Aucune donnée disponible
+        </div>
+      )}
     </div>
   );
 }
@@ -104,6 +187,7 @@ function CustomTooltip({ active, payload, label }) {
 export default function AdminDashboard({ session }) {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
+  const [period, setPeriod] = useState(DEFAULT_PERIOD);
   const [kpis, setKpis] = useState(null);
   const [chart, setChart] = useState(null);
   const [formations, setFormations] = useState([]);
@@ -115,8 +199,17 @@ export default function AdminDashboard({ session }) {
   const [error, setError] = useState('');
   const [lastRefresh, setLastRefresh] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [report, setReport] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState('');
 
-  // Refs pour les intervalles — évite les fuites mémoire
+  const periodRef = useRef(period);
+  periodRef.current = period;
+
+  const showReportRef = useRef(showReport);
+  showReportRef.current = showReport;
+
   const kpiTimerRef = useRef(null);
   const sessionTimerRef = useRef(null);
 
@@ -125,15 +218,17 @@ export default function AdminDashboard({ session }) {
     if (!silent) setLoading(true);
     setError('');
     try {
+      const p = periodRef.current;
       const [kpiRes, chartRes, pendingRes] = await Promise.all([
-        kpiApi.getAll(),
-        kpiApi.getRevenueChart(),
+        kpiApi.getAll({ period: p }),
+        kpiApi.getRevenueChart({ period: p }),
         memberApi.getPendingAccounts().catch(() => ({ pending: [] })),
       ]);
       setKpis(kpiRes);
       setChart(chartRes);
       setPendingAccounts(pendingRes.pending || []);
       setLastRefresh(new Date());
+      if (Array.isArray(chartRes.formations)) setFormations(chartRes.formations);
     } catch (e) {
       if (!silent) setError(e.message);
     } finally {
@@ -141,10 +236,30 @@ export default function AdminDashboard({ session }) {
     }
   }, []);
 
+  // ── Rapport IA (généré selon la période active) ──────────────────────────
+  const loadReport = useCallback(async (silent = false) => {
+    if (!silent) setReportLoading(true);
+    setReportError('');
+    try {
+      const r = await kpiApi.getReport({ period: periodRef.current });
+      setReport(r);
+    } catch (e) {
+      setReportError(e.message);
+    } finally {
+      setReportLoading(false);
+    }
+  }, []);
+
+  const toggleReport = () => {
+    const next = !showReport;
+    setShowReport(next);
+    if (next) loadReport(false);
+  };
+
   // ── Refresh sélectif (sessions uniquement, rapide) ───────────────────────
   const fetchSessionsOnly = useCallback(async () => {
     try {
-      const kpiData = await kpiApi.getAll();
+      const kpiData = await kpiApi.getAll({ period: periodRef.current });
       setKpis((prev) => prev
         ? { ...prev, sessionsEnCours: kpiData.sessionsEnCours, reservationsDuJour: kpiData.reservationsDuJour }
         : kpiData
@@ -171,10 +286,10 @@ export default function AdminDashboard({ session }) {
           }
         }
       });
-    
+
     fetchKpis(false);
 
-    // Mon Coworking (image + coordonnées) & réservations invités (guests)
+    // Mon Coworking (image + coordonnées)
     tenantAdminApi.getTenant()
       .then(res => { if (res.tenant) setCoworking(res.tenant); })
       .catch(() => {});
@@ -191,7 +306,18 @@ export default function AdminDashboard({ session }) {
     };
   }, [session, navigate, fetchKpis, fetchSessionsOnly]);
 
-  // ── Export Excel ─────────────────────────────────────────────────────────
+  // ── Changement de période : recharge silencieuse (pas de spinner) ─────────
+  useEffect(() => {
+    if (!kpis) return;
+    fetchKpis(true);
+  }, [period]);
+
+  // ── Rapport IA : rechargé si ouvert lors d'un changement de période ───────
+  useEffect(() => {
+    if (showReportRef.current) loadReport(true);
+  }, [period, loadReport]);
+
+  // ── Exports ───────────────────────────────────────────────────────────────
   const handleExport = async () => {
     if (!kpis || !chart) return;
     setExporting(true);
@@ -209,7 +335,6 @@ export default function AdminDashboard({ session }) {
     navigate('/');
   };
 
-  // ── Approuver / Rejeter un compte ───────────────────────────────────────
   const handleAccountAction = async (id, action) => {
     setApprovingId(id);
     try {
@@ -222,7 +347,6 @@ export default function AdminDashboard({ session }) {
     }
   };
 
-  // ── Écran de chargement initial ──────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: '#f4f6f9' }}>
@@ -233,28 +357,48 @@ export default function AdminDashboard({ session }) {
     );
   }
 
-  // ── Valeurs KPIs avec fallback ───────────────────────────────────────────
+  // ── Dérivés ────────────────────────────────────────────────────────────────
   const k = kpis || {};
-  const ca = k.chiffreAffaires || { jour: 0, mois: 0, annee: 0 };
-  const membres = k.nouveauxMembres || { moisActuel: 0, moisPrecedent: 0, evolution: 0 };
+  const ca = (k.chiffreAffaires || {});
+  const membres = (k.nouveauxMembres || {});
   const sessions = Array.isArray(k.sessionsEnCours) ? k.sessionsEnCours : [];
   const topMembres = Array.isArray(k.topMembres) ? k.topMembres : [];
   const tauxOccupation = Array.isArray(k.tauxOccupation) ? k.tauxOccupation : [];
+  const calendrierDuJour = Array.isArray(k.calendrierDuJour) ? k.calendrierDuJour : [];
+  const prochainesReservations = Array.isArray(k.prochainesReservations) ? k.prochainesReservations : [];
+  const formationsDuJourList = Array.isArray(k.formationsDuJourList) ? k.formationsDuJourList : [];
+  const activiteRecente = Array.isArray(k.activiteRecente) ? k.activiteRecente : [];
+  const reservationsPeriode = k.reservationsPeriode || { count: 0, confirmed: 0, pending: 0 };
+
   const revenueChart = Array.isArray(chart?.revenueChart) ? chart.revenueChart : [];
   const occupationChart = Array.isArray(chart?.occupationChart) ? chart.occupationChart : [];
+  const caParEspace = Array.isArray(chart?.caParEspace)
+    ? chart.caParEspace.map((d) => ({ ...d, value: d.ca ?? 0, color: CHART_COLORS[chart.caParEspace.indexOf(d) % CHART_COLORS.length] }))
+    : [];
+  const reservationsParEspace = Array.isArray(chart?.reservationsParEspace) ? chart.reservationsParEspace : [];
 
-  const evolutionLabel = membres.evolution > 0
-    ? `▲ +${membres.evolution}% vs mois préc.`
-    : membres.evolution < 0
-      ? `▼ ${membres.evolution}% vs mois préc.`
-      : `→ Stable vs mois préc.`;
+  const win = periodWindow(period);
+  const label = windowLabel(period);
+  const bucketCaption = period === 'jour' ? `Par heure · ${label}` : period === 'mois' ? `Par jour · ${label}` : period === 'annee' ? `Par mois · ${label}` : 'Par année · historique';
+
+  const membersTrend = trendBadge(membres.periode || 0, membres.periodePrecedente || 0);
+
+  const occupationMoyen = typeof k.occupationMoyen === 'number' ? k.occupationMoyen
+    : (tauxOccupation.length > 0 ? Math.round(tauxOccupation.reduce((s, e) => s + (e.taux || 0), 0) / tauxOccupation.length) : 0);
+
+  const topEspace = tauxOccupation.length > 0
+    ? tauxOccupation.reduce((a, b) => ((b.taux || 0) > (a.taux || 0) ? b : a), tauxOccupation[0])
+    : null;
+
+  const formationsPeriode = formations.filter((f) => inWindow(f.date_debut, win));
+  const guestsPeriode = guests.filter((g) => inWindow(g.created_at, win));
 
   const welcomeText = greeting();
 
   return (
     <PortalLayout profile={profile} onLogout={handleLogout}>
 
-      {/* ── En-tête ─────────────────────────────────────────────────────── */}
+      {/* ── En-tête + filtre global ─────────────────────────────────────── */}
       <header className="mb-6 animate-fade-up">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -274,6 +418,26 @@ export default function AdminDashboard({ session }) {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <PeriodFilter value={period} onChange={setPeriod} />
+            <button
+              onClick={toggleReport}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
+                showReport
+                  ? 'text-white'
+                  : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
+              }`}
+              style={showReport ? { background: 'linear-gradient(135deg, #8b5cf6, #f95d00)', boxShadow: '0 4px 12px rgba(139,92,246,.3)' } : undefined}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 17 }}>
+                {reportLoading ? 'sync' : 'auto_awesome'}
+              </span>
+              Rapport IA
+              {report?.anomalies?.length > 0 && showReport && (
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#ba1a1a] text-[9px] font-bold text-white">
+                  {report.anomalies.length}
+                </span>
+              )}
+            </button>
             <button
               onClick={handleExport}
               disabled={exporting || !kpis}
@@ -295,44 +459,60 @@ export default function AdminDashboard({ session }) {
         </div>
       )}
 
-      {/* ── Grille KPIs — Ligne 1 ──────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-4 animate-fade-up">
+      {/* ── Rapport intelligent (IA) ────────────────────────────────────── */}
+      {showReport && (
+        <div className="mb-6 animate-fade-up">
+          <AIReportPanel
+            report={report}
+            loading={reportLoading}
+            error={reportError}
+            onClose={() => setShowReport(false)}
+            onRefresh={() => loadReport(false)}
+          />
+        </div>
+      )}
+
+      {/* ── Grille KPIs — Ligne 1 (filtre global appliqué) ─────────────── */}
+      <div key={`k1-${period}`} className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-4 animate-fade-up">
         <StatCard
-          label="Membres actifs"
-          value={k.membresActifs ?? '—'}
-          sub={`${membres.moisActuel} nouveaux ce mois`}
-          badge={evolutionLabel}
-          icon="group"
-          accent="#f95d00"
-        />
-        <StatCard
-          label="CA du mois"
-          value={`${formatDT(ca.mois)} DT`}
-          sub={`Aujourd'hui : ${formatDT(ca.jour)} DT`}
+          label="CA — période"
+          value={`${formatDT(ca.periode)} DT`}
+          sub={`${ca.transactions ?? 0} transactions · ${label}`}
+          badge={typeof k.caMoisPrecedent === 'number' ? `Mois préc. : ${formatDT(k.caMoisPrecedent)} DT` : null}
+          trend={{ text: `${ca.evolution > 0 ? '▲' : ca.evolution < 0 ? '▼' : '→'} ${Math.abs(ca.evolution ?? 0)}% vs période préc.`, dir: ca.evolution > 0 ? 'up' : ca.evolution < 0 ? 'down' : 'flat' }}
           icon="payments"
           accent="#2fbe8f"
           to="/admin/payments"
         />
         <StatCard
-          label="CA annuel"
-          value={`${formatDT(ca.annee)} DT`}
-          sub="Paiements encaissés cette année"
-          icon="bar_chart"
+          label="Nouveaux membres"
+          value={`${membres.periode ?? 0}`}
+          sub={`${k.membresActifs ?? 0} membres actifs au total`}
+          badge={null}
+          trend={membersTrend}
+          icon="group"
+          accent="#f95d00"
+        />
+        <StatCard
+          label="Réservations — période"
+          value={`${reservationsPeriode.count ?? 0}`}
+          sub={`${k.reservationsDuJour ?? 0} aujourd'hui · ${reservationsPeriode.confirmed ?? 0} confirmées`}
+          icon="event_available"
           accent="#8b5cf6"
-          to="/admin/payments"
+          to="/admin/agenda"
         />
         <StatCard
           label="Paiements en attente"
           value={`${formatDT(k.paiementsEnAttente?.montantTotal ?? 0)} DT`}
-          sub={`${k.paiementsEnAttente?.count ?? 0} paiement(s)`}
+          sub={`${k.paiementsEnAttente?.count ?? 0} paiement(s) · ${label}`}
           icon="pending_actions"
           accent="#ba1a1a"
           to="/admin/payments"
         />
       </div>
 
-      {/* ── Grille KPIs — Ligne 2 (Opérations) ──────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6 animate-fade-up">
+      {/* ── Grille KPIs — Ligne 2 (Opérations) ─────────────────────────── */}
+      <div key={`k2-${period}`} className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6 animate-fade-up">
         <StatCard
           label="Sessions en cours"
           value={sessions.length}
@@ -342,12 +522,19 @@ export default function AdminDashboard({ session }) {
           pulse={sessions.length > 0}
         />
         <StatCard
-          label="Réservations du jour"
-          value={k.reservationsDuJour ?? '—'}
-          sub="Confirmées + en attente"
-          icon="event_available"
-          accent="#2fbe8f"
-          to="/admin/agenda"
+          label="Formations — période"
+          value={k.formationsPeriode ?? 0}
+          sub={`${k.formationsDuJour ?? 0} prévue(s) aujourd'hui`}
+          icon="school"
+          accent="#8b5cf6"
+          to="/admin/formations"
+        />
+        <StatCard
+          label="Occupation moyenne"
+          value={`${occupationMoyen}%`}
+          sub={topEspace ? `Meilleur espace : ${topEspace.nom} (${topEspace.taux}%)` : '—'}
+          icon="domain"
+          accent="#0ea5e9"
         />
         <StatCard
           label="Abonnements expirant"
@@ -355,13 +542,6 @@ export default function AdminDashboard({ session }) {
           sub="Dans les 7 prochains jours"
           icon="card_membership"
           accent={k.abonnementsExpirant > 0 ? '#ba1a1a' : '#f95d00'}
-        />
-        <StatCard
-          label="Formations du jour"
-          value={k.formationsDuJour ?? 0}
-          sub="Sessions planifiées"
-          icon="school"
-          accent="#8b5cf6"
         />
       </div>
 
@@ -417,33 +597,85 @@ export default function AdminDashboard({ session }) {
         </div>
       )}
 
-      {/* ── Graphiques ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 animate-fade-up">
+      {/* ── Graphiques : CA / espace + occupation / réservations ───────── */}
+      <div key={`ch1-${period}`} className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6 animate-fade-up">
 
-        {/* Graphique CA 6 mois */}
-        <div className="bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
+        {/* Évolution des revenus (buckets selon période) */}
+        <div className="lg:col-span-7 bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
           style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="font-sora font-bold text-primary text-base">Évolution du CA</h2>
-              <p className="text-xs text-on-surface-variant">6 derniers mois</p>
+              <h2 className="font-sora font-bold text-primary text-base">Évolution des revenus</h2>
+              <p className="text-xs text-on-surface-variant">{bucketCaption}</p>
             </div>
             <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-[rgba(47,190,143,0.1)]">
               <span className="material-symbols-outlined text-[#2fbe8f]" style={{ fontSize: 17 }}>trending_up</span>
             </span>
           </div>
           {revenueChart.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={revenueChart} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={220}>
+              <ComposedChart data={revenueChart} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="revBar" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2fbe8f" stopOpacity={0.9} />
+                    <stop offset="95%" stopColor="#2fbe8f" stopOpacity={0.25} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
                 <XAxis dataKey="mois" tick={{ fontSize: 11, fill: '#64748b' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(v) => `${v} DT`} width={70} />
+                <YAxis yAxisId="ca" tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(v) => `${v} DT`} width={70} />
+                <YAxis yAxisId="tx" orientation="right" tick={{ fontSize: 10, fill: '#94a3b8' }} allowDecimals={false} width={30} />
                 <Tooltip content={<CustomTooltip />} />
-                <Line
-                  type="monotone" dataKey="ca" name="CA (DT)"
-                  stroke="#2fbe8f" strokeWidth={2.5} dot={{ r: 4, fill: '#2fbe8f' }}
-                  activeDot={{ r: 6 }}
-                />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar yAxisId="ca" dataKey="ca" name="CA (DT)" fill="url(#revBar)" radius={[5, 5, 0, 0]} />
+                <Line yAxisId="tx" type="monotone" dataKey="transactions" name="Transactions" stroke="#f95d00" strokeWidth={2.2} dot={{ r: 3, fill: '#f95d00' }} activeDot={{ r: 5 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[220px] flex items-center justify-center text-sm text-on-surface-variant">
+              Aucune donnée disponible
+            </div>
+          )}
+        </div>
+
+        {/* Donut CA par espace */}
+        <div className="lg:col-span-5">
+          <DonutBySpace
+            data={caParEspace}
+            title="CA par espace"
+            sub={label}
+            totalFormatter={(v) => `${v.toLocaleString('fr-FR')} DT`}
+          />
+        </div>
+      </div>
+
+      <div key={`ch2-${period}`} className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 animate-fade-up">
+        {/* Évolution occupation */}
+        <div className="bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
+          style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-sora font-bold text-primary text-base">Taux d'occupation moyen</h2>
+              <p className="text-xs text-on-surface-variant">{bucketCaption}</p>
+            </div>
+            <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-[rgba(0,84,203,0.09)]">
+              <span className="material-symbols-outlined text-[#0ea5e9]" style={{ fontSize: 17 }}>domain</span>
+            </span>
+          </div>
+          {occupationChart.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={occupationChart} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="occFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
+                <XAxis dataKey="mois" tick={{ fontSize: 11, fill: '#64748b' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(v) => `${v}%`} domain={[0, 100]} width={40} />
+                <Tooltip content={<CustomTooltip />} />
+                <Area type="monotone" dataKey="taux" name="Occupation (%)" stroke="#0ea5e9" strokeWidth={2.5} fill="url(#occFill)" />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -453,27 +685,29 @@ export default function AdminDashboard({ session }) {
           )}
         </div>
 
-        {/* Graphique Taux Occupation */}
+        {/* Réservations par espace (empilé) */}
         <div className="bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
           style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="font-sora font-bold text-primary text-base">Taux d'occupation</h2>
-              <p className="text-xs text-on-surface-variant">Par espace — mois en cours</p>
+              <h2 className="font-sora font-bold text-primary text-base">Réservations par espace</h2>
+              <p className="text-xs text-on-surface-variant">{reservationsParEspace.length} espace(s) · {label}</p>
             </div>
-            <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-[rgba(0,84,203,0.09)]">
-              <span className="material-symbols-outlined text-[#f95d00]" style={{ fontSize: 17 }}>domain</span>
+            <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-[rgba(245,158,11,0.1)]">
+              <span className="material-symbols-outlined text-[#f59e0b]" style={{ fontSize: 17 }}>chair</span>
             </span>
           </div>
-          {tauxOccupation.length > 0 ? (
+          {reservationsParEspace.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={tauxOccupation} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+              <BarChart data={reservationsParEspace} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
                 <XAxis dataKey="nom" tick={{ fontSize: 10, fill: '#64748b' }}
-                  tickFormatter={(v) => v.length > 10 ? v.slice(0, 10) + '…' : v} />
-                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(v) => `${v}%`} domain={[0, 100]} width={40} />
+                  tickFormatter={(v) => (v.length > 10 ? v.slice(0, 10) + '…' : v)} />
+                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} width={32} allowDecimals={false} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="taux" name="Occupation (%)" fill="#f95d00" radius={[6, 6, 0, 0]} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="confirmed" name="Confirmées" stackId="a" fill="#2fbe8f" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="pending" name="En attente" stackId="a" fill="#f59e0b" radius={[5, 5, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -484,7 +718,7 @@ export default function AdminDashboard({ session }) {
         </div>
       </div>
 
-      {/* ── Ligne 3 : Sessions live + Top membres ──────────────────────── */}
+      {/* ── Sessions live + Top membres ─────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6 animate-fade-up">
 
         {/* Sessions en cours */}
@@ -545,12 +779,12 @@ export default function AdminDashboard({ session }) {
           )}
         </div>
 
-        {/* Top 5 membres */}
+        {/* Top 5 membres (CA période) */}
         <div className="lg:col-span-5 bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
           style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-sora font-bold text-primary text-base">Top membres</h2>
-            <span className="text-xs text-on-surface-variant font-medium">Par CA annuel</span>
+            <span className="text-xs text-on-surface-variant font-medium">Par CA · {label}</span>
           </div>
           {topMembres.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -561,16 +795,196 @@ export default function AdminDashboard({ session }) {
             <div className="space-y-2">
               {topMembres.map((m, i) => {
                 const medals = ['🥇', '🥈', '🥉'];
+                const maxCa = topMembres[0]?.ca || 1;
                 return (
                   <div key={i} className="flex items-center gap-3 p-2 rounded-xl hover:bg-surface-container-low/50 transition-colors">
                     <span className="text-lg w-6 text-center shrink-0">{medals[i] || `#${i + 1}`}</span>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-primary text-sm truncate">{m.nom}</p>
-                      <p className="text-[10px] text-on-surface-variant truncate">{m.email}</p>
+                      <div className="h-1 rounded-full bg-outline-variant/10 overflow-hidden mt-1">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(6, Math.round((m.ca / maxCa) * 100))}%`, background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                      </div>
                     </div>
                     <span className="font-bold text-[#2fbe8f] text-sm shrink-0">
                       {formatDT(m.ca)} DT
                     </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Calendrier du jour + Prochaines réservations ───────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6 animate-fade-up">
+        {/* Calendrier du jour */}
+        <div className="lg:col-span-7 bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
+          style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-sora font-bold text-primary text-base">Calendrier du jour</h2>
+              <p className="text-xs text-on-surface-variant">Réservations d'aujourd'hui</p>
+            </div>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white shrink-0"
+              style={{ background: '#f95d00' }}>{calendrierDuJour.length}</span>
+          </div>
+          {calendrierDuJour.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <span className="material-symbols-outlined text-[40px] text-on-surface-variant/40 mb-2">event_busy</span>
+              <p className="text-sm text-on-surface-variant">Aucune réservation aujourd'hui</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-outline-variant/10 max-h-[320px] overflow-y-auto">
+              {calendrierDuJour.map((r) => (
+                <div key={r.id} className="py-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0 bg-[rgba(139,92,246,0.1)] text-[#8b5cf6]">
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>event</span>
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-primary text-sm truncate">
+                        {r.profiles ? `${r.profiles.prenom} ${r.profiles.nom}` : 'Membre'}
+                      </p>
+                      <p className="text-xs text-on-surface-variant truncate">
+                        {r.espaces?.nom || 'Espace'} · {formatTimeShort(r.date_debut)} – {formatTimeShort(r.date_fin)}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${
+                    r.statut === 'confirmed' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {r.statut === 'confirmed' ? 'Confirmée' : 'En attente'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Prochaines réservations (J+7) */}
+        <div className="lg:col-span-5 bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
+          style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-sora font-bold text-primary text-base">Prochaines réservations</h2>
+              <p className="text-xs text-on-surface-variant">Dans les 7 prochains jours</p>
+            </div>
+            <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-[rgba(0,84,203,0.09)]">
+              <span className="material-symbols-outlined text-[#0ea5e9]" style={{ fontSize: 17 }}>upcoming</span>
+            </span>
+          </div>
+          {prochainesReservations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <span className="material-symbols-outlined text-[40px] text-on-surface-variant/40 mb-2">event_available</span>
+              <p className="text-sm text-on-surface-variant">Aucune réservation à venir</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-outline-variant/10 max-h-[320px] overflow-y-auto">
+              {prochainesReservations.map((r) => (
+                <div key={r.id} className="py-3 flex items-center gap-3">
+                  <span className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0 bg-[rgba(47,190,143,0.1)] text-[#2fbe8f]">
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>calendar_month</span>
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-primary text-sm truncate">
+                      {r.profiles ? `${r.profiles.prenom} ${r.profiles.nom}` : 'Membre'}
+                    </p>
+                    <p className="text-xs text-on-surface-variant truncate">{r.espaces?.nom || 'Espace'}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-xs font-bold text-primary">
+                      {new Date(r.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    </p>
+                    <p className="text-[10px] text-on-surface-variant">{formatTimeShort(r.date_debut)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Formations du jour + Activité récente ───────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6 animate-fade-up">
+        {/* Formations prévues aujourd'hui */}
+        <div className="lg:col-span-7 bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
+          style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-sora font-bold text-primary text-base">Formations prévues aujourd'hui</h2>
+              <p className="text-xs text-on-surface-variant">Détail des séances du jour</p>
+            </div>
+            <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-[rgba(139,92,246,0.1)]">
+              <span className="material-symbols-outlined text-[#8b5cf6]" style={{ fontSize: 17 }}>school</span>
+            </span>
+          </div>
+          {formationsDuJourList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <span className="material-symbols-outlined text-[40px] text-on-surface-variant/40 mb-2">school</span>
+              <p className="text-sm text-on-surface-variant">Aucune formation prévue aujourd'hui</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-outline-variant/10">
+              {formationsDuJourList.map((f) => (
+                <div key={f.id} className="py-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0 bg-[rgba(139,92,246,0.1)] text-[#8b5cf6]">
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>co_present</span>
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-primary text-sm truncate">{f.titre}</p>
+                      <p className="text-xs text-on-surface-variant truncate">
+                        {f.profiles ? `${f.profiles.prenom} ${f.profiles.nom}` : 'Formateur'} · {f.espaces?.nom || 'Espace'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-xs font-bold text-primary">{formatTimeShort(f.date_debut)}</p>
+                    <p className="text-[10px] font-semibold text-on-surface-variant">
+                      {f.nb_inscrits ?? 0}/{f.capacite_max ?? 0} inscrits
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Activité récente */}
+        <div className="lg:col-span-5 bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
+          style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-sora font-bold text-primary text-base">Activité récente</h2>
+              <p className="text-xs text-on-surface-variant">Derniers événements</p>
+            </div>
+            <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-[rgba(249,93,0,0.09)]">
+              <span className="material-symbols-outlined text-[#f95d00]" style={{ fontSize: 17 }}>bolt</span>
+            </span>
+          </div>
+          {activiteRecente.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <span className="material-symbols-outlined text-[40px] text-on-surface-variant/40 mb-2">history</span>
+              <p className="text-sm text-on-surface-variant">Aucune activité récente</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-outline-variant/10 max-h-[320px] overflow-y-auto">
+              {activiteRecente.map((a) => {
+                const meta = a.type === 'paiement'
+                  ? { icon: 'payments', bg: 'bg-[rgba(47,190,143,0.1)]', color: 'text-[#2fbe8f]' }
+                  : a.type === 'session'
+                    ? { icon: 'login', bg: 'bg-[rgba(245,158,11,0.1)]', color: 'text-[#f59e0b]' }
+                    : { icon: 'event_available', bg: 'bg-[rgba(139,92,246,0.1)]', color: 'text-[#8b5cf6]' };
+                return (
+                  <div key={a.id} className="py-2.5 flex items-center gap-3">
+                    <span className={`flex items-center justify-center w-8 h-8 rounded-xl shrink-0 ${meta.bg} ${meta.color}`}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>{meta.icon}</span>
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-primary font-medium leading-snug">{a.text}</p>
+                      <p className="text-[10px] text-on-surface-variant mt-0.5">{relTime(a.time)}</p>
+                    </div>
                   </div>
                 );
               })}
@@ -648,7 +1062,7 @@ export default function AdminDashboard({ session }) {
         </div>
       )}
 
-      {/* ── Ligne Formations de la semaine ──────────────────────────────── */}
+      {/* ── Formations (période) ──────────────────────────────────────── */}
       <div className="bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10 mb-6 animate-fade-up"
         style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
         <div className="flex items-center justify-between mb-4">
@@ -656,12 +1070,15 @@ export default function AdminDashboard({ session }) {
             <span className="material-symbols-outlined text-[#8b5cf6]" style={{ fontSize: 20 }}>school</span>
             <h2 className="font-sora font-bold text-primary text-base">Suivi des formations programmées</h2>
           </div>
+          <span className="text-xs text-on-surface-variant font-medium">
+            {formationsPeriode.length} formation(s) · {label}
+          </span>
         </div>
 
-        {formations.length === 0 ? (
+        {formationsPeriode.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <span className="material-symbols-outlined text-[40px] text-on-surface-variant/40 mb-2">school</span>
-            <p className="text-sm text-on-surface-variant">Aucune formation programmée à venir</p>
+            <p className="text-sm text-on-surface-variant">Aucune formation programmée dans cette période</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -677,7 +1094,7 @@ export default function AdminDashboard({ session }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/10">
-                {formations.slice(0, 5).map((f) => {
+                {formationsPeriode.slice(0, 5).map((f) => {
                   const formateurName = f.profiles ? `${f.profiles.prenom} ${f.profiles.nom}` : '—';
                   const fillPct = f.capacite_max > 0 ? Math.min(100, Math.round((f.nb_inscrits / f.capacite_max) * 100)) : 0;
                   const barColor = fillPct >= 90 ? 'bg-red-500' : fillPct >= 60 ? 'bg-amber-500' : 'bg-emerald-500';
@@ -725,16 +1142,16 @@ export default function AdminDashboard({ session }) {
             <span className="material-symbols-outlined text-secondary" style={{ fontSize: 20 }}>person_off</span>
             <h2 className="font-sora font-bold text-primary text-base">Réservations invités (guests)</h2>
           </div>
-          {guests.length > 0 && (
+          {guestsPeriode.length > 0 && (
             <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white"
-              style={{ background: '#f95d00' }}>{guests.length}</span>
+              style={{ background: '#f95d00' }}>{guestsPeriode.length}</span>
           )}
         </div>
 
-        {guests.length === 0 ? (
+        {guestsPeriode.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <span className="material-symbols-outlined text-[38px] text-on-surface-variant/40 mb-2">group_off</span>
-            <p className="text-sm text-on-surface-variant">Aucune réservation invité pour le moment.</p>
+            <p className="text-sm text-on-surface-variant">Aucune réservation invité sur {label}.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -749,7 +1166,7 @@ export default function AdminDashboard({ session }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/10">
-                {guests.slice(0, 10).map((g) => {
+                {guestsPeriode.slice(0, 10).map((g) => {
                   const res = g.reservations?.[0];
                   return (
                     <tr key={g.id} className="hover:bg-surface-container-low/30 transition-colors">
@@ -791,49 +1208,18 @@ export default function AdminDashboard({ session }) {
         )}
       </div>
 
-      {/* ── Graphique occupation 6 mois + Actions rapides ─────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 animate-fade-up">
-
-        {/* Évolution occupation 6 mois */}
-        <div className="lg:col-span-7 bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10"
-          style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.06)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-sora font-bold text-primary text-base">Taux d'occupation moyen</h2>
-              <p className="text-xs text-on-surface-variant">Évolution sur 6 mois</p>
-            </div>
-          </div>
-          {occupationChart.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <LineChart data={occupationChart} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
-                <XAxis dataKey="mois" tick={{ fontSize: 11, fill: '#64748b' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(v) => `${v}%`} domain={[0, 100]} width={40} />
-                <Tooltip content={<CustomTooltip />} />
-                <Line
-                  type="monotone" dataKey="taux" name="Occupation (%)"
-                  stroke="#8b5cf6" strokeWidth={2.5} dot={{ r: 4, fill: '#8b5cf6' }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[180px] flex items-center justify-center text-sm text-on-surface-variant">
-              Aucune donnée disponible
-            </div>
-          )}
-        </div>
-
-        {/* Actions rapides */}
-        <div className="lg:col-span-5 bg-primary text-white rounded-3xl p-5 relative overflow-hidden"
+      {/* ── Actions rapides ────────────────────────────────────────────── */}
+      <div className="animate-fade-up">
+        <div className="bg-primary text-white rounded-3xl p-5 relative overflow-hidden"
           style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.12)' }}>
           <div className="absolute top-[-20px] right-[-20px] w-40 h-40 bg-white/10 rounded-full blur-3xl" />
           <div className="relative z-10">
             <h2 className="font-sora font-bold text-base mb-4">Actions rapides</h2>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
               {[
                 { to: '/admin/agenda', icon: 'calendar_month', label: 'Agenda & réservations' },
                 { to: '/admin/payments', icon: 'account_balance_wallet', label: 'Gestion paiements' },
+                { to: '/admin/formations', icon: 'school', label: 'Formations' },
                 { to: '/admin/pricing', icon: 'sell', label: 'Tarifs & codes promo' },
                 { to: '/admin/cancellation-policy', icon: 'policy', label: 'Politique d\'annulation' },
               ].map(({ to, icon, label }) => (

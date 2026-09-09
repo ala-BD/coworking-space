@@ -290,7 +290,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
     } else if (type.includes('paiement') || type.includes('payment') || type.includes('facture')) {
       targetUrl = isAdmin ? '/admin/payments' : '/dashboard/payments';
     } else if (type.includes('message')) {
-      targetUrl = isAdmin ? '/admin/messages' : '/dashboard/messages';
+      targetUrl = isAdmin ? '/admin/messages' : (isTrainer ? '/trainer/messages' : '/dashboard/messages');
     } else if (type.includes('formation') || type.includes('inscription')) {
       targetUrl = isTrainer ? '/trainer/formations' : (isAdmin ? '/admin/formations' : '/dashboard/formations');
     } else if (type.includes('abonnement')) {

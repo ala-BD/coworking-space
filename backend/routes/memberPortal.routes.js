@@ -5,6 +5,7 @@ const { authenticate } = require('../middleware/authenticate');
 const {
   bookingsHistory,
   memberStats,
+  spacesNearby,
   listNotifications,
   markNotificationRead,
   markAllNotificationsRead,
@@ -17,6 +18,9 @@ router.get('/bookings/history', authenticate, bookingsHistory);
 
 // Stats globales
 router.get('/member/stats', authenticate, memberStats);
+
+// Espaces disponibles à proximité
+router.get('/member/spaces-nearby', authenticate, spacesNearby);
 
 // Notifications
 router.get('/member/notifications', authenticate, listNotifications);

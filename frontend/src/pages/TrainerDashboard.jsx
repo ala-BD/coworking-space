@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { formationApi, bookingApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import PeriodFilter from '../components/dashboard/PeriodFilter';
+import { DEFAULT_PERIOD, periodWindow, inWindow, windowLabel, trendBadge } from '../utils/dashboardPeriod';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const STATUT_STYLES = {
@@ -39,9 +41,12 @@ export default function TrainerDashboard({ session }) {
   const [reservations, setReservations] = useState([]);
   const [espaces, setEspaces] = useState([]);
   const [inscriptions, setInscriptions] = useState({});   // Map formation_id → participants[]
+  const [coworkings, setCoworkings] = useState([]);
+  const [remunerations, setRemunerations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [period, setPeriod] = useState(DEFAULT_PERIOD);
 
   /* Modals */
   const [showCreateFormation, setShowCreateFormation] = useState(false);
@@ -152,6 +157,24 @@ export default function TrainerDashboard({ session }) {
       } else {
         setInscriptions({});
       }
+
+      try {
+        const cw = await formationApi.getMyCoworkings();
+        setCoworkings(cw.coworkings || []);
+      } catch {
+        setCoworkings([]);
+      }
+
+      try {
+        const { data: remu } = await supabase
+          .from('remuneration_formateurs')
+          .select('*, formations(titre)')
+          .eq('formateur_id', id)
+          .order('created_at', { ascending: false });
+        setRemunerations(remu || []);
+      } catch {
+        setRemunerations([]);
+      }
     } catch (e) { setError('Erreur chargement : ' + e.message); }
     finally { setLoading(false); }
   };
@@ -212,11 +235,46 @@ export default function TrainerDashboard({ session }) {
   const safeReservations = Array.isArray(reservations) ? reservations : [];
   const safeInscriptions = inscriptions && typeof inscriptions === 'object' ? inscriptions : {};
 
-  const totalFormations = safeFormations.length;
-  const upcomingFormations = safeFormations.filter(f => f.statut === 'planifiee').length;
-  const totalReservations = safeReservations.length;
-  const activeReservations = safeReservations.filter(r => r.statut === 'confirmed').length;
-  const totalInscrits = Object.values(safeInscriptions).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.filter(i => i.statut !== 'annulee').length : 0), 0);
+  // Filtrage global par période (jour / mois / année / tout)
+  const win = periodWindow(period);
+
+  const filteredFormations = safeFormations.filter(f => inWindow(f.date_debut, win));
+  const filteredReservations = safeReservations.filter(r => inWindow(r.date_debut, win));
+
+  const prevDur = win.toJ.getTime() - win.fromJ.getTime();
+  const prevToJ = new Date(win.fromJ.getTime() - 1);
+  const prevFromJ = new Date(prevToJ.getTime() - prevDur);
+  const prevInscrits = safeFormations
+    .filter(f => {
+      const d = new Date(f.date_debut);
+      return d >= prevFromJ && d <= prevToJ;
+    })
+    .reduce((sum, f) => sum + (safeInscriptions[f.id] || []).filter(i => i.statut !== 'annulee').length, 0);
+
+  const upcomingFormations = filteredFormations.filter(f => f.statut === 'planifiee').length;
+  const totalInscrits = filteredFormations.reduce((sum, f) => sum + (safeInscriptions[f.id] || []).filter(i => i.statut !== 'annulee').length, 0);
+
+  const inscritsTrend = trendBadge(totalInscrits, prevInscrits);
+
+  /* Sessions du jour : formations + réservations personnelles aujourd'hui */
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
+  const todayFormations = safeFormations.filter(f => {
+    const d = new Date(f.date_debut);
+    return f.statut !== 'annulee' && d >= todayStart && d <= todayEnd;
+  });
+  const todayReservations = safeReservations.filter(r => {
+    const d = new Date(r.date_debut);
+    return r.statut !== 'cancelled' && d >= todayStart && d <= todayEnd;
+  });
+  const todaySessions = [
+    ...todayFormations.map(f => ({ kind: 'formation', id: f.id, titre: f.titre, heure: f.date_debut, statut: f.statut, lieu: f.espaces?.nom || '—' })),
+    ...todayReservations.map(r => ({ kind: 'reservation', id: r.id, titre: r.espaces?.nom || 'Espace', heure: r.date_debut, statut: r.statut, lieu: r.espaces?.nom || '—' })),
+  ].sort((a, b) => new Date(a.heure) - new Date(b.heure));
+
+  const pendingPayouts = remunerations
+    .filter(r => r.statut === 'en_attente')
+    .reduce((s, r) => s + parseFloat(r.montant || 0), 0);
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center">
@@ -229,17 +287,20 @@ export default function TrainerDashboard({ session }) {
       <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto">
 
         {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-secondary" style={{ fontSize: 16 }}>school</span>
-            </span>
-            <span className="text-xs font-bold uppercase tracking-widest text-secondary">Espace Formateur</span>
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-secondary" style={{ fontSize: 16 }}>school</span>
+              </span>
+              <span className="text-xs font-bold uppercase tracking-widest text-secondary">Espace Formateur</span>
+            </div>
+            <h1 className="font-sora font-bold text-primary text-2xl sm:text-3xl">Tableau de bord</h1>
+            <p className="text-sm text-on-surface-variant mt-0.5">
+              Bonjour {profile?.prenom} — Gérez vos formations et vos réservations d'espaces · {windowLabel(period)}
+            </p>
           </div>
-          <h1 className="font-sora font-bold text-primary text-2xl sm:text-3xl">Tableau de bord</h1>
-          <p className="text-sm text-on-surface-variant mt-0.5">
-            Bonjour {profile?.prenom} — Gérez vos formations et vos réservations d'espaces.
-          </p>
+          <PeriodFilter value={period} onChange={setPeriod} />
         </div>
 
         {/* Alertes */}
@@ -262,19 +323,27 @@ export default function TrainerDashboard({ session }) {
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {[
-            { label: 'Mes formations', value: totalFormations, icon: 'event_note', color: 'text-secondary bg-secondary/10' },
-            { label: 'À venir', value: upcomingFormations, icon: 'upcoming', color: 'text-emerald-600 bg-emerald-50' },
-            { label: 'Total inscrits', value: totalInscrits, icon: 'group', color: 'text-violet-600 bg-violet-50' },
-            { label: 'Réservations actives', value: activeReservations, icon: 'check_circle', color: 'text-sky-600 bg-sky-50' },
-          ].map(({ label, value, icon, color }) => (
-            <div key={label} className="bg-surface-container-lowest rounded-3xl sm:rounded-3xl p-4 sm:p-5 border border-outline-variant/20 shadow-sm flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${color}`}>
-                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{icon}</span>
+            { label: 'Sessions du jour', value: todaySessions.length, icon: 'today', color: 'text-secondary bg-secondary/10' },
+            { label: 'Prochaines formations', value: upcomingFormations, icon: 'upcoming', color: 'text-emerald-600 bg-emerald-50' },
+            { label: 'Total participants', value: totalInscrits, icon: 'group', color: 'text-violet-600 bg-violet-50', trend: inscritsTrend },
+            { label: 'Rémunération en attente', value: pendingPayouts > 0 ? `${pendingPayouts.toFixed(0)} DT` : 'Aucune', icon: 'payments', color: 'text-sky-600 bg-sky-50' },
+          ].map(({ label, value, icon, color, trend }) => (
+            <div key={label} className="bg-surface-container-lowest rounded-3xl sm:rounded-3xl p-4 sm:p-5 border border-outline-variant/20 shadow-sm relative overflow-hidden">
+              <span className="absolute inset-x-0 top-0 h-0.5" style={{ background: 'linear-gradient(90deg, #f95d00, transparent)' }} />
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${color}`}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{icon}</span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant leading-tight">{label}</p>
+                  <p className="font-sora font-bold text-primary text-xl leading-tight mt-0.5">{value}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant leading-tight">{label}</p>
-                <p className="font-sora font-bold text-primary text-xl leading-tight mt-0.5">{value}</p>
-              </div>
+              {trend && (
+                <p className={`text-[10px] font-bold mt-2 ${trend.dir === 'up' ? 'text-emerald-600' : trend.dir === 'down' ? 'text-red-500' : 'text-on-surface-variant'}`}>
+                  {trend.text}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -305,13 +374,104 @@ export default function TrainerDashboard({ session }) {
               <p className="text-xs text-on-surface-variant mt-1">Louer un espace dans un coworking space</p>
             </div>
           </button>
+        </div>
+
+        {/* Sessions du jour + Mes coworkings */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {/* ── Sessions du jour ── */}
+          <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-sora font-bold text-primary text-base flex items-center gap-2">
+                  <span className="material-symbols-outlined text-secondary" style={{ fontSize: 18 }}>today</span>
+                  Sessions du jour
+                </h2>
+                <p className="text-xs text-on-surface-variant mt-0.5">Formations et réservations personnelles · {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+              </div>
+              <Link to="/trainer/planning" className="text-xs font-semibold text-secondary hover:underline">
+                Calendrier →
+              </Link>
+            </div>
+            {todaySessions.length === 0 ? (
+              <div className="flex flex-col items-center py-6 text-center">
+                <span className="material-symbols-outlined text-on-surface-variant/30 mb-2" style={{ fontSize: 32 }}>event_busy</span>
+                <p className="text-sm text-on-surface-variant">Aucune session prévue aujourd'hui.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {todaySessions.slice(0, 5).map((s) => (
+                  <div key={`${s.kind}-${s.id}`} className="flex items-center gap-3 p-3 rounded-2xl border border-outline-variant/20 bg-surface-container-lowest/60">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: s.kind === 'formation' ? 'rgba(139,92,246,.1)' : 'rgba(16,185,129,.1)' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 18, color: s.kind === 'formation' ? '#8b5cf6' : '#10b981' }}>{s.kind === 'formation' ? 'school' : 'chair'}</span>
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <p className="font-semibold text-primary text-sm truncate">{s.titre}</p>
+                      <p className="text-xs text-on-surface-variant">
+                        {new Date(s.heure).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} · {s.lieu}
+                      </p>
+                    </div>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                      s.kind === 'formation'
+                        ? STATUT_STYLES[s.statut] || 'bg-gray-100 text-gray-600'
+                        : s.statut === 'confirmed' ? 'bg-emerald-100 text-emerald-800'
+                          : s.statut === 'pending' ? 'bg-amber-100 text-amber-800'
+                            : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {s.kind === 'formation' ? STATUT_LABELS[s.statut] || s.statut : s.statut === 'confirmed' ? 'Confirmée' : s.statut === 'pending' ? 'En attente' : s.statut}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Mes coworkings ── */}
+          <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-sora font-bold text-primary text-base flex items-center gap-2">
+                <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 18 }}>apartment</span>
+                Mes coworkings
+              </h2>
+              <span className="px-2.5 py-1 rounded-full bg-secondary/10 text-secondary text-[10px] font-bold uppercase tracking-tight">
+                {coworkings.length} rattaché{coworkings.length > 1 ? 's' : ''}
+              </span>
+            </div>
+            {coworkings.length === 0 ? (
+              <div className="flex flex-col items-center py-6 text-center">
+                <span className="material-symbols-outlined text-on-surface-variant/30 mb-2" style={{ fontSize: 32 }}>apartment</span>
+                <p className="text-sm text-on-surface-variant">Aucun coworking rattaché pour le moment.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {coworkings.map((cw) => (
+                  <div key={cw.id} className="flex items-center gap-3 p-3 rounded-2xl border border-outline-variant/20 bg-surface-container-lowest/60">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-primary/5 text-primary">
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>location_on</span>
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <p className="font-semibold text-primary text-sm truncate">{cw.nom || 'Coworking'}</p>
+                      <p className="text-xs text-on-surface-variant truncate">
+                        {[cw.ville, cw.adresse].filter(Boolean).join(' · ') || '—'}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-[10px] font-bold text-on-surface-variant">{cw.nb_formations} formation{cw.nb_formations > 1 ? 's' : ''}</p>
+                      <p className="text-[10px] font-bold text-on-surface-variant">{cw.nb_reservations} réservation{cw.nb_reservations > 1 ? 's' : ''}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Graphique de fréquentation des formations */}
-        {formations.length > 0 && (
+        {filteredFormations.length > 0 && (
           <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-5 mb-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="font-sora font-bold text-primary text-base">Inscriptions par formation</h2>
-                <p className="text-xs text-on-surface-variant">Taux de remplissage de vos sessions</p>
+                <p className="text-xs text-on-surface-variant">Taux de remplissage de vos sessions · {windowLabel(period)}</p>
               </div>
               <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-violet-50 text-violet-600">
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>bar_chart</span>
@@ -319,7 +479,7 @@ export default function TrainerDashboard({ session }) {
             </div>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart
-                data={safeFormations.map(f => ({
+                data={filteredFormations.map(f => ({
                   name: (f.titre || '').length > 15 ? (f.titre || '').slice(0, 15) + '…' : (f.titre || ''),
                   inscrits: (safeInscriptions[f.id] || []).filter(i => i.statut !== 'annulee').length,
                   capacite: Number(f.capacite_max) || 10,
@@ -337,7 +497,7 @@ export default function TrainerDashboard({ session }) {
           </div>
         )}
           {/* Formations */}
-          <div>
+          <div className="mb-6">
             <h2 className="font-sora font-semibold text-primary text-base mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-secondary" style={{ fontSize: 18 }}>school</span>
               Mes formations
@@ -353,9 +513,14 @@ export default function TrainerDashboard({ session }) {
                   Créer ma première formation
                 </button>
               </div>
+            ) : filteredFormations.length === 0 ? (
+              <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-8 text-center shadow-sm">
+                <span className="material-symbols-outlined text-on-surface-variant/30 block mb-2" style={{ fontSize: 36 }}>calendar_month</span>
+                <p className="text-sm text-on-surface-variant">Aucune formation sur cette période ({windowLabel(period)}).</p>
+              </div>
             ) : (
               <div className="space-y-3">
-                {safeFormations.map((f) => {
+                {filteredFormations.map((f) => {
                   const formInscrits = (safeInscriptions[f.id] || []).filter(i => i.statut !== 'annulee');
                   const nbInscrits = formInscrits.length;
                   const capacity = Number(f.capacite_max) || 10;
@@ -439,9 +604,14 @@ export default function TrainerDashboard({ session }) {
                   Réserver un espace
                 </button>
               </div>
+            ) : filteredReservations.length === 0 ? (
+              <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-8 text-center shadow-sm">
+                <span className="material-symbols-outlined text-on-surface-variant/30 block mb-2" style={{ fontSize: 36 }}>calendar_month</span>
+                <p className="text-sm text-on-surface-variant">Aucune réservation sur cette période ({windowLabel(period)}).</p>
+              </div>
             ) : (
               <div className="space-y-3">
-                {reservations.map((r) => (
+                {filteredReservations.map((r) => (
                   <div key={r.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-4 shadow-sm">
                     <div className="flex justify-between items-start gap-2 mb-2">
                       <h3 className="font-sora font-bold text-primary text-sm leading-snug flex-1">{r.espaces?.nom}</h3>
@@ -467,7 +637,6 @@ export default function TrainerDashboard({ session }) {
               </div>
             )}
           </div>
-        </div>
       </div>
 
       {/* Modal Créer Formation */}

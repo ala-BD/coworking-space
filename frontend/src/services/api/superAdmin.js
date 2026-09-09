@@ -2,7 +2,15 @@
 import { apiFetch } from './_core';
 
 export const superAdminApi = {
-  getStats: () => apiFetch('/api/super-admin/stats'),
+  getStats: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/api/super-admin/stats${qs ? `?${qs}` : ''}`);
+  },
+
+  getReport: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/api/super-admin/report${qs ? `?${qs}` : ''}`);
+  },
 
   // Tenants
   getTenants: (params = {}) => {

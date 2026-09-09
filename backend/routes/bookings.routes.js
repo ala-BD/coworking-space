@@ -12,6 +12,7 @@ router.post('/bookings/check-availability', authenticate, ctrl.checkAvailability
 // CRUD réservations (membres & admin)
 router.post('/bookings', authenticate, ctrl.createBooking);
 router.delete('/bookings/:id', authenticate, ctrl.deleteBooking);
+router.get('/bookings/:id/cancel-info', authenticate, ctrl.cancelInfoBooking);
 router.get('/bookings', authenticate, ctrl.listBookings);
 router.patch('/bookings/:id', authenticate, ctrl.updateBooking);
 

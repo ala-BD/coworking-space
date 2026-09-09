@@ -122,6 +122,105 @@ async function memberStats(req, res) {
   });
 }
 
+// ── GET /api/member/spaces-nearby ────────────────────────────────────────
+async function spacesNearby(req, res) {
+  try {
+    const userId = req.user.id;
+
+    // Espaces des coworkings actifs (avec info coworking)
+    const { data: tenants } = await supabaseAdmin
+      .from('tenants')
+      .select('id')
+      .eq('statut', 'actif');
+    const activeTenantIds = (tenants || []).map(t => t.id);
+
+    let spaceQuery = supabaseAdmin
+      .from('espaces')
+      .select('id, nom, type, capacite, tarif_horaire, photo_url, tenant_id, tenants!tenant_id(nom, ville, adresse, pays, latitude, longitude)')
+      .order('tarif_horaire', { ascending: true });
+    if (activeTenantIds.length > 0) spaceQuery = spaceQuery.in('tenant_id', activeTenantIds);
+
+    const { data: espaces, error: espErr } = await spaceQuery;
+    if (espErr) return res.status(500).json({ error: espErr.message });
+
+    // Coworking habituel : fréquence des réservations du membre par tenant
+    const { data: memberBookings } = await supabaseAdmin
+      .from('reservations')
+      .select('espaces(tenant_id)')
+      .eq('user_id', userId);
+    const tenantFreq = {};
+    (memberBookings || []).forEach(b => {
+      const tid = b.espaces?.tenant_id;
+      if (tid) tenantFreq[tid] = (tenantFreq[tid] || 0) + 1;
+    });
+
+    // Fenêtre « maintenant » (prochaine heure)
+    const now = new Date();
+    const windowEnd = new Date(now.getTime() + 60 * 60 * 1000);
+
+    const [bookingsRes, formationsRes] = await Promise.all([
+      supabaseAdmin
+        .from('reservations')
+        .select('espace_id')
+        .in('statut', ['confirmed', 'pending'])
+        .lt('date_debut', windowEnd.toISOString())
+        .gt('date_fin', now.toISOString()),
+      supabaseAdmin
+        .from('formations')
+        .select('espace_id')
+        .in('statut', ['planifiee', 'en_cours'])
+        .lt('date_debut', windowEnd.toISOString())
+        .gt('date_fin', now.toISOString()),
+    ]);
+
+    const occupiedByBookings = {};
+    (bookingsRes.data || []).forEach(r => {
+      occupiedByBookings[r.espace_id] = (occupiedByBookings[r.espace_id] || 0) + 1;
+    });
+    const occupiedByFormations = new Set((formationsRes.data || []).map(f => f.espace_id));
+
+    const spaces = (espaces || []).map(e => {
+      const isExclusive = e.type !== 'open_space';
+      const capacity = Math.max(1, parseInt(e.capacite, 10) || 1);
+      const overlappingCount = occupiedByBookings[e.id] || 0;
+      const blockedByFormation = occupiedByFormations.has(e.id);
+      const remaining = isExclusive
+        ? (overlappingCount > 0 ? 0 : 1)
+        : Math.max(0, capacity - overlappingCount);
+      const disponible = !blockedByFormation && remaining > 0;
+      return {
+        id: e.id,
+        nom: e.nom,
+        type: e.type,
+        capacite: capacity,
+        tarif_horaire: parseFloat(e.tarif_horaire) || 0,
+        photo_url: e.photo_url || null,
+        disponible,
+        places_restantes: remaining,
+        proche: !!tenantFreq[e.tenant_id],
+        coworking: e.tenants
+          ? { nom: e.tenants.nom, ville: e.tenants.ville, adresse: e.tenants.adresse, pays: e.tenants.pays }
+          : null,
+      };
+    });
+
+    spaces.sort((a, b) => {
+      if (a.disponible !== b.disponible) return a.disponible ? -1 : 1;
+      if (!!a.proche !== !!b.proche) return a.proche ? -1 : 1;
+      return a.tarif_horaire - b.tarif_horaire;
+    });
+
+    res.json({
+      espaces: spaces.slice(0, 6),
+      total: spaces.length,
+      disponibles: spaces.filter(s => s.disponible).length,
+      heure: now.toISOString(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 // ── GET /api/member/notifications ────────────────────────────────────────
 async function listNotifications(req, res) {
   const { page = 1, limit = 20, unread_only } = req.query;
@@ -198,6 +297,7 @@ async function myFormations(req, res) {
 module.exports = {
   bookingsHistory,
   memberStats,
+  spacesNearby,
   listNotifications,
   markNotificationRead,
   markAllNotificationsRead,

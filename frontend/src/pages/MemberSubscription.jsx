@@ -28,6 +28,14 @@ const PLAN_LABELS = {
   entreprise: 'Entreprise',
 };
 
+const ESPACE_TYPE_LABELS = {
+  open_space: 'Open space',
+  private_office: 'Bureau privé',
+  meeting_room: 'Salle de réunion',
+  training_room: 'Salle de formation',
+  event_space: 'Espace événementiel',
+};
+
 export default function MemberSubscription({ session }) {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
@@ -320,6 +328,14 @@ export default function MemberSubscription({ session }) {
                             <h3 className="text-sm font-bold text-primary" style={{ fontFamily: 'Sora, sans-serif' }}>
                               {SUBSCRIPTION_LABELS[tarif.type_abonnement] || tarif.label}
                             </h3>
+                            {tarif.type_espace && (
+                              <span className="inline-flex mt-1 items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                                style={{ background: 'rgba(249,93,0,0.1)', color: '#b34a00' }}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 12 }}>meeting_room</span>
+                                {ESPACE_TYPE_LABELS[tarif.type_espace] || tarif.type_espace}
+                              </span>
+                            )}
                             {tarif.duree_jours && (
                               <span className="text-xs text-on-surface-variant/60">{tarif.duree_jours} jours</span>
                             )}

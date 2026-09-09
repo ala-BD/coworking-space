@@ -1,6 +1,6 @@
 // controllers/bookingsController.js — MODULE B : Réservations
 const { supabaseAdmin } = require('../config/supabase');
-const { getBookingAvailability, getCancellationPolicy, evaluateCancellation } = require('../models/helpers');
+const { getBookingAvailability, getCancellationPolicy, getCancellationPolicyForEspace, buildCancellationInfo, todayISO } = require('../models/helpers');
 const { applyTenantFilter } = require('../middleware/guards');
 const { notifyConfirmationReservation, notifyAnnulationReservation } = require('../services/notificationService');
 
@@ -87,9 +87,37 @@ async function createBooking(req, res) {
     // Calcul automatique du montant total selon le tarif horaire de l'espace
     const { data: espData } = await req.db
       .from('espaces')
-      .select('tarif_horaire, tenant_id')
+      .select('tarif_horaire, tenant_id, type')
       .eq('id', espace_id)
       .single();
+
+    // Tâche 5 — Type d'espace lié à la tarification :
+    // si l'abonnement actif du membre provient d'une formule restreinte à un
+    // type d'espace, la réservation n'est possible que pour ce type.
+    const today = todayISO();
+    const { data: activeSub } = await req.db
+      .from('abonnements')
+      .select('type_espace')
+      .eq('user_id', req.user.id)
+      .eq('statut', 'active')
+      .lte('date_debut', today)
+      .gte('date_fin', today)
+      .order('date_fin', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (activeSub?.type_espace && espData?.type && activeSub.type_espace !== espData.type) {
+      const typeLabels = {
+        open_space: 'Open space',
+        private_office: 'Bureau privé',
+        meeting_room: 'Salle de réunion',
+        training_room: 'Salle de formation',
+        event_space: 'Espace événementiel',
+      };
+      return res.status(400).json({
+        error: `Votre formule d'abonnement est limitée aux espaces de type « ${typeLabels[activeSub.type_espace] || activeSub.type_espace} ». Cet espace est de type « ${typeLabels[espData.type] || espData.type} ».`,
+      });
+    }
 
     const hours = Math.max(1, (new Date(date_fin) - new Date(date_debut)) / (1000 * 60 * 60));
     const tarif = parseFloat(espData?.tarif_horaire) || 0;
@@ -184,6 +212,47 @@ async function createBooking(req, res) {
   }
 }
 
+async function cancelInfoBooking(req, res) {
+  const { id } = req.params;
+  const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
+
+  try {
+    const { data: reservation, error: fetchErr } = await supabaseAdmin
+      .from('reservations')
+      .select('*, espaces(nom, type), paiements(id, montant, statut, montant_rembourse)')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr || !reservation) {
+      return res.status(404).json({ error: 'Réservation introuvable.' });
+    }
+
+    if (!isStaff && reservation.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Vous ne pouvez consulter que vos propres réservations.' });
+    }
+
+    const tenantId = reservation.tenant_id || req.tenantId;
+    const policy = await getCancellationPolicy(tenantId);
+    const espacePolicy = await getCancellationPolicyForEspace(tenantId, reservation.espaces?.type);
+    const paiement = (reservation.paiements || [])[0];
+    const info = buildCancellationInfo(reservation, policy, espacePolicy, isStaff, paiement?.montant);
+
+    res.json({
+      info,
+      policy: {
+        delai_heures: policy.delai_heures,
+        penalite_pct: policy.penalite_pct,
+        annulation_membre_autorisee: policy.annulation_membre_autorisee,
+        remboursement_auto: policy.remboursement_auto,
+        message_membre: policy.message_membre,
+        type_espace: espacePolicy ? reservation.espaces?.type : null,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 async function deleteBooking(req, res) {
   const { id } = req.params;
   const isStaff = ['super_admin', 'admin', 'staff'].includes(req.profile.role);
@@ -191,7 +260,7 @@ async function deleteBooking(req, res) {
   try {
     const { data: reservation, error: fetchErr } = await supabaseAdmin
       .from('reservations')
-      .select('*, espaces(nom, type)')
+      .select('*, espaces(nom, type), paiements(id, montant, statut, montant_rembourse)')
       .eq('id', id)
       .single();
 
@@ -203,23 +272,68 @@ async function deleteBooking(req, res) {
       return res.status(403).json({ error: 'Vous ne pouvez annuler que vos propres réservations.' });
     }
 
-    const policy = await getCancellationPolicy(req.tenantId);
-    const cancellation = evaluateCancellation(reservation, policy, isStaff);
-    if (!cancellation.allowed) {
+    // Tâche 6 — Politique d'annulation : vérifier les conditions, déterminer
+    // si un remboursement ou un crédit est applicable, puis les appliquer.
+    const tenantId = reservation.tenant_id || req.tenantId;
+    const policy = await getCancellationPolicy(tenantId);
+    const espacePolicy = await getCancellationPolicyForEspace(tenantId, reservation.espaces?.type);
+    const paiement = (reservation.paiements || [])[0];
+    const info = buildCancellationInfo(reservation, policy, espacePolicy, isStaff, paiement?.montant);
+
+    if (!info.allowed) {
       return res.status(403).json({
-        error: cancellation.reason,
+        error: info.reason || 'Annulation non autorisée.',
         policy,
-        hoursUntilStart: cancellation.hoursUntilStart,
+        hoursUntilStart: info.hoursUntilStart,
       });
     }
 
-    const { error: deleteErr } = await supabaseAdmin
+    const { error: updateErr } = await supabaseAdmin
       .from('reservations')
-      .update({ statut: 'cancelled' })
+      .update({ statut: 'cancelled', penalite_pct: info.penalite_pct })
       .eq('id', id);
 
-    if (deleteErr) {
-      return res.status(400).json({ error: deleteErr.message });
+    if (updateErr) {
+      return res.status(400).json({ error: updateErr.message });
+    }
+
+    let refund = { montant_rembourse: 0, montant_credit: 0, paiement_updated: false };
+
+    if (paiement) {
+      // Remboursement (cash) si la règle le prévoit
+      if (info.montantRembourse > 0) {
+        const { error: refundErr } = await supabaseAdmin.from('paiements').update({
+          montant_rembourse: info.montantRembourse,
+          statut: 'refunded',
+        }).eq('id', paiement.id);
+        if (refundErr) {
+          console.error('⚠️ Échec enregistrement remboursement paiement:', refundErr.message);
+        } else {
+          refund.montant_rembourse = info.montantRembourse;
+          refund.paiement_updated = true;
+        }
+      }
+
+      // Crédit portefeuille (formule avec credit_portefeuille_auto)
+      if (info.montantCredit > 0) {
+        const { error: creditErr } = await supabaseAdmin.from('credits_membres').insert({
+          tenant_id: reservation.tenant_id || tenantId,
+          user_id: reservation.user_id,
+          montant: info.montantCredit,
+          motif: `Annulation réservation — crédit portefeuille (${reservation.espaces?.nom || 'espace'})`,
+          reservation_id: reservation.id,
+        });
+        if (creditErr) {
+          console.error('⚠️ Échec inscription crédit portefeuille:', creditErr.message);
+        } else {
+          const { error: statusErr } = await supabaseAdmin.from('paiements').update({
+            statut: 'refunded',
+          }).eq('id', paiement.id);
+          if (statusErr) console.error('⚠️ Échec mise à jour statut paiement (crédit):', statusErr.message);
+          refund.montant_credit = info.montantCredit;
+          refund.paiement_updated = true;
+        }
+      }
     }
 
     try {
@@ -272,7 +386,10 @@ async function deleteBooking(req, res) {
     res.json({
       message: 'Réservation annulée avec succès.',
       reservation,
-      penalite_pct: cancellation.penalite_pct || 0,
+      penalite_pct: info.penalite_pct || 0,
+      montant_rembourse: refund.montant_rembourse,
+      montant_credit: refund.montant_credit,
+      mode: info.mode,
     });
   } catch (err) {
     console.error('Erreur annulation réservation:', err);
@@ -579,6 +696,7 @@ module.exports = {
   getBookingsCalendar,
   createBooking,
   deleteBooking,
+  cancelInfoBooking,
   checkAvailability,
   listBookings,
   getBookingsOccupation,

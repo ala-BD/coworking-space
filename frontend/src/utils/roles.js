@@ -206,6 +206,12 @@ export const FORMATEUR_NAV = [
     ],
   },
   {
+    group: 'Communication',
+    items: [
+      { id: 'trainer_messages', label: 'Messagerie', icon: 'chat', to: '/trainer/messages' },
+    ],
+  },
+  {
     group: 'Profil',
     items: [
       { id: 'trainer_profile', label: 'Mon Profil', icon: 'person', to: '/trainer/profile' },

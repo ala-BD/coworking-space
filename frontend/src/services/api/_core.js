@@ -55,7 +55,10 @@ export async function apiFetch(path, options = {}, retried = false) {
   if (!response.ok) {
     const message = body.error || `Erreur API (${response.status})`;
     if (isAuthError(response.status, message)) throw new Error(SESSION_EXPIRED_MESSAGE);
-    throw new Error(message);
+    const err = new Error(message);
+    err.status = response.status;
+    err.body = body;
+    throw err;
   }
 
   return body;

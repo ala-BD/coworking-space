@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { memberApi, subscriptionApi, bookingApi, sessionApi, formationApi } from '../services/api';
+import { memberApi, subscriptionApi, bookingApi, sessionApi, formationApi, memberPortalApi, paymentApi } from '../services/api';
 import {
   connectSocket,
   joinUser,
@@ -12,6 +12,8 @@ import {
   disconnectSocket,
 } from '../services/socket';
 import PortalLayout from '../components/layout/PortalLayout';
+import PeriodFilter from '../components/dashboard/PeriodFilter';
+import { DEFAULT_PERIOD, periodWindow, windowLabel } from '../utils/dashboardPeriod';
 import { ROLE_LABELS } from '../utils/roles';
 import { QRCodeSVG } from 'qrcode.react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -52,6 +54,28 @@ const BOOKING_STATUT_COLORS = {
   confirmed: 'bg-emerald-100 text-emerald-700',
   pending: 'bg-amber-100 text-amber-700',
   cancelled: 'bg-red-100 text-red-600',
+};
+
+const PAYMENT_STATUT_LABELS = {
+  pending: 'En attente',
+  paid: 'Payé',
+  failed: 'Échoué',
+  refunded: 'Remboursé',
+};
+
+const PAYMENT_STATUT_COLORS = {
+  paid: 'bg-emerald-100 text-emerald-700',
+  pending: 'bg-amber-100 text-amber-700',
+  failed: 'bg-red-100 text-red-600',
+  refunded: 'bg-slate-100 text-slate-600',
+};
+
+const SPACE_TYPE_LABELS = {
+  open_space: 'Open Space',
+  private_office: 'Bureau privé',
+  meeting_room: 'Salle de réunion',
+  training_room: 'Salle de formation',
+  event_space: 'Espace événementiel',
 };
 
 /* ─── Keyframes injected once ─── */
@@ -114,9 +138,15 @@ export default function Dashboard({ session }) {
   const [bookings, setBookings] = useState([]);
   const [myFormations, setMyFormations] = useState([]);
   const [availableFormations, setAvailableFormations] = useState([]);
+  const [nearbySpaces, setNearbySpaces] = useState([]);
+  const [nearbySummary, setNearbySummary] = useState({ total: 0, disponibles: 0 });
+  const [recentPayments, setRecentPayments] = useState([]);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [period, setPeriod] = useState(DEFAULT_PERIOD);
+  const [memberQr, setMemberQr] = useState(null);
 
   /* ── Session state ── */
   const [activeSession, setActiveSession] = useState(null);
@@ -171,30 +201,53 @@ export default function Dashboard({ session }) {
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   }, [activeSubscription]);
 
-  /* ── Derived: member activity chart ── */
+  /* ── Derived: member activity chart (période globale) ── */
   const memberActivityChart = useMemo(() => {
-    const months = [];
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const label = d.toLocaleDateString('fr-FR', { month: 'short' });
-      const year = d.getFullYear();
-      const month = d.getMonth();
+    const win = periodWindow(period);
+    const buckets = [];
+    const inRange = (dateStr, s, e) => {
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
+      return d >= s && d <= e;
+    };
+    const countRes = (s, e) => (bookings || []).filter(b => b.statut !== 'cancelled' && inRange(b.date_debut, s, e)).length;
+    const countForm = (s, e) => (myFormations || []).filter(i => i.statut !== 'annulee' && inRange(i.formations?.date_debut || i.created_at, s, e)).length;
 
-      const countRes = (bookings || []).filter(b => {
-        const db = new Date(b.date_debut);
-        return db.getFullYear() === year && db.getMonth() === month && b.statut !== 'cancelled';
-      }).length;
-
-      const countForm = (myFormations || []).filter(f => {
-        const db = new Date(f.formations?.date_debut || f.created_at);
-        return db.getFullYear() === year && db.getMonth() === month && f.statut !== 'annulee';
-      }).length;
-
-      months.push({ mois: label, reservations: countRes, formations: countForm });
+    const y = win.fromJ.getFullYear();
+    const m = win.fromJ.getMonth();
+    if (period === 'jour') {
+      for (let h = 0; h < 24; h++) {
+        const s = new Date(y, m, win.fromJ.getDate(), h, 0, 0, 0);
+        const e = new Date(y, m, win.fromJ.getDate(), h, 59, 59, 999);
+        buckets.push({ label: `${h}h`, reservations: countRes(s, e), formations: countForm(s, e) });
+      }
+    } else if (period === 'mois') {
+      const dim = new Date(y, m + 1, 0).getDate();
+      for (let d = 1; d <= dim; d++) {
+        const s = new Date(y, m, d, 0, 0, 0, 0);
+        const e = new Date(y, m, d, 23, 59, 59, 999);
+        buckets.push({ label: String(d), reservations: countRes(s, e), formations: countForm(s, e) });
+      }
+    } else if (period === 'annee') {
+      for (let mo = 0; mo < 12; mo++) {
+        const s = new Date(y, mo, 1, 0, 0, 0, 0);
+        const e = new Date(y, mo + 1, 0, 23, 59, 59, 999);
+        buckets.push({ label: new Date(y, mo, 1).toLocaleDateString('fr-FR', { month: 'short' }), reservations: countRes(s, e), formations: countForm(s, e) });
+      }
+    } else {
+      for (let yr = win.fromJ.getFullYear(); yr <= win.toJ.getFullYear(); yr++) {
+        const s = new Date(yr, 0, 1, 0, 0, 0, 0);
+        const e = new Date(yr, 11, 31, 23, 59, 59, 999);
+        buckets.push({ label: String(yr), reservations: countRes(s, e), formations: countForm(s, e) });
+      }
     }
-    return months;
-  }, [bookings, myFormations]);
+    return buckets;
+  }, [bookings, myFormations, period]);
+
+  const memberActivityCaption = period === 'jour' ? 'Par heure · ' + windowLabel(period)
+    : period === 'mois' ? 'Par jour · ' + windowLabel(period)
+      : period === 'annee' ? 'Par mois · ' + windowLabel(period)
+        : 'Par année · historique';
 
   /* ── Load all data ── */
   const loadData = async () => {
@@ -229,6 +282,21 @@ export default function Dashboard({ session }) {
       } catch {
         setActiveSession(null);
       }
+
+      try {
+        const nearby = await memberPortalApi.getNearbySpaces();
+        setNearbySpaces(nearby.espaces || []);
+        setNearbySummary({ total: nearby.total ?? 0, disponibles: nearby.disponibles ?? 0 });
+      } catch {
+        setNearbySpaces([]);
+      }
+
+      try {
+        const { payments = [] } = await paymentApi.getMemberPayments(session.user.id);
+        setRecentPayments(payments.slice(0, 4));
+      } catch {
+        setRecentPayments([]);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -250,6 +318,20 @@ export default function Dashboard({ session }) {
 
   /* ── Initial load ── */
   useEffect(() => { loadData(); }, [session]);
+
+  /* ── Mon QR code d'accès (scannable par le staff) ── */
+  useEffect(() => {
+    let active = true;
+    memberApi
+      .getQr()
+      .then((qr) => {
+        if (active) setMemberQr(qr);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [session]);
 
   /* ── Socket.io events ── */
   useEffect(() => {
@@ -333,6 +415,18 @@ export default function Dashboard({ session }) {
     }
   };
 
+  const handleDownloadReceipt = async (id) => {
+    setError('');
+    try {
+      setDownloadingReceipt(id);
+      await paymentApi.downloadReceipt(id);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setDownloadingReceipt(null);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
@@ -403,14 +497,17 @@ export default function Dashboard({ session }) {
               Gérez votre espace, vos réservations et votre abonnement
             </p>
           </div>
-          <Link
-            to="/book/step1"
-            className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-white px-5 py-2.5 rounded-xl shrink-0 transition-all hover:-translate-y-0.5 active:scale-[.97]"
-            style={{ background: '#f95d00', boxShadow: '0 4px 14px rgba(249,93,0,.3)' }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_circle</span>
-            Réserver
-          </Link>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
+            <PeriodFilter value={period} onChange={setPeriod} />
+            <Link
+              to="/book/step1"
+              className="hidden sm:inline-flex items-center justify-center gap-2 text-sm font-semibold text-white px-5 py-2.5 rounded-xl shrink-0 transition-all hover:-translate-y-0.5 active:scale-[.97]"
+              style={{ background: '#f95d00', boxShadow: '0 4px 14px rgba(249,93,0,.3)' }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_circle</span>
+              Réserver
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -726,7 +823,7 @@ export default function Dashboard({ session }) {
               </div>
               <div className="w-40 h-40 flex items-center justify-center">
                 <QRCodeSVG
-                  value={profile?.email || session?.user?.email || profile?.id || 'member'}
+                  value={memberQr?.payload || profile?.email || session?.user?.email || profile?.id || 'member'}
                   size={160}
                   bgColor="transparent"
                   fgColor="#000d23"
@@ -746,13 +843,146 @@ export default function Dashboard({ session }) {
           </div>
         </div>
 
+        {/* ─── ROW A LEFT (8 cols): Available Spaces Near You ─── */}
+        <div className="md:col-span-8 bento-card">
+          <div className="bg-white rounded-3xl p-6 border border-outline-variant/10 h-full" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
+            <div className="flex justify-between items-center mb-5">
+              <div>
+                <h3 className="font-sora font-bold text-primary text-base flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#f95d00]" style={{ fontSize: 20 }}>near_me</span>
+                  Espaces disponibles à proximité
+                </h3>
+                <p className="text-xs text-on-surface-variant mt-1">
+                  {nearbySummary.disponibles} disponible{nearbySummary.disponibles > 1 ? 's' : ''} maintenant sur {nearbySummary.total} espaces actifs
+                </p>
+              </div>
+              <span className="shrink-0 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-tight">
+                {nearbySummary.disponibles} dispo
+              </span>
+            </div>
+
+            {nearbySpaces.length === 0 ? (
+              <div className="flex flex-col items-center py-8 text-center">
+                <span className="material-symbols-outlined text-outline-variant mb-2" style={{ fontSize: 40 }}>location_off</span>
+                <p className="text-sm text-on-surface-variant">Aucun espace planifiable pour le moment.</p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-3">
+                {nearbySpaces.map((sp) => (
+                  <div key={sp.id} className="p-3 rounded-xl border border-outline-variant/10 bg-surface-container-low/40 flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(249,93,0,0.1)' }}>
+                      <span className="material-symbols-outlined text-[#f95d00]" style={{ fontSize: 22 }}>
+                        {sp.type === 'open_space' ? 'groups' : sp.type === 'private_office' ? 'meeting_room' : sp.type === 'meeting_room' ? 'event_seat' : sp.type === 'training_room' ? 'school' : 'celebration'}
+                      </span>
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-semibold text-primary text-sm truncate">{sp.nom}</p>
+                        {sp.proche && (
+                          <span className="shrink-0 px-1.5 py-0.5 rounded bg-[#dae2ff] text-[#001847] text-[9px] font-bold uppercase leading-none">Habituel</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-on-surface-variant truncate">
+                        {sp.coworking?.nom}{sp.coworking?.ville ? ` · ${sp.coworking.ville}` : ''}
+                      </p>
+                      <p className="text-[10px] text-on-surface-variant/80">
+                        {SPACE_TYPE_LABELS[sp.type] || sp.type} · {sp.tarif_horaire > 0 ? `${sp.tarif_horaire} DT/h` : 'Gratuit'}
+                      </p>
+                    </div>
+                    <div className="shrink-0 flex flex-col items-end gap-1.5">
+                      {sp.disponible ? (
+                        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[9px] font-bold uppercase tracking-tight">
+                          {sp.places_restantes > 1 ? `${sp.places_restantes} places` : 'Disponible'}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-500 text-[9px] font-bold uppercase tracking-tight">Occupé</span>
+                      )}
+                      <Link
+                        to="/book/step1"
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold text-white transition-all hover:opacity-90 active:scale-[.97]"
+                        style={{ background: sp.disponible ? '#f95d00' : '#cbd5e1' }}
+                      >
+                        Réserver
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ─── ROW A RIGHT (4 cols): Recent Invoices ─── */}
+        <div className="md:col-span-4 bento-card">
+          <div className="bg-white rounded-3xl p-6 border border-outline-variant/10 h-full flex flex-col justify-between" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-sora font-bold text-primary text-base flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#8b5cf6]" style={{ fontSize: 20 }}>receipt_long</span>
+                  Factures récentes
+                </h3>
+                <Link to="/member/payments" className="text-sm font-semibold text-[#f95d00] hover:underline transition-colors">Voir tout</Link>
+              </div>
+
+              {recentPayments.length === 0 ? (
+                <div className="flex flex-col items-center py-8 text-center">
+                  <span className="material-symbols-outlined text-outline-variant mb-2" style={{ fontSize: 32 }}>receipt_long</span>
+                  <p className="text-xs text-on-surface-variant">Aucune facture pour le moment.</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {recentPayments.map((p) => {
+                    const source = p.reservations?.espaces?.nom
+                      ? `Réservation · ${p.reservations.espaces.nom}`
+                      : p.abonnements?.type
+                        ? 'Abonnement'
+                        : p.inscriptions_formations?.[0]?.formations?.titre
+                          ? `Formation · ${p.inscriptions_formations[0].formations.titre}`
+                          : 'Paiement';
+                    return (
+                      <div key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-outline-variant/10 bg-surface-container-low/30">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-primary text-xs truncate">{source}</p>
+                          <p className="text-[10px] text-on-surface-variant">
+                            {p.created_at ? new Date(p.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                          </p>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-tight ${PAYMENT_STATUT_COLORS[p.statut] || 'bg-gray-100 text-gray-500'}`}>
+                            {PAYMENT_STATUT_LABELS[p.statut] || p.statut}
+                          </span>
+                          <span className="font-sora font-bold text-primary text-sm whitespace-nowrap">{parseFloat(p.montant || 0).toFixed(2)} DT</span>
+                          <button
+                            onClick={() => handleDownloadReceipt(p.id)}
+                            disabled={downloadingReceipt === p.id}
+                            className="flex items-center justify-center w-7 h-7 rounded-lg bg-surface-container-high text-primary hover:bg-outline-variant/30 transition-all disabled:opacity-50"
+                            title="Télécharger le reçu"
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{downloadingReceipt === p.id ? 'hourglass_top' : 'download'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <Link
+              to="/member/payments"
+              className="w-full text-center py-2 mt-4 rounded-xl text-xs font-bold text-secondary border border-secondary/20 hover:bg-secondary/5 transition-all block"
+            >
+              Toutes mes factures
+            </Link>
+          </div>
+        </div>
+
         {/* ─── GRAPH : Mon activité mensuelle ─── */}
         <div className="md:col-span-12 bento-card">
           <div className="bg-white rounded-3xl p-6 border border-outline-variant/10" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
             <div className="flex justify-between items-center mb-4">
               <div>
-                <h3 className="font-sora font-bold text-primary text-base">Mon activité (6 derniers mois)</h3>
-                <p className="text-xs text-on-surface-variant">Réservations d'espaces et participations aux formations</p>
+                <h3 className="font-sora font-bold text-primary text-base">Mon activité</h3>
+                <p className="text-xs text-on-surface-variant">{memberActivityCaption} · Réservations et formations</p>
               </div>
               <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-orange-50 text-[#f95d00]">
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>show_chart</span>
@@ -771,7 +1001,7 @@ export default function Dashboard({ session }) {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-                <XAxis dataKey="mois" tick={{ fontSize: 11, fill: '#64748b' }} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748b' }} />
                 <YAxis tick={{ fontSize: 11, fill: '#64748b' }} width={30} allowDecimals={false} />
                 <Tooltip />
                 <Area type="monotone" dataKey="reservations" name="Réservations" stroke="#f95d00" strokeWidth={2} fillOpacity={1} fill="url(#colorRes)" />

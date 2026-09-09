@@ -5,6 +5,7 @@ export const formationApi = {
   // ── Formateurs ──────────────────────────────────────────────────────────
   getFormateurs: () => apiFetch('/api/formateurs'),
   getFormateur: (id) => apiFetch(`/api/formateurs/${id}`),
+  getMyCoworkings: () => apiFetch('/api/formateurs/me/coworkings'),
   createFormateur: (payload) =>
     apiFetch('/api/formateurs', { method: 'POST', body: JSON.stringify(payload) }),
   updateFormateur: (id, payload) =>

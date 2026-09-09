@@ -60,6 +60,8 @@ export default function MemberBookings() {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(null);
   const [cancelModal, setCancelModal] = useState(null);
+  const [cancelInfo, setCancelInfo] = useState(null);
+  const [cancelInfoLoading, setCancelInfoLoading] = useState(false);
   const [payingId, setPayingId] = useState(null);
 
   useEffect(() => {
@@ -86,6 +88,20 @@ export default function MemberBookings() {
   }, [filter]);
 
   useEffect(() => { loadData(1); }, [loadData]);
+
+  const openCancelModal = async (b) => {
+    setCancelModal(b);
+    setCancelInfo(null);
+    setCancelInfoLoading(true);
+    try {
+      const res = await bookingApi.getCancelInfo(b.id);
+      setCancelInfo(res);
+    } catch (err) {
+      setCancelInfo(null);
+      console.error('Erreur chargement conditions annulation:', err);
+    }
+    setCancelInfoLoading(false);
+  };
 
   const handleCancel = async (id) => {
     setCancelling(id);
@@ -314,7 +330,7 @@ export default function MemberBookings() {
                       
                       {canCancel && (
                         <button
-                          onClick={() => setCancelModal(b)}
+                          onClick={() => openCancelModal(b)}
                           className="px-3 py-1.5 rounded-lg text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold transition border border-rose-200 dark:border-rose-900/40 cursor-pointer"
                         >
                           Annuler
@@ -373,7 +389,55 @@ export default function MemberBookings() {
             <p className="text-xs text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
               Êtes-vous sûr de vouloir annuler cette réservation ? Cette action est irréversible.
             </p>
-            
+
+            {cancelInfoLoading && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 flex items-center gap-2">
+                <span className="animate-spin inline-block h-3 w-3 border-2 border-secondary border-t-transparent rounded-full" />
+                Chargement des conditions d'annulation...
+              </p>
+            )}
+
+            {cancelInfo && !cancelInfoLoading && (
+              <div className="mb-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 p-4 space-y-2">
+                {!cancelInfo.info.allowed ? (
+                  <p className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                    {cancelInfo.info.reason || 'Annulation non autorisée.'}
+                  </p>
+                ) : (
+                  <>
+                    {cancelInfo.info.montantPaye > 0 && (
+                      <>
+                        <div className="flex justify-between text-xs text-slate-600 dark:text-slate-300">
+                          <span>Pénalité appliquée</span>
+                          <span className="font-bold">{cancelInfo.info.penalite_pct}%</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-slate-600 dark:text-slate-300">
+                          <span>Montant retenu</span>
+                          <span className="font-bold">{formatCurrency(cancelInfo.info.montantRetenu)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-slate-600 dark:text-slate-300">
+                          <span>{cancelInfo.info.mode === 'credit' ? 'Crédit portefeuille' : 'Remboursement'}</span>
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                            {formatCurrency(cancelInfo.info.mode === 'credit' ? cancelInfo.info.montantCredit : cancelInfo.info.montantRembourse)}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    {cancelInfo.info.montantPaye <= 0 && (
+                      <p className="text-xs text-slate-600 dark:text-slate-300">
+                        Aucun montant réglé pour cette réservation : annulation sans frais.
+                      </p>
+                    )}
+                  </>
+                )}
+                {cancelInfo.policy?.message_membre && (
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 italic border-t border-slate-200 dark:border-slate-800 pt-2">
+                    {cancelInfo.policy.message_membre}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-3">
               <button
                 onClick={() => setCancelModal(null)}
@@ -383,7 +447,7 @@ export default function MemberBookings() {
               </button>
               <button
                 onClick={() => handleCancel(cancelModal.id)}
-                disabled={cancelling === cancelModal.id}
+                disabled={cancelling === cancelModal.id || (cancelInfo && !cancelInfo.info.allowed)}
                 className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow-md"
               >
                 {cancelling === cancelModal.id ? 'Annulation...' : 'Annuler'}
