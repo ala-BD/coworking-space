@@ -5,7 +5,9 @@ const { authenticate } = require('../middleware/authenticate');
 const { requireRoles } = require('../middleware/requireRoles');
 const ctrl = require('../controllers/espacesController');
 
-// Routes publiques/membres (lister les espaces)
+// Routes publiques/membres (lister les espaces et les coworkings)
+router.get('/tenants', authenticate, ctrl.listTenants);
+router.get('/espaces/formation', authenticate, ctrl.listEspacesFormation);
 router.get('/espaces', authenticate, ctrl.listEspaces);
 
 // Routes administration du tenant (Admin / Staff)

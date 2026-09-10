@@ -64,6 +64,16 @@ async function finalizeOnlinePayment(supabaseAdmin, paymentId, userId, reference
     }
   }
 
+  // Mettre à jour le statut paiement des inscriptions formations associées
+  try {
+    await supabaseAdmin
+      .from('inscriptions_formations')
+      .update({ statut_paiement: 'paye' })
+      .eq('paiement_id', paymentId);
+  } catch (insPayErr) {
+    console.warn('⚠️ Erreur mise à jour statut_paiement inscription formation:', insPayErr.message);
+  }
+
   if (isEmailConfigured()) {
     try {
       const config = getCoworkingConfig();

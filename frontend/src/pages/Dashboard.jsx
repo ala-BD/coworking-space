@@ -491,7 +491,7 @@ export default function Dashboard({ session }) {
               {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
             <h1 className="font-sora font-bold text-primary" style={{ fontSize: 28, lineHeight: '1.25' }}>
-              {greeting()}, {profile?.prenom || 'Membre'}&nbsp;👋
+              {greeting()}, {profile?.prenom || 'Membre'}
             </h1>
             <p className="text-on-surface-variant text-sm mt-1">
               Gérez votre espace, vos réservations et votre abonnement

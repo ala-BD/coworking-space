@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { memberPortalApi, bookingApi, paymentApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import Pagination from '../components/Pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 const STATUS_CONFIG = {
   confirmed: { label: 'Confirmée', color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 ring-emerald-600/20', dot: 'bg-emerald-500' },
@@ -75,14 +78,14 @@ export default function MemberBookings() {
   const loadData = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const params = { page, limit: 8 };
+      const params = { page, limit: ITEMS_PER_PAGE };
       if (filter) params.statut = filter;
       const res = await memberPortalApi.getBookingsHistory(params);
       setBookings(res.bookings || []);
       setStats(res.stats || null);
       setPagination(res.pagination || { page: 1, totalPages: 1, total: 0 });
     } catch (err) {
-      console.error('Erreur chargement historique:', err);
+      // silencieux
     }
     setLoading(false);
   }, [filter]);
@@ -98,7 +101,6 @@ export default function MemberBookings() {
       setCancelInfo(res);
     } catch (err) {
       setCancelInfo(null);
-      console.error('Erreur chargement conditions annulation:', err);
     }
     setCancelInfoLoading(false);
   };
@@ -110,7 +112,7 @@ export default function MemberBookings() {
       setCancelModal(null);
       loadData(pagination.page);
     } catch (err) {
-      console.error('Annulation échouée:', err);
+      // silencieux
     }
     setCancelling(null);
   };
@@ -345,27 +347,15 @@ export default function MemberBookings() {
         )}
 
         {/* Pagination */}
-        {pagination.totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 pt-4">
-            <button
-              onClick={() => loadData(pagination.page - 1)}
-              disabled={pagination.page <= 1}
-              className="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
-            >
-              Précédent
-            </button>
-            <span className="text-xs text-slate-500 font-semibold px-3">
-              Page {pagination.page} / {pagination.totalPages}
-            </span>
-            <button
-              onClick={() => loadData(pagination.page + 1)}
-              disabled={pagination.page >= pagination.totalPages}
-              className="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
-            >
-              Suivant
-            </button>
-          </div>
-        )}
+        <div className="bg-white dark:bg-[#141824] rounded-2xl border border-outline-variant/15 overflow-hidden">
+          <Pagination
+            currentPage={pagination.page}
+            totalItems={pagination.total}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={loadData}
+            label="réservations"
+          />
+        </div>
       </div>
 
       {/* Modal d'annulation */}

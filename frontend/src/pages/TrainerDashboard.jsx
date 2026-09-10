@@ -348,34 +348,6 @@ export default function TrainerDashboard({ session }) {
           ))}
         </div>
 
-        {/* Actions rapides */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          <button
-            onClick={() => setShowCreateFormation(true)}
-            className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-4"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-secondary" style={{ fontSize: 24 }}>add_circle</span>
-            </div>
-            <div className="text-left">
-              <h3 className="font-sora font-bold text-primary text-base">Créer une formation</h3>
-              <p className="text-xs text-on-surface-variant mt-1">Ajouter une nouvelle formation à votre catalogue</p>
-            </div>
-          </button>
-          <button
-            onClick={() => setShowBookingModal(true)}
-            className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-4"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 24 }}>event</span>
-            </div>
-            <div className="text-left">
-              <h3 className="font-sora font-bold text-primary text-base">Réserver un espace</h3>
-              <p className="text-xs text-on-surface-variant mt-1">Louer un espace dans un coworking space</p>
-            </div>
-          </button>
-        </div>
-
         {/* Sessions du jour + Mes coworkings */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           {/* ── Sessions du jour ── */}

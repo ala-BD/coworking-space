@@ -1,3 +1,7 @@
+// AdminNotifications.jsx
+// Page centre de notifications pour les rôles admin, staff, super_admin et formateur
+// Réutilise la même logique que MemberNotifications mais avec navigation role-aware
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
@@ -6,11 +10,13 @@ import PortalLayout from '../components/layout/PortalLayout';
 
 function getTypeIcon(type = '') {
   if (type.includes('formation') || type.includes('inscription')) return 'school';
-  if (type.includes('reservation') || type.includes('session')) return 'calendar_month';
+  if (type.includes('reservation') || type.includes('session') || type === 'nouvelle_demande_reservation') return 'calendar_month';
   if (type.includes('payment') || type.includes('paiement') || type.includes('facture')) return 'receipt_long';
   if (type.includes('message')) return 'chat';
   if (type.includes('abonnement')) return 'payments';
-  return 'info';
+  if (type.includes('membre') || type.includes('member')) return 'person_add';
+  if (type.includes('formateur')) return 'school';
+  return 'notifications';
 }
 
 function getTypeColor(type = '') {
@@ -19,10 +25,12 @@ function getTypeColor(type = '') {
   if (type.includes('payment') || type.includes('paiement') || type.includes('facture')) return 'rgba(47,190,143,0.09)';
   if (type.includes('message')) return 'rgba(139,92,246,0.1)';
   if (type.includes('abonnement')) return 'rgba(249,93,0,0.09)';
-  return 'rgba(0,13,35,0.09)';
+  if (type.includes('membre') || type.includes('member') || type.includes('formateur')) return 'rgba(14,165,233,0.09)';
+  return 'rgba(16,15,13,0.06)';
 }
 
 function getRelativeTime(dateStr) {
+  if (!dateStr) return '';
   const now = new Date();
   const date = new Date(dateStr);
   const diffMs = now - date;
@@ -61,8 +69,8 @@ function groupNotifications(notifications) {
   return groups;
 }
 
-// DB field is "lu" (boolean) — n.lu is the source of truth
-function NotificationItem({ notification, onClick }) {
+// DB field is "lu" (boolean)
+function NotificationItem({ notification, onClick, dark }) {
   const { type, message, title, lu, created_at } = notification;
   const isRead = !!lu;
 
@@ -76,8 +84,12 @@ function NotificationItem({ notification, onClick }) {
         alignItems: 'flex-start',
         gap: 16,
         borderRadius: 16,
-        border: isRead ? '1px solid rgba(16,15,13,0.08)' : '1px solid rgba(249,93,0,0.2)',
-        background: isRead ? '#ffffff' : 'rgba(249,93,0,0.03)',
+        border: isRead
+          ? `1px solid ${dark ? 'rgba(255,255,255,0.07)' : 'rgba(16,15,13,0.08)'}`
+          : '1px solid rgba(249,93,0,0.2)',
+        background: isRead
+          ? (dark ? 'rgba(255,255,255,0.03)' : '#ffffff')
+          : (dark ? 'rgba(249,93,0,0.06)' : 'rgba(249,93,0,0.03)'),
         padding: '16px 20px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
@@ -92,10 +104,12 @@ function NotificationItem({ notification, onClick }) {
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           width: 40, height: 40, borderRadius: 12, flexShrink: 0, marginTop: 2,
-          background: getTypeColor(type),
+          background: isRead
+            ? (dark ? 'rgba(255,255,255,0.06)' : getTypeColor(type))
+            : getTypeColor(type),
         }}
       >
-        <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#f95d00' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 20, color: isRead ? (dark ? 'rgba(251,255,255,0.5)' : '#6b7280') : '#f95d00' }}>
           {getTypeIcon(type)}
         </span>
       </span>
@@ -104,7 +118,7 @@ function NotificationItem({ notification, onClick }) {
           <span style={{
             fontSize: 13,
             fontWeight: isRead ? 500 : 700,
-            color: isRead ? '#44474d' : '#100f0d',
+            color: isRead ? (dark ? 'rgba(251,255,255,0.6)' : '#44474d') : (dark ? '#fbffff' : '#100f0d'),
             fontFamily: 'Sora, sans-serif',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -117,19 +131,33 @@ function NotificationItem({ notification, onClick }) {
           )}
         </div>
         {title && message && (
-          <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 6px', lineHeight: 1.45 }}>
+          <p style={{
+            fontSize: 13,
+            color: dark ? 'rgba(251,255,255,0.5)' : '#6b7280',
+            margin: '0 0 6px',
+            lineHeight: 1.45,
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+          }}>
             {message}
           </p>
         )}
-        <span style={{ fontSize: 11, color: '#9ca3af' }}>{getRelativeTime(created_at)}</span>
+        <span style={{ fontSize: 11, color: dark ? 'rgba(251,255,255,0.35)' : '#9ca3af' }}>
+          {getRelativeTime(created_at)}
+        </span>
       </div>
     </button>
   );
 }
 
-export default function MemberNotifications() {
+export default function AdminNotifications({ session }) {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
+  const [dark, setDark] = useState(() => {
+    try { return localStorage.getItem('theme') === 'dark'; } catch { return false; }
+  });
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -138,7 +166,7 @@ export default function MemberNotifications() {
   const [loadingMore, setLoadingMore] = useState(false);
   const totalRef = useRef(0);
 
-  // Load profile from profiles table (not members)
+  // Load profile from profiles table
   useEffect(() => {
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -160,7 +188,7 @@ export default function MemberNotifications() {
         limit: 20,
         unread_only: filter === 'unread',
       });
-      // Backend returns { notifications: [], unreadCount, pagination: { total } }
+      // Backend: { notifications: [], unreadCount, pagination: { total } }
       const items = res.data?.notifications ?? res.notifications ?? res.data ?? [];
       const total = res.data?.pagination?.total ?? res.pagination?.total ?? res.data?.total ?? res.total ?? items.length;
       totalRef.current = total;
@@ -190,12 +218,12 @@ export default function MemberNotifications() {
     fetchNotifications(1, false);
   }, [filter, profile?.id, fetchNotifications]);
 
-  // Realtime: listen for new notifications in the full-page view too
+  // Realtime subscription
   useEffect(() => {
     if (!profile?.id) return;
 
     const channel = supabase
-      .channel(`notif-page-${profile.id}`)
+      .channel(`admin-notif-page-${profile.id}`)
       .on(
         'postgres_changes',
         {
@@ -217,7 +245,9 @@ export default function MemberNotifications() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) console.warn('AdminNotifications realtime error:', err.message);
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -225,7 +255,6 @@ export default function MemberNotifications() {
   }, [profile?.id]);
 
   const handleNotificationClick = async (n) => {
-    // DB field is "lu" (not "read")
     if (!n.lu) {
       try {
         await memberPortalApi.markNotificationRead(n.id);
@@ -252,6 +281,8 @@ export default function MemberNotifications() {
       navigate(isTrainer ? '/trainer/formations' : isAdmin ? '/admin/formations' : '/dashboard/formations');
     } else if (type.includes('abonnement')) {
       navigate('/dashboard/subscription');
+    } else if (type.includes('membre') || type.includes('member') || type.includes('formateur')) {
+      navigate(isAdmin ? '/admin/members' : '/dashboard');
     } else {
       navigate(isAdmin ? '/admin/dashboard' : isTrainer ? '/trainer-dashboard' : '/dashboard');
     }
@@ -273,18 +304,27 @@ export default function MemberNotifications() {
     fetchNotifications(next, true);
   };
 
-  // Count based on "lu" (DB field)
   const unreadCount = notifications.filter((n) => !n.lu).length;
   const grouped = groupNotifications(notifications);
   const groupOrder = ["Aujourd'hui", 'Hier', 'Cette semaine', 'Plus ancien'];
+
+  const bgPage = dark ? '#100f0d' : '#f6f4f1';
+  const textPrimary = dark ? '#fbffff' : '#100f0d';
+  const textMuted = dark ? 'rgba(251,255,255,0.5)' : '#9ca3af';
 
   return (
     <PortalLayout profile={profile}>
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '8px 0 40px' }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexWrap: 'wrap', gap: 12, marginBottom: 28,
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, fontFamily: 'Sora, sans-serif', color: '#100f0d' }}>
+            <h1 style={{
+              fontSize: 22, fontWeight: 700, margin: 0,
+              fontFamily: 'Sora, sans-serif', color: textPrimary,
+            }}>
               Notifications
             </h1>
             {unreadCount > 0 && (
@@ -327,9 +367,9 @@ export default function MemberNotifications() {
               style={{
                 padding: '7px 18px', borderRadius: 99,
                 fontSize: 13, fontWeight: 600,
-                border: filter === tab.key ? 'none' : '1px solid rgba(16,15,13,0.12)',
-                background: filter === tab.key ? '#f95d00' : '#ffffff',
-                color: filter === tab.key ? '#ffffff' : '#44474d',
+                border: filter === tab.key ? 'none' : `1px solid ${dark ? 'rgba(255,255,255,0.12)' : 'rgba(16,15,13,0.12)'}`,
+                background: filter === tab.key ? '#f95d00' : (dark ? 'rgba(255,255,255,0.06)' : '#ffffff'),
+                color: filter === tab.key ? '#ffffff' : textPrimary,
                 cursor: 'pointer', transition: 'all 0.15s ease',
                 boxShadow: filter === tab.key ? '0 2px 8px rgba(249,93,0,0.25)' : 'none',
               }}
@@ -345,7 +385,7 @@ export default function MemberNotifications() {
             <span className="material-symbols-outlined" style={{ fontSize: 32, color: '#f95d00', animation: 'spin 1s linear infinite' }}>
               progress_activity
             </span>
-            <span style={{ fontSize: 13, color: '#6b7280' }}>Chargement...</span>
+            <span style={{ fontSize: 13, color: textMuted }}>Chargement...</span>
             <style>{'@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'}</style>
           </div>
         ) : notifications.length === 0 ? (
@@ -359,9 +399,9 @@ export default function MemberNotifications() {
                 notifications_none
               </span>
             </span>
-            <p style={{ fontSize: 14, color: '#9ca3af', margin: 0, textAlign: 'center' }}>
+            <p style={{ fontSize: 14, color: textMuted, margin: 0, textAlign: 'center' }}>
               {filter === 'unread'
-                ? 'Vous avez lu toutes vos notifications.'
+                ? 'Toutes les notifications ont été lues.'
                 : 'Aucune notification pour le moment.'}
             </p>
           </div>
@@ -374,7 +414,7 @@ export default function MemberNotifications() {
                 <div key={group}>
                   <p style={{
                     fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                    letterSpacing: '0.12em', color: '#9ca3af', margin: '0 0 10px 4px',
+                    letterSpacing: '0.12em', color: textMuted, margin: '0 0 10px 4px',
                     fontFamily: 'Sora, sans-serif',
                   }}>
                     {group}
@@ -385,6 +425,7 @@ export default function MemberNotifications() {
                         key={n.id}
                         notification={n}
                         onClick={handleNotificationClick}
+                        dark={dark}
                       />
                     ))}
                   </div>

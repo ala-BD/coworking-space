@@ -142,7 +142,7 @@ export default function SuperAdminDashboard({ session }) {
       const cwRes = await superAdminApi.getTenants({ statut: 'actif', limit: 50 });
       setCoworkings(cwRes.tenants || []);
       firstLoadRef.current = false;
-    } catch (e) { console.error(e); }
+    } catch (e) { /* silencieux */ }
     finally { if (!silent) setLoading(false); }
   }, []);
 
@@ -175,7 +175,7 @@ export default function SuperAdminDashboard({ session }) {
         const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single();
         setProfile(prof);
         if (prof?.role !== 'super_admin') return navigate('/admin/dashboard');
-      } catch (e) { console.error(e); }
+      } catch (e) { /* silencieux */ }
       setLoading(false);
     }
     bootstrap();
@@ -616,55 +616,9 @@ export default function SuperAdminDashboard({ session }) {
           </div>
         )}
 
-        {/* ─── Actions rapides ────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
-          <div className="lg:col-span-1 bg-primary-container rounded-3xl p-6 text-white bento-card">
-            <h2 className="font-sora text-lg font-semibold mb-4">Actions rapides</h2>
-            <div className="space-y-3">
-              <button onClick={() => navigate('/super-admin/tenants')} className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 rounded-xl text-sm font-semibold hover:bg-white/20 transition-colors">
-                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>domain</span>
-                Gérer les Coworkings
-              </button>
-              <button onClick={() => navigate('/super-admin/users')} className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 rounded-xl text-sm font-semibold hover:bg-white/20 transition-colors">
-                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>groups</span>
-                Gérer les Utilisateurs
-              </button>
-              <button onClick={() => navigate('/super-admin/billing')} className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 rounded-xl text-sm font-semibold hover:bg-white/20 transition-colors">
-                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>receipt_long</span>
-                Facturation B2B
-              </button>
-              <button onClick={() => navigate('/super-admin/monitoring')} className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 rounded-xl text-sm font-semibold hover:bg-white/20 transition-colors">
-                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>monitor</span>
-                Monitoring & Audit
-              </button>
-            </div>
-            <div className="mt-6 p-4 rounded-xl border"
-              style={alerts.length > 0 ? { background: 'rgba(245,158,11,0.08)', borderColor: 'rgba(245,158,11,0.25)' } : { background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.15)' }}>
-              <div className="flex items-center gap-2 mb-2">
-                <span className={`w-2 h-2 rounded-full pulse-dot ${alerts.length > 0 ? '' : 'bg-[#2FBE8F]'}`}
-                  style={alerts.length > 0 ? { background: '#f59e0b' } : undefined} />
-                <span className="text-xs font-semibold uppercase tracking-wider">Alertes importantes</span>
-              </div>
-              {alerts.length === 0 ? (
-                <p className="text-sm opacity-90">Aucune alerte majeure — tous les systèmes opérationnels</p>
-              ) : (
-                <ul className="space-y-2.5 mt-3">
-                  {alerts.map((a, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <span className="material-symbols-outlined" style={{ fontSize: 17, color: a.severity === 'high' ? '#fca5a5' : '#fde047' }}>{a.icon}</span>
-                      <div>
-                        <p className="opacity-95 leading-snug">{a.text}</p>
-                        {a.detail && <p className="text-xs opacity-70 mt-0.5">{a.detail}</p>}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          {/* ─── Catalogue global des formations ─── */}
-          <div className="lg:col-span-2 bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/10 shadow-[0px_2px_4px_rgba(16,35,63,0.04)] bento-card">
+        {/* ─── Catalogue global des formations ─── */}
+        <div className="mb-6">
+          <div className="bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/10 shadow-[0px_2px_4px_rgba(16,35,63,0.04)] bento-card">
             <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#8b5cf6]" style={{ fontSize: 22 }}>school</span>

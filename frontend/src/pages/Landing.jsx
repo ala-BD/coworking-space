@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { guestApi } from '../services/api';
+import { API_URL } from '../services/api';
 import Navbar from '../components/layout/Navbar';
 
 /* ─── Charte DeskyWork ——— */
@@ -192,11 +193,282 @@ const HERO_SLIDES = [
   { src: '/images/coworking/space-5.jpg',   title: 'Espace lounge',      tag: 'Pause & networking' },
 ];
 
+/* ─── Modale Promos ─── */
+function PromoModal({ tenant, onClose }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!tenant) return;
+    setLoading(true);
+    fetch(`${API_URL}/api/public/coworkings/${tenant.id}/promos`)
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [tenant]);
+
+  if (!tenant) return null;
+
+  const ESPACE_LABELS = {
+    open_space: 'Open Space',
+    private_office: 'Bureau privatif',
+    meeting_room: 'Salle de réunion',
+    training_room: 'Salle de formation',
+    event_space: 'Espace événementiel',
+  };
+
+  const ABONNEMENT_LABELS = {
+    day_pass: 'Pass Jour',
+    week_pass: 'Pass Semaine',
+    mensuel: 'Mensuel',
+    trimestriel: 'Trimestriel',
+    annuel: 'Annuel',
+    bureau_prive: 'Bureau privé',
+  };
+
+  function fmtDate(d) {
+    if (!d) return null;
+    return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  function daysLeft(dateStr) {
+    if (!dateStr) return null;
+    const diff = Math.ceil((new Date(dateStr) - new Date()) / 86400000);
+    return diff > 0 ? diff : 0;
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(16,15,13,.72)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1rem',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#fff', borderRadius: 24, width: '100%', maxWidth: 560,
+          maxHeight: '90vh', overflowY: 'auto',
+          boxShadow: '0 32px 80px rgba(0,0,0,.28)',
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          background: 'linear-gradient(135deg,#f95d00,#ff8a3d)',
+          borderRadius: '24px 24px 0 0', padding: '1.5rem 1.75rem',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span className="material-symbols-outlined" style={{ color: '#fff', fontSize: 26 }}>local_offer</span>
+              <h3 style={{ margin: 0, color: '#fff', fontFamily: 'Sora,sans-serif', fontWeight: 800, fontSize: '1.25rem' }}>
+                Promotions actives
+              </h3>
+            </div>
+            <p style={{ margin: '4px 0 0', color: 'rgba(255,255,255,.85)', fontSize: '.85rem' }}>
+              {tenant.nom}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'rgba(255,255,255,.2)', border: 'none', borderRadius: '50%',
+              width: 36, height: 36, cursor: 'pointer', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', color: '#fff',
+              transition: 'background .2s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,.35)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,.2)'}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '1.75rem' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '3rem 0', color: '#798bac' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 40, display: 'block', marginBottom: 12, opacity: .5 }}>hourglass_empty</span>
+              Chargement des promotions…
+            </div>
+          ) : (!data?.promo_codes?.length && !data?.tarifs_limites?.length) ? (
+            <div style={{ textAlign: 'center', padding: '3rem 0', color: '#798bac' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 40, display: 'block', marginBottom: 12, opacity: .4 }}>sentiment_neutral</span>
+              Aucune promotion active pour le moment.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+              {/* Codes promo */}
+              {data?.promo_codes?.length > 0 && (
+                <div>
+                  <h5 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 700, color: '#100f0d', fontSize: '.95rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="material-symbols-outlined" style={{ color: '#f95d00', fontSize: 20 }}>confirmation_number</span>
+                    Codes promotionnels
+                  </h5>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {data.promo_codes.map(p => {
+                      const days = daysLeft(p.date_fin);
+                      const urgent = days !== null && days <= 7;
+                      return (
+                        <div key={p.id} style={{
+                          border: `1.5px solid ${urgent ? '#f95d00' : '#e5e7eb'}`,
+                          borderRadius: 14, padding: '1rem 1.25rem',
+                          background: urgent ? '#fff8f5' : '#fafafa',
+                          display: 'flex', alignItems: 'center', gap: 14,
+                        }}>
+                          <div style={{
+                            background: 'linear-gradient(135deg,#f95d00,#ff8a3d)',
+                            borderRadius: 10, padding: '8px 14px',
+                            fontFamily: 'Sora,sans-serif', fontWeight: 800,
+                            color: '#fff', fontSize: '.9rem', letterSpacing: '.04em',
+                            flexShrink: 0,
+                          }}>
+                            {p.code}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, color: '#100f0d', fontSize: '.95rem' }}>
+                              {p.type_reduction === 'percent'
+                                ? `−${p.valeur}% de réduction`
+                                : `−${p.valeur} DT de réduction`}
+                            </div>
+                            {p.date_fin && (
+                              <div style={{ fontSize: '.78rem', color: urgent ? '#f95d00' : '#6b7280', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
+                                {urgent
+                                  ? `Expire dans ${days} jour${days !== 1 ? 's' : ''} · ${fmtDate(p.date_fin)}`
+                                  : `Valide jusqu'au ${fmtDate(p.date_fin)}`}
+                              </div>
+                            )}
+                            {p.utilisations_max && (
+                              <div style={{ fontSize: '.78rem', color: '#6b7280', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>group</span>
+                                {p.utilisations_count} / {p.utilisations_max} utilisations
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Tarifs à durée limitée */}
+              {data?.tarifs_limites?.length > 0 && (
+                <div>
+                  <h5 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 700, color: '#100f0d', fontSize: '.95rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="material-symbols-outlined" style={{ color: '#f95d00', fontSize: 20 }}>sell</span>
+                    Tarifs promotionnels limités
+                  </h5>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {data.tarifs_limites.map(t => {
+                      const days = daysLeft(t.date_fin);
+                      const urgent = days !== null && days <= 7;
+                      return (
+                        <div key={t.id} style={{
+                          border: `1.5px solid ${urgent ? '#f95d00' : '#e5e7eb'}`,
+                          borderRadius: 14, padding: '1rem 1.25rem',
+                          background: urgent ? '#fff8f5' : '#fafafa',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                        }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, color: '#100f0d', fontSize: '.95rem' }}>
+                              {ABONNEMENT_LABELS[t.type_abonnement] || t.type_abonnement}
+                              {t.type_espace && (
+                                <span style={{ fontWeight: 500, color: '#6b7280', fontSize: '.85rem' }}>
+                                  {' '}· {ESPACE_LABELS[t.type_espace] || t.type_espace}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '.78rem', color: '#6b7280', marginTop: 2, textTransform: 'capitalize' }}>
+                              Plan {t.plan_tarifaire}
+                            </div>
+                            {t.date_fin && (
+                              <div style={{ fontSize: '.78rem', color: urgent ? '#f95d00' : '#6b7280', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
+                                {urgent
+                                  ? `Expire dans ${days} jour${days !== 1 ? 's' : ''} · ${fmtDate(t.date_fin)}`
+                                  : `Jusqu'au ${fmtDate(t.date_fin)}`}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{
+                            background: 'linear-gradient(135deg,#f95d00,#ff8a3d)',
+                            borderRadius: 12, padding: '8px 16px', textAlign: 'center', flexShrink: 0,
+                          }}>
+                            <div style={{ color: '#fff', fontFamily: 'Sora,sans-serif', fontWeight: 800, fontSize: '1.1rem', lineHeight: 1 }}>
+                              {t.prix} DT
+                            </div>
+                            <div style={{ color: 'rgba(255,255,255,.8)', fontSize: '.7rem', marginTop: 2 }}>TTC {t.tva_pct}%</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '1rem 1.75rem 1.75rem', borderTop: '1px solid #f3f4f6' }}>
+          <Link
+            to={`/book-guest?tenantId=${tenant.id}`}
+            onClick={onClose}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              background: 'linear-gradient(135deg,#f95d00,#ff8a3d)',
+              color: '#fff', borderRadius: 12, padding: '13px 0', width: '100%',
+              fontWeight: 700, fontSize: '.95rem', textDecoration: 'none',
+              boxShadow: '0 6px 20px rgba(249,93,0,.35)',
+              transition: 'transform .2s, box-shadow .2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 28px rgba(249,93,0,.45)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(249,93,0,.35)'; }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>event_available</span>
+            Réserver et profiter des promos
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Landing({ session }) {
+  const [contactForm, setContactForm] = useState({ nom: '', email: '', sujet: '', message: '' });
+  const [contactStatus, setContactStatus] = useState({ type: '', text: '' });
+  const [contactLoading, setContactLoading] = useState(false);
+
+  const handleContactSubmit = async (event) => {
+    event.preventDefault();
+    setContactLoading(true);
+    setContactStatus({ type: '', text: '' });
+    try {
+      const response = await fetch(`${API_URL}/api/contact`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(contactForm),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Impossible d’envoyer le message.');
+      setContactForm({ nom: '', email: '', sujet: '', message: '' });
+      setContactStatus({ type: 'success', text: data.message });
+    } catch (error) {
+      setContactStatus({ type: 'error', text: error.message });
+    } finally {
+      setContactLoading(false);
+    }
+  };
   const [tenants, setTenants] = useState([]);
   const [slide, setSlide] = useState(0);
   const [hovering, setHovering] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [promoTenant, setPromoTenant] = useState(null);
   const paused = hovering || hidden;
 
   useEffect(() => {
@@ -223,7 +495,7 @@ export default function Landing({ session }) {
       if (res.error) throw new Error(res.error);
       setTenants(res.coworkings || []);
     } catch (e) {
-      console.error('Error fetching tenants:', e.message);
+      // silencieux
     }
   };
 
@@ -268,9 +540,6 @@ export default function Landing({ session }) {
     <>
       {/* ── Styles globaux ── */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@400,0&display=swap');
-
         html { scroll-behavior:smooth; scroll-padding-top:80px; }
         body { font-family:'Inter',sans-serif; background-color:#fbffff; color:#100f0d; }
         .sora { font-family:'Sora',sans-serif !important; }
@@ -375,6 +644,12 @@ export default function Landing({ session }) {
           .hero-bg-slide.active img.kb-a, .hero-bg-slide.active img.kb-b { animation:none; }
           .hero-bg-slide { transition:none; }
           .hero-title .fl-word, .hero-title .fl-accent, .hero-fly { animation:none; opacity:1; transform:none; filter:none; }
+        }
+
+        /* BADGE PROMO */
+        @keyframes promoPulse {
+          0%,100% { box-shadow:0 4px 14px rgba(249,93,0,.55); }
+          50%      { box-shadow:0 4px 22px rgba(249,93,0,.9); }
         }
       `}</style>
 
@@ -529,6 +804,42 @@ export default function Landing({ session }) {
                       decoding="async"
                     />
                     <div className="space-overlay" />
+
+                    {/* ── Badge PROMO ── */}
+                    {tenant.has_promo && (
+                      <div style={{
+                        position: 'absolute', top: 14, right: 14,
+                        background: 'linear-gradient(135deg,#f95d00,#ff8a3d)',
+                        color: '#fff',
+                        borderRadius: 10,
+                        padding: '5px 12px',
+                        fontSize: '.7rem',
+                        fontWeight: 800,
+                        letterSpacing: '.1em',
+                        textTransform: 'uppercase',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        boxShadow: '0 4px 14px rgba(249,93,0,.55)',
+                        zIndex: 4,
+                        animation: 'promoPulse 2.4s ease-in-out infinite',
+                      }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>local_offer</span>
+                        PROMO
+                        {tenant.promo_count > 1 && (
+                          <span style={{
+                            background: 'rgba(255,255,255,.3)',
+                            borderRadius: 6,
+                            padding: '1px 6px',
+                            fontSize: '.65rem',
+                            fontWeight: 700,
+                          }}>
+                            ×{tenant.promo_count}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <div className="space-body">
                       <span style={{ backgroundColor: EC.cobalt, color: 'white', borderRadius: 8, padding: '4px 12px', fontSize: '.72rem', fontWeight: 700, display: 'inline-block', marginBottom: 8 }}>
                         {tenant.ville || tenant.pays || 'Tunisie'}
@@ -550,12 +861,6 @@ export default function Landing({ session }) {
                             {tenant.telephone}
                           </span>
                         )}
-                        {tenant.latitude && tenant.longitude && (
-                          <span className="d-inline-flex align-items-center gap-1">
-                            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>place</span>
-                            {tenant.latitude}, {tenant.longitude}
-                          </span>
-                        )}
                       </div>
                       <div className="d-flex flex-wrap gap-2">
                         <Link
@@ -566,14 +871,34 @@ export default function Landing({ session }) {
                           <span className="material-symbols-outlined" style={{ fontSize: 18 }}>visibility</span>
                           Voir plus
                         </Link>
-                        <Link
-                          to={`/book-guest?tenantId=${tenant.id}`}
-                          className="btn d-inline-flex align-items-center gap-2"
-                          style={{ backgroundColor: 'transparent', color: 'white', border: '2px solid rgba(255,255,255,.5)', borderRadius: 12, padding: '10px 20px', fontWeight: 700, fontSize: '.9rem', transition: 'all .25s' }}
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>event_available</span>
-                          Réserver
-                        </Link>
+                        {tenant.has_promo && (
+                          <button
+                            onClick={() => setPromoTenant(tenant)}
+                            className="btn d-inline-flex align-items-center gap-2"
+                            style={{
+                              background: 'linear-gradient(135deg,#f95d00,#ff8a3d)',
+                              color: 'white', border: 'none', borderRadius: 12,
+                              padding: '10px 20px', fontWeight: 700, fontSize: '.9rem',
+                              transition: 'all .25s', cursor: 'pointer',
+                              boxShadow: '0 4px 14px rgba(249,93,0,.4)',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                            onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>local_offer</span>
+                            Promotions
+                          </button>
+                        )}
+                        {!tenant.has_promo && (
+                          <Link
+                            to={`/book-guest?tenantId=${tenant.id}`}
+                            className="btn d-inline-flex align-items-center gap-2"
+                            style={{ backgroundColor: 'transparent', color: 'white', border: '2px solid rgba(255,255,255,.5)', borderRadius: 12, padding: '10px 20px', fontWeight: 700, fontSize: '.9rem', transition: 'all .25s' }}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>event_available</span>
+                            Réserver
+                          </Link>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -659,9 +984,9 @@ export default function Landing({ session }) {
               </h2>
               <div className="d-flex flex-column gap-4">
                 {[
-                  { icon: 'location_on', label: 'Adresse', val: 'Avenue Habib Bourguiba, Tunis 1001, Tunisie' },
-                  { icon: 'phone', label: 'Téléphone', val: '+216 71 XXX XXX' },
-                  { icon: 'mail', label: 'Email', val: 'bonjour@encrecobalt.tn' },
+                  { icon: 'location_on', label: 'Adresse', val: 'Montplaisir, Tunis' },
+                  { icon: 'phone', label: 'Téléphone', val: '+216 52 882 880\n+216 52 882 930' },
+                  { icon: 'mail', label: 'Email', val: 'contact@vclow.com' },
                   { icon: 'schedule', label: 'Horaires', val: 'Lun–Ven 7h–22h · Week-end 9h–18h' },
                 ].map(({ icon, label, val }) => (
                   <div key={icon} className="d-flex gap-3 align-items-start">
@@ -670,7 +995,7 @@ export default function Landing({ session }) {
                     </div>
                     <div>
                       <div style={{ fontSize: '.72rem', fontWeight: 700, color: EC.muted, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 3 }}>{label}</div>
-                      <div style={{ color: EC.navy, fontWeight: 500 }}>{val}</div>
+                      <div style={{ color: EC.navy, fontWeight: 500, whiteSpace: 'pre-line' }}>{val}</div>
                     </div>
                   </div>
                 ))}
@@ -680,19 +1005,19 @@ export default function Landing({ session }) {
             <div className="col-lg-7">
               <div style={{ backgroundColor: EC.white, borderRadius: 24, padding: '2.5rem', boxShadow: '0 8px 32px rgba(0,13,35,.08)', border: `1.5px solid ${EC.outline}` }}>
                 <h4 className="sora fw-bold mb-4" style={{ color: EC.navy }}>Envoyez-nous un message</h4>
-                <form onSubmit={e => e.preventDefault()}>
+                <form onSubmit={handleContactSubmit}>
                   <div className="row g-3">
                     <div className="col-md-6">
                       <label className="fw-semibold mb-2 d-block" style={{ color: EC.navy, fontSize: '.875rem' }}>Prénom &amp; Nom</label>
-                      <input type="text" className="ec-input" placeholder="Votre nom complet" />
+                      <input type="text" required className="ec-input" placeholder="Votre nom complet" value={contactForm.nom} onChange={e => setContactForm(f => ({ ...f, nom: e.target.value }))} />
                     </div>
                     <div className="col-md-6">
                       <label className="fw-semibold mb-2 d-block" style={{ color: EC.navy, fontSize: '.875rem' }}>Email</label>
-                      <input type="email" className="ec-input" placeholder="votre@email.com" />
+                      <input type="email" required className="ec-input" placeholder="votre@email.com" value={contactForm.email} onChange={e => setContactForm(f => ({ ...f, email: e.target.value }))} />
                     </div>
                     <div className="col-12">
                       <label className="fw-semibold mb-2 d-block" style={{ color: EC.navy, fontSize: '.875rem' }}>Sujet</label>
-                      <select className="ec-input">
+                      <select required className="ec-input" value={contactForm.sujet} onChange={e => setContactForm(f => ({ ...f, sujet: e.target.value }))}>
                         <option value="">Choisir un sujet…</option>
                         <option>Visite de l'espace</option>
                         <option>Abonnement mensuel</option>
@@ -702,16 +1027,17 @@ export default function Landing({ session }) {
                     </div>
                     <div className="col-12">
                       <label className="fw-semibold mb-2 d-block" style={{ color: EC.navy, fontSize: '.875rem' }}>Message</label>
-                      <textarea className="ec-input" rows={4} placeholder="Décrivez votre besoin…" style={{ resize: 'vertical' }} />
+                      <textarea required className="ec-input" rows={4} placeholder="Décrivez votre besoin…" style={{ resize: 'vertical' }} value={contactForm.message} onChange={e => setContactForm(f => ({ ...f, message: e.target.value }))} />
                     </div>
                     <div className="col-12">
-                      <button type="submit" className="btn w-100 d-flex align-items-center justify-content-center gap-2"
+                      <button type="submit" disabled={contactLoading} className="btn w-100 d-flex align-items-center justify-content-center gap-2"
                         style={{ backgroundColor: EC.cobalt, color: 'white', borderRadius: 12, padding: '14px', fontWeight: 700, border: 'none', fontSize: '1rem', transition: 'all .25s' }}
                         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,84,203,.3)'; }}
                         onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 20 }}>send</span>
-                        Envoyer le message
+                        {contactLoading ? 'Envoi en cours...' : 'Envoyer le message'}
                       </button>
+                      {contactStatus.text && <div className="mt-3" role="status" style={{ color: contactStatus.type === 'success' ? '#15803d' : '#b91c1c', fontWeight: 600 }}>{contactStatus.text}</div>}
                     </div>
                   </div>
                 </form>
@@ -736,7 +1062,7 @@ export default function Landing({ session }) {
                 <a href="#contact" aria-label="Contact" className="soc-btn" style={{ border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }}>
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>public</span>
                 </a>
-                <a href="mailto:contact@deskywork.tn" aria-label="Email" className="soc-btn" style={{ border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }}>
+                <a href="mailto:contact@vclow.com" aria-label="Email" className="soc-btn" style={{ border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }}>
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>alternate_email</span>
                 </a>
                 <a href="#contact" aria-label="Messagerie" className="soc-btn" style={{ border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }}>
@@ -779,7 +1105,7 @@ export default function Landing({ session }) {
               <h6 className="fw-bold mb-3" style={{ color: '#ffffff', fontSize: '.8rem', textTransform: 'uppercase', letterSpacing: '.08em' }}>Contact</h6>
               <ul className="list-unstyled d-flex flex-column gap-2 mb-0">
                 <li><a href="tel:+21600000000" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>+216 00 000 000</a></li>
-                <li><a href="mailto:contact@deskywork.tn" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>contact@deskywork.tn</a></li>
+                <li><a href="mailto:contact@vclow.com" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>contact@vclow.com</a></li>
                 <li><a href="#contact" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>Tunis, Tunisie</a></li>
               </ul>
             </div>
@@ -796,6 +1122,11 @@ export default function Landing({ session }) {
           </div>
         </div>
       </footer>
+
+      {/* ══ MODALE PROMOS ══ */}
+      {promoTenant && (
+        <PromoModal tenant={promoTenant} onClose={() => setPromoTenant(null)} />
+      )}
     </>
   );
 }

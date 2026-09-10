@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../supabaseClient';
+import { joinUser, onNotificationCreated, onNotificationChanged } from '../../services/socket';
+import { memberPortalApi } from '../../services/api';
 import {
   ADMIN_NAV,
   STAFF_NAV,
@@ -16,10 +18,10 @@ import {
 } from '../../utils/roles';
 
 function getProfilePath(role) {
-  if (role === 'member') return '/member/profile';
+  if (role === 'member') return '/dashboard/profile';
   if (role === 'formateur') return '/trainer/profile';
   if (isAdminRole(role)) return '/admin/profile-coworking';
-  return '/super-admin/dashboard';
+  return '/dashboard/profile';
 }
 
 // Titres des pages hors navigation (breadcrumb / recherche)
@@ -31,8 +33,11 @@ const PAGE_TITLES = {
   '/admin/formations': 'Formations',
   '/admin/formateurs': 'Formateurs',
   '/admin/onboarding': 'Configuration initiale',
+  '/admin/notifications': 'Notifications',
   '/trainer-dashboard': 'Tableau de bord',
+  '/trainer/notifications': 'Notifications',
   '/member/profile': 'Mon Profil',
+  '/dashboard/profile': 'Mon Profil',
   '/trainer/profile': 'Mon Profil',
   '/dashboard/notifications': 'Notifications',
 };
@@ -67,10 +72,45 @@ function getRelativeTime(dateStr) {
 }
 
 function getNotifIcon(type) {
-  if (type === 'confirmation_reservation' || type === 'reservation') return 'calendar_month';
-  if (type === 'payment' || type === 'facture') return 'receipt_long';
-  if (type === 'formation') return 'school';
+  if (!type) return 'notifications';
+  if (type.includes('reservation') || type.includes('session')) return 'calendar_month';
+  if (type.includes('payment') || type.includes('paiement') || type.includes('facture')) return 'receipt_long';
+  if (type.includes('formation') || type.includes('inscription') || type === 'nouvelle_formation') return 'school';
+  if (type.includes('message')) return 'chat';
+  if (type.includes('abonnement')) return 'payments';
   return 'notifications';
+}
+
+function getNotificationTarget(type, role) {
+  const normalizedType = String(type || '').toLowerCase();
+  const isAdmin = ['admin', 'staff'].includes(role);
+
+  if (normalizedType.includes('nouveau_coworking') || normalizedType.includes('tenant')) {
+    return role === 'super_admin' ? '/super-admin/tenants' : getHomePath(role);
+  }
+  if (normalizedType.includes('nouveau_membre') || normalizedType.includes('nouveau_formateur')) {
+    return role === 'super_admin' ? '/super-admin/users' : (isAdmin ? '/admin/formateurs' : getHomePath(role));
+  }
+  if (normalizedType.includes('reservation') || normalizedType.includes('session')) {
+    if (isAdmin || role === 'super_admin') return '/admin/reservations';
+    return role === 'formateur' ? '/trainer/bookings' : '/dashboard/bookings';
+  }
+  if (normalizedType.includes('paiement') || normalizedType.includes('payment') || normalizedType.includes('facture')) {
+    if (isAdmin || role === 'super_admin') return '/admin/payments';
+    return role === 'formateur' ? '/trainer/payments' : '/member/payments';
+  }
+  if (normalizedType.includes('message')) {
+    return isAdmin || role === 'super_admin'
+      ? '/admin/messages'
+      : role === 'formateur' ? '/trainer/messages' : '/dashboard/messages';
+  }
+  if (normalizedType.includes('formation') || normalizedType.includes('inscription')) {
+    if (isAdmin || role === 'super_admin') return '/admin/formations';
+    return role === 'formateur' ? '/trainer/formations' : '/dashboard/formations';
+  }
+  if (normalizedType.includes('abonnement')) return '/dashboard/abonnement';
+
+  return getHomePath(role);
 }
 
 /* === NavLink Sidebar === */
@@ -148,11 +188,9 @@ export default function PortalLayout({ children, profile, onLogout }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [tenantLogo, setTenantLogo] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const dropdownRef = useRef(null);
   const notifRef = useRef(null);
-  const searchRef = useRef(null);
   const { dark, toggle } = useTheme();
 
   const initials = `${profile?.prenom?.[0] || ''}${profile?.nom?.[0] || ''}`.toUpperCase() || 'U';
@@ -171,7 +209,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
             setTenantLogo(tenantData.logo_url);
           }
         } catch (e) {
-          console.error(e);
+          // silencieux
         }
       }
     }
@@ -184,25 +222,31 @@ export default function PortalLayout({ children, profile, onLogout }) {
 
     async function fetchNotifications() {
       try {
-        const { data, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', profile.id)
-          .order('created_at', { ascending: false })
-          .limit(15);
-
-        if (!error && data) {
+        const response = await memberPortalApi.getNotifications({ page: 1, limit: 20 });
+        const data = response.data?.notifications ?? response.notifications ?? [];
+        if (data) {
           setNotifications(data);
-          const unread = data.filter(n => !n.lu).length;
-          setUnreadCount(unread);
+          setUnreadCount(response.data?.unreadCount ?? response.unreadCount ?? data.filter(n => !n.lu).length);
         }
       } catch (err) {
-        console.error('Erreur chargement notifications:', err);
+        // silencieux
       }
     }
 
     fetchNotifications();
 
+    joinUser(profile.id);
+    const removeCreatedListener = onNotificationCreated((notification) => {
+      if (notification?.user_id !== profile.id) return;
+      setNotifications(prev => {
+        const alreadyPresent = prev.some(item => item.id === notification.id);
+        if (!alreadyPresent && !notification.lu) setUnreadCount(count => count + 1);
+        return [notification, ...prev.filter(item => item.id !== notification.id)].slice(0, 20);
+      });
+    });
+    const removeChangedListener = onNotificationChanged(() => fetchNotifications());
+
+    // Realtime: re-fetch on any INSERT/UPDATE/DELETE for this user's notifications
     const channel = supabase
       .channel(`user-notifs-${profile.id}`)
       .on(
@@ -213,13 +257,29 @@ export default function PortalLayout({ children, profile, onLogout }) {
           table: 'notifications',
           filter: `user_id=eq.${profile.id}`,
         },
-        () => {
-          fetchNotifications();
+        (payload) => {
+          // For new notifications, add directly to state for instant update
+          if (payload.eventType === 'INSERT' && payload.new) {
+            setNotifications(prev => {
+              if (prev.some(item => item.id === payload.new.id)) return prev;
+              if (!payload.new.lu) setUnreadCount(count => count + 1);
+              return [payload.new, ...prev].slice(0, 20);
+            });
+          } else {
+            // For UPDATE/DELETE, re-fetch to stay in sync
+            fetchNotifications();
+          }
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) {
+          console.warn('Notification realtime subscription error:', err.message);
+        }
+      });
 
     return () => {
+      removeCreatedListener();
+      removeChangedListener();
       supabase.removeChannel(channel);
     };
   }, [profile?.id]);
@@ -253,18 +313,6 @@ export default function PortalLayout({ children, profile, onLogout }) {
           : 'Espace membre';
   const pageTitle = derivePageTitle(location.pathname, navItems);
 
-  // Recherche contextuelle : filtre le menu du rôle courant
-  const searchResults = searchQuery.trim()
-    ? navItems.filter((item) =>
-        item.label.toLowerCase().includes(searchQuery.trim().toLowerCase())
-      ).slice(0, 8)
-    : [];
-
-  const goToSearchResult = (item) => {
-    setSearchQuery('');
-    navigate(item.to);
-  };
-
   const isNavActive = (to) => {
     if (to === homePath) return location.pathname === to;
     return location.pathname === to || location.pathname.startsWith(`${to}/`);
@@ -272,53 +320,39 @@ export default function PortalLayout({ children, profile, onLogout }) {
 
   const markAsRead = async (id) => {
     try {
-      await supabase.from('notifications').update({ lu: true }).eq('id', id);
+      await memberPortalApi.markNotificationRead(id);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, lu: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleNotificationClick = async (n) => {
-    if (!n.lu) {
-      await markAsRead(n.id);
-    }
-    setNotifOpen(false);
-
-    const type = n.type || '';
-    const isAdmin = ['super_admin', 'admin', 'staff'].includes(profile?.role);
-    const isTrainer = profile?.role === 'formateur';
-
-    let targetUrl = '';
-    if (type.includes('reservation') || type.includes('session') || type === 'nouvelle_demande_reservation') {
-      targetUrl = isAdmin ? '/admin/reservations' : '/dashboard/bookings';
-    } else if (type.includes('paiement') || type.includes('payment') || type.includes('facture')) {
-      targetUrl = isAdmin ? '/admin/payments' : '/dashboard/payments';
-    } else if (type.includes('message')) {
-      targetUrl = isAdmin ? '/admin/messages' : (isTrainer ? '/trainer/messages' : '/dashboard/messages');
-    } else if (type.includes('formation') || type.includes('inscription')) {
-      targetUrl = isTrainer ? '/trainer/formations' : (isAdmin ? '/admin/formations' : '/dashboard/formations');
-    } else if (type.includes('abonnement')) {
-      targetUrl = '/dashboard/subscription';
-    } else {
-      targetUrl = isAdmin ? '/admin/reservations' : '/dashboard/bookings';
-    }
-
-    if (targetUrl) {
-      navigate(targetUrl);
-    }
+    } catch (_) {}
   };
 
   const markAllAsRead = async () => {
     try {
-      await supabase.from('notifications').update({ lu: true }).eq('user_id', profile.id).eq('lu', false);
+      await memberPortalApi.markAllNotificationsRead();
       setNotifications(prev => prev.map(n => ({ ...n, lu: true })));
       setUnreadCount(0);
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (_) {}
   };
+
+  // Ouvrir/fermer le panneau — sans marquer comme lu automatiquement
+  const handleOpenNotif = () => {
+    const next = !notifOpen;
+    setNotifOpen(next);
+    setDropdownOpen(false);
+  };
+
+  const handleNotificationClick = async (n) => {
+    if (!n.lu) await markAsRead(n.id);
+    setNotifOpen(false);
+
+    navigate(getNotificationTarget(n.type, profile?.role));
+  };
+
+  const notifCenterUrl = ['super_admin', 'admin', 'staff'].includes(profile?.role)
+    ? '/admin/notifications'
+    : profile?.role === 'formateur'
+      ? '/trainer/notifications'
+      : '/dashboard/notifications';
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -327,9 +361,6 @@ export default function PortalLayout({ children, profile, onLogout }) {
       }
       if (notifRef.current && !notifRef.current.contains(event.target)) {
         setNotifOpen(false);
-      }
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setSearchQuery('');
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -350,7 +381,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
       <div style={{ position: 'fixed', bottom: 0, left: 0, width: 384, height: 384, borderRadius: '50%', pointerEvents: 'none', zIndex: -1, background: 'radial-gradient(circle, rgba(16,15,13,0.05), transparent)', transform: 'translate(-30%, 30%)' }} />
 
       {/* === HEADER === */}
-      <header style={{
+      <header className="portal-header" style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
         height: 68, padding: '0 24px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -365,91 +396,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
           <BrandLogo to={homePath} height={44} />
         </div>
 
-        {/* Search — Barre de recherche contextuelle (menu du rôle) · Spec §13 */}
-        <div ref={searchRef} style={{ flex: '1 1 auto', minWidth: 0, maxWidth: 340, position: 'relative', marginLeft: 24 }}>
-          <div style={{ position: 'relative' }}>
-            <span
-              className="material-symbols-outlined"
-              style={{
-                position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-                fontSize: 18, color: dark ? 'rgba(251,255,255,0.5)' : '#8a8f98', pointerEvents: 'none',
-              }}
-            >
-              search
-            </span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && searchResults.length > 0) goToSearchResult(searchResults[0]);
-              }}
-              placeholder="Rechercher dans le menu…"
-              aria-label="Recherche contextuelle"
-              style={{
-                width: '100%',
-                height: 38,
-                borderRadius: 12,
-                border: dark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(16,15,13,0.10)',
-                background: dark ? 'rgba(255,255,255,0.06)' : 'rgba(16,15,13,0.04)',
-                color: dark ? '#fbffff' : '#100f0d',
-                fontSize: 13.5,
-                padding: '0 12px 0 38px',
-                outline: 'none',
-                transition: 'border-color 0.2s ease, background 0.2s ease',
-                fontFamily: 'Inter, sans-serif',
-              }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = '#f95d00'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = dark ? 'rgba(255,255,255,0.12)' : 'rgba(16,15,13,0.10)'; }}
-            />
-          </div>
-
-          {searchResults.length > 0 && (
-            <div style={{
-              position: 'absolute', top: 46, left: 0, right: 0,
-              background: dark ? '#1b1a18' : '#ffffff',
-              border: dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(16,15,13,0.08)',
-              borderRadius: 16,
-              boxShadow: dark ? '0 16px 40px rgba(0,0,0,0.6)' : '0 16px 40px rgba(16,15,13,0.15)',
-              zIndex: 120, overflow: 'hidden', padding: 6,
-              animation: 'popDropdown 0.2s ease-out both',
-            }}>
-              {searchResults.map((item) => (
-                <button
-                  key={item.to}
-                  onClick={() => goToSearchResult(item)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    width: '100%', padding: '9px 12px', borderRadius: 12,
-                    border: 'none', background: 'transparent', cursor: 'pointer',
-                    textAlign: 'left', fontSize: 13.5, fontWeight: 600,
-                    color: dark ? '#fbffff' : '#100f0d',
-                    transition: 'background 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = dark ? 'rgba(249,93,0,0.15)' : 'rgba(249,93,0,0.08)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#f95d00' }}>{item.icon}</span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {searchQuery.trim() && searchResults.length === 0 && (
-            <div style={{
-              position: 'absolute', top: 46, left: 0, right: 0,
-              background: dark ? '#1b1a18' : '#ffffff',
-              border: dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(16,15,13,0.08)',
-              borderRadius: 16,
-              boxShadow: dark ? '0 16px 40px rgba(0,0,0,0.6)' : '0 16px 40px rgba(16,15,13,0.15)',
-              zIndex: 120, padding: '16px 18px',
-              fontSize: 13, color: dark ? 'rgba(251,255,255,0.6)' : '#666',
-            }}>
-              Aucun résultat dans le menu.
-            </div>
-          )}
-        </div>
+        {/* Search supprimé */}
 
         {/* Right: User profile + Language Switcher + Notification Bell + Dark toggle + Clickable Avatar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
@@ -471,7 +418,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
           {/* 🛎️ BOUTON NOTIFICATION AVEC COMPTEUR TEMPS RÉEL */}
           <div style={{ position: 'relative' }} ref={notifRef}>
             <button
-              onClick={() => { setNotifOpen(v => !v); setDropdownOpen(false); }}
+              onClick={handleOpenNotif}
               title="Notifications"
               style={{
                 position: 'relative',
@@ -611,11 +558,11 @@ export default function PortalLayout({ children, profile, onLogout }) {
                   background: dark ? 'rgba(255,255,255,0.02)' : 'rgba(16,15,13,0.02)',
                 }}>
                   <Link
-                    to="/dashboard/notifications"
+                    to={notifCenterUrl}
                     onClick={() => setNotifOpen(false)}
                     style={{ fontSize: 12, fontWeight: 700, color: '#f95d00', textDecoration: 'none' }}
                   >
-                    Voir le centre de notifications →
+                    Voir toutes les notifications →
                   </Link>
                 </div>
               </div>
@@ -768,10 +715,10 @@ export default function PortalLayout({ children, profile, onLogout }) {
         </div>
       </header>
 
-      <div style={{ display: 'flex', paddingTop: 68 }}>
+      <div className="portal-shell" style={{ display: 'flex', paddingTop: 68 }}>
 
         {/* Sidebar */}
-        <aside style={{
+        <aside className="portal-sidebar" style={{
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,
@@ -856,7 +803,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
         </aside>
 
         {/* Main content */}
-        <main style={{
+        <main className="portal-main" style={{
           flex: 1, overflowX: 'hidden',
           padding: '28px 24px', minHeight: 'calc(100vh - 68px)',
         }}>

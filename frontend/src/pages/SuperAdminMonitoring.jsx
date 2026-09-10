@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { superAdminApi } from '../services/superAdminApi';
 import { supabase } from '../supabaseClient';
 import PortalLayout from '../components/layout/PortalLayout';
+import Pagination from '../components/Pagination';
 import { exportAuditLogsToExcel } from '../utils/exportAuditLogsExcel';
+
+const ITEMS_PER_PAGE = 10;
 
 const CLUSTERS = [
   { name: 'Core API Cluster', status: 'active', cpu: '42%', mem: '3.1GB', icon: 'dns' },
@@ -26,6 +29,7 @@ export default function SuperAdminMonitoring({ session }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [logPage, setLogPage] = useState(1);
   const [range, setRange] = useState('all'); // 'all' | '24h'
   const [actionFilter, setActionFilter] = useState('all');
   const [pagination, setPagination] = useState({ total: 0 });
@@ -64,6 +68,8 @@ export default function SuperAdminMonitoring({ session }) {
     const inAction = actionFilter === 'all' || l.action === actionFilter;
     return inRange && inAction;
   });
+
+  const pagedLogs = visibleLogs.slice((logPage - 1) * ITEMS_PER_PAGE, logPage * ITEMS_PER_PAGE);
 
   const exportCsv = () => {
     if (!visibleLogs.length) return;
@@ -205,7 +211,7 @@ export default function SuperAdminMonitoring({ session }) {
               </tr>
             </thead>
             <tbody>
-              {visibleLogs.map((log) => {
+              {pagedLogs.map((log) => {
                 const userName = log.profiles ? `${log.profiles.prenom || ''} ${log.profiles.nom || ''}`.trim() : 'System';
                 const initials = userName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
                 return (
@@ -229,14 +235,13 @@ export default function SuperAdminMonitoring({ session }) {
             </tbody>
           </table>
         </div>
-        {pagination.total > 50 && (
-          <div className="px-5 py-3 border-t border-outline-variant/15 text-center">
-            <button onClick={() => setPage((p) => p + 1)} className="text-sm font-semibold text-secondary hover:underline flex items-center gap-1 mx-auto">
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>keyboard_double_arrow_down</span>
-              Charger l'historique plus ancien
-            </button>
-          </div>
-        )}
+        <Pagination
+          currentPage={logPage}
+          totalItems={visibleLogs.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setLogPage}
+          label="entrées"
+        />
       </div>
 
       <div className="fixed bottom-6 right-6 z-40">

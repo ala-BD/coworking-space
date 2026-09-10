@@ -39,6 +39,18 @@ export function joinStaff() {
   s.emit('join:staff');
 }
 
+export function onNotificationCreated(callback) {
+  const s = connectSocket();
+  s.on('notification:new', callback);
+  return () => s.off('notification:new', callback);
+}
+
+export function onNotificationChanged(callback) {
+  const s = connectSocket();
+  s.on('notification:changed', callback);
+  return () => s.off('notification:changed', callback);
+}
+
 export function onSessionStarted(callback) {
   const s = connectSocket();
   s.on('session:started', callback);

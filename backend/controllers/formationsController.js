@@ -6,6 +6,7 @@ const {
   FORMATION_ROOM_UNAVAILABLE,
 } = require('../models/helpers');
 const { applyTenantFilter } = require('../middleware/guards');
+const { broadcastNouvelleFormation } = require('../services/notificationService');
 
 async function listFormations(req, res) {
   try {
@@ -74,7 +75,7 @@ async function getFormation(req, res) {
 
 async function createFormation(req, res) {
   try {
-    const { titre, description, formateur_id, espace_id, date_debut, date_fin, capacite_max, prix_inscription, programme, prerequis, materiel } = req.body;
+    const { titre, description, formateur_id, espace_id, date_debut, date_fin, capacite_max, prix_inscription, programme, prerequis, materiel, mode, tenant_id } = req.body;
 
     if (!titre || !formateur_id || !date_debut || !date_fin || !capacite_max) {
       return res.status(400).json({ error: 'titre, formateur_id, date_debut, date_fin et capacite_max sont requis.' });
@@ -92,6 +93,8 @@ async function createFormation(req, res) {
     if (fErr || !formateur) return res.status(404).json({ error: 'Formateur introuvable.' });
 
     let reservationId = null;
+    let targetTenantId = tenant_id || req.tenantId;
+
     if (espace_id) {
       const availability = await getBookingAvailability(espace_id, date_debut, date_fin, null, { exclusive: true });
       if (!availability.isAvailable) {
@@ -101,28 +104,29 @@ async function createFormation(req, res) {
         });
       }
 
-      const { reservation } = await createReservationWithPayment({
+      const { reservation, tenantId: bookingTenantId } = await createReservationWithPayment({
         userId: req.user.id,
         espaceId: espace_id,
         dateDebut: date_debut,
         dateFin: date_fin,
-        tenantId: req.tenantId,
-        mode: 'online',
+        tenantId: targetTenantId,
+        mode: mode || 'sur_place',
       });
       reservationId = reservation.id;
+      if (bookingTenantId) targetTenantId = bookingTenantId;
 
       try {
         const { data: admins } = await supabaseAdmin
           .from('profiles')
           .select('id')
           .in('role', ['admin', 'staff'])
-          .eq('tenant_id', reservation.tenant_id || req.tenantId);
+          .eq('tenant_id', reservation.tenant_id || targetTenantId);
         for (const admin of admins || []) {
           await supabaseAdmin.from('notifications').insert({
             user_id: admin.id,
             type: 'nouvelle_demande_reservation',
             canal: 'Dashboard',
-            message: `📋 Réservation liée à la formation « ${titre} » — ${reservation.espaces?.nom || 'espace'} (en attente de confirmation).`,
+            message: `📋 Réservation (${mode === 'online' ? 'en ligne' : 'sur place'}) liée à la formation « ${titre} » — ${reservation.espaces?.nom || 'espace'} (en attente de confirmation).`,
           });
         }
       } catch (notifErr) {
@@ -143,7 +147,7 @@ async function createFormation(req, res) {
       prerequis: prerequis || null,
       materiel: materiel || null,
       statut: 'planifiee',
-      tenant_id: req.tenantId,
+      tenant_id: targetTenantId,
     };
     if (reservationId) insertPayload.reservation_id = reservationId;
 
@@ -170,6 +174,11 @@ async function createFormation(req, res) {
       }
       return res.status(400).json({ error: error.message });
     }
+
+    // Diffusion de la notification à tous les membres (étudiant, entreprise, individuel)
+    broadcastNouvelleFormation(supabaseAdmin, data).catch((notifErr) => {
+      console.warn('⚠️ Erreur diffusion notification nouvelle formation:', notifErr.message);
+    });
 
     res.status(201).json({
       formation: data,

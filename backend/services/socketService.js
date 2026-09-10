@@ -14,6 +14,34 @@ function initSocket(server, supabaseUrl, supabaseServiceKey) {
 
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
+  supabaseAdmin
+    .channel('notifications-broadcast')
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'notifications',
+    }, ({ new: notification }) => {
+      if (notification?.user_id) {
+        io.to(`user:${notification.user_id}`).emit('notification:new', notification);
+      }
+    })
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'notifications',
+    }, ({ new: notification }) => {
+      if (notification?.user_id) {
+        io.to(`user:${notification.user_id}`).emit('notification:changed', notification);
+      }
+    })
+    .on('postgres_changes', {
+      event: 'DELETE', schema: 'public', table: 'notifications',
+    }, ({ old: notification }) => {
+      if (notification?.user_id) {
+        io.to(`user:${notification.user_id}`).emit('notification:changed', notification);
+      }
+    })
+    .subscribe((status, error) => {
+      if (error) console.error('❌ Realtime notifications indisponible:', error.message);
+      else if (status === 'SUBSCRIBED') console.log('✅ Realtime notifications activé.');
+    });
+
   io.on('connection', (socket) => {
     console.log(`🔌 Socket connecté : ${socket.id}`);
 

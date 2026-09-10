@@ -152,10 +152,16 @@ export const ADMIN_NAV = [
     ],
   },
   {
+    group: 'Formations',
+    items: [
+      { id: 'admin_formations', label: 'Formations & Workshops', icon: 'school', to: '/admin/formations' },
+      { id: 'admin_formateurs', label: 'Formateurs & Candidatures', icon: 'groups', to: '/admin/formateurs' },
+    ],
+  },
+  {
     group: 'Communication',
     items: [
       { id: 'admin_messages', label: 'Messagerie', icon: 'chat', to: '/admin/messages' },
-      { id: 'admin_formateurs', label: 'Formateurs', icon: 'groups', to: '/admin/formateurs' },
     ],
   },
 ];
@@ -243,6 +249,7 @@ export const SUPER_ADMIN_NAV = [
     group: 'Technique',
     items: [
       { id: 'sa_monitoring', label: 'Surveillance & Audit', icon: 'monitor', to: '/super-admin/monitoring' },
+      { id: 'sa_contacts', label: 'Contacts reçus', icon: 'contact_mail', to: '/super-admin/contacts' },
     ],
   },
 ];

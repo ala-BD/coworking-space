@@ -10,6 +10,8 @@ const HomeRedirect = lazy(() => import('./components/auth/RoleGuard').then((m) =
 const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const AdminPayments = lazy(() => import('./pages/AdminPayments'));
@@ -37,6 +39,7 @@ const TrainerProfile = lazy(() => import('./pages/TrainerProfile'));
 const TrainerDashboard = lazy(() => import('./pages/TrainerDashboard'));
 const TrainerFormations = lazy(() => import('./pages/TrainerFormations'));
 const TrainerBookings = lazy(() => import('./pages/TrainerBookings'));
+const AdminNotifications = lazy(() => import('./pages/AdminNotifications'));
 // Modules H, J, K, L, N
 const GuestBookingPage = lazy(() => import('./pages/GuestBookingPage'));
 const SignDocumentPage = lazy(() => import('./pages/SignDocumentPage'));
@@ -49,27 +52,54 @@ const TenantManagement = lazy(() => import('./pages/TenantManagement'));
 const TenantBilling = lazy(() => import('./pages/TenantBilling'));
 const SuperAdminMonitoring = lazy(() => import('./pages/SuperAdminMonitoring'));
 const SuperAdminUsers = lazy(() => import('./pages/SuperAdminUsers'));
+const SuperAdminContacts = lazy(() => import('./pages/SuperAdminContacts'));
 const AdminEspaces = lazy(() => import('./pages/AdminEspaces'));
 const AdminCoworkingProfile = lazy(() => import('./pages/AdminCoworkingProfile'));
 const CoworkingDetail = lazy(() => import('./pages/CoworkingDetail'));
 
 function LoadingFallback() {
+  // Skeleton transparent — évite le flash blanc au lazy-load des pages
   return (
-    <div className="flex h-screen items-center justify-center bg-[#F4F6F9]">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
-    </div>
+    <div style={{ minHeight: '100vh', background: '#f6f4f1' }} />
   );
 }
 
 export default function App() {
 
-  const [session, setSession] = useState(null);
+  // Lire la session Supabase de façon synchrone depuis localStorage
+  // pour éviter le spinner de chargement au refresh
+  const [session, setSession] = useState(() => {
+    try {
+      // Supabase stocke la session sous la clé "sb-<project-ref>-auth-token"
+      // On scanne toutes les clés localStorage pour trouver la bonne
+      const authKey = Object.keys(localStorage).find(
+        k => k.startsWith('sb-') && k.endsWith('-auth-token')
+      );
+      if (authKey) {
+        const parsed = JSON.parse(localStorage.getItem(authKey));
+        const expiresAt = parsed?.expires_at;
+        if (expiresAt && Date.now() / 1000 < expiresAt) {
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    return null;
+  });
 
-  const [loading, setLoading] = useState(true);
+  // Afficher le spinner seulement si aucune session n'a été trouvée en sync
+  const [loading, setLoading] = useState(!session);
 
 
 
   useEffect(() => {
+    const isRecoveryLink = window.location.hash.includes('access_token=')
+      || window.location.search.includes('type=recovery')
+      || window.location.search.includes('code=');
+    if (isRecoveryLink && window.location.pathname === '/') {
+      window.location.replace(`/reset-password${window.location.search}${window.location.hash}`);
+      return undefined;
+    }
+
     const hasAuthParams = window.location.search.includes('code=') || window.location.hash.includes('access_token=');
 
     const checkUserStatusAndSetSession = async (s) => {
@@ -87,9 +117,7 @@ export default function App() {
             setSession(null);
             return false;
           }
-        } catch (err) {
-          console.error('Error checking account status:', err);
-        }
+        } catch (_) {}
       }
       setSession(s);
       return true;
@@ -97,16 +125,12 @@ export default function App() {
 
     supabase.auth.getSession().then(async ({ data: { session: s } }) => {
       await checkUserStatusAndSetSession(s);
-      if (!hasAuthParams || s) {
-        setLoading(false);
-      }
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
       await checkUserStatusAndSetSession(s);
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || s) {
-        setLoading(false);
-      }
+      setLoading(false);
     });
 
     let fallbackTimeout;
@@ -125,17 +149,9 @@ export default function App() {
 
 
   if (loading) {
-
     return (
-
-      <div className="flex h-screen items-center justify-center bg-[#F4F6F9]">
-
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
-
-      </div>
-
+      <div style={{ minHeight: '100vh', background: '#f6f4f1' }} />
     );
-
   }
 
 
@@ -239,6 +255,11 @@ export default function App() {
             element={session ? <HomeRedirect session={session} /> : <Login />}
 
           />
+
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+
+          <Route path="/super-admin/contacts" element={<SuperAdminRoute><SuperAdminContacts session={session} /></SuperAdminRoute>} />
 
           <Route
 
@@ -641,6 +662,22 @@ export default function App() {
               <AdminRoute>
 
                 <AdminAgenda session={session} />
+
+              </AdminRoute>
+
+            }
+
+          />
+
+          <Route
+
+            path="/admin/notifications"
+
+            element={
+
+              <AdminRoute>
+
+                <AdminNotifications session={session} />
 
               </AdminRoute>
 

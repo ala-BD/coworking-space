@@ -349,11 +349,21 @@ export default function AdminDashboard({ session }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: '#f4f6f9' }}>
-        <div className="w-14 h-14 rounded-full border-4 animate-spin mb-4"
-          style={{ borderColor: 'rgba(249,93,0,0.15)', borderTopColor: '#f95d00' }} />
-        <p className="text-sm text-on-surface-variant font-medium">Chargement du tableau de bord…</p>
-      </div>
+      <PortalLayout profile={profile}>
+        <div className="space-y-6 animate-pulse">
+          <div className="h-10 bg-gray-200 rounded-2xl w-64" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="bg-white rounded-3xl p-5 border border-outline-variant/20 h-28" />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="bg-white rounded-3xl h-48 border border-outline-variant/20" />
+            <div className="bg-white rounded-3xl h-48 border border-outline-variant/20" />
+            <div className="bg-white rounded-3xl h-48 border border-outline-variant/20" />
+          </div>
+        </div>
+      </PortalLayout>
     );
   }
 
@@ -406,7 +416,7 @@ export default function AdminDashboard({ session }) {
               {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
             <h1 className="font-sora font-bold text-primary" style={{ fontSize: 26 }}>
-              {welcomeText}, {profile?.prenom || 'Admin'} 👋
+              {welcomeText}, {profile?.prenom || 'Admin'}
             </h1>
             <p className="text-on-surface-variant text-sm mt-1">
               Tableau de bord — {getRoleLabel(profile?.role)}
@@ -1206,32 +1216,6 @@ export default function AdminDashboard({ session }) {
             </table>
           </div>
         )}
-      </div>
-
-      {/* ── Actions rapides ────────────────────────────────────────────── */}
-      <div className="animate-fade-up">
-        <div className="bg-primary text-white rounded-3xl p-5 relative overflow-hidden"
-          style={{ boxShadow: '0 4px 16px rgba(16,35,63,0.12)' }}>
-          <div className="absolute top-[-20px] right-[-20px] w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-          <div className="relative z-10">
-            <h2 className="font-sora font-bold text-base mb-4">Actions rapides</h2>
-            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
-              {[
-                { to: '/admin/agenda', icon: 'calendar_month', label: 'Agenda & réservations' },
-                { to: '/admin/payments', icon: 'account_balance_wallet', label: 'Gestion paiements' },
-                { to: '/admin/formations', icon: 'school', label: 'Formations' },
-                { to: '/admin/pricing', icon: 'sell', label: 'Tarifs & codes promo' },
-                { to: '/admin/cancellation-policy', icon: 'policy', label: 'Politique d\'annulation' },
-              ].map(({ to, icon, label }) => (
-                <Link key={to} to={to}
-                  className="flex items-center gap-3 bg-white/10 hover:bg-white/20 rounded-xl px-4 py-2.5 transition-colors no-underline text-white">
-                  <span className="material-symbols-outlined text-[18px]">{icon}</span>
-                  <span className="font-semibold text-sm">{label}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
     </PortalLayout>

@@ -304,7 +304,7 @@ export default function Register() {
   ];
 
   return (
-    <div className="min-h-screen flex font-inter text-on-surface">
+    <div className="min-h-screen min-w-0 flex font-inter text-on-surface">
 
       {/* ══════════════════════════════════════════
           PANNEAU GAUCHE — Illustratif (desktop only)
@@ -409,7 +409,7 @@ export default function Register() {
       {/* ══════════════════════════════════════════
           PANNEAU DROIT — Formulaire / OTP / Succès
           ══════════════════════════════════════════ */}
-      <div className="flex-1 page-gradient flex flex-col relative overflow-hidden">
+      <div className="w-full min-w-0 flex-1 page-gradient flex flex-col relative overflow-hidden">
         {/* Blobs */}
         <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(circle, rgba(249,93,0,0.07), transparent)' }} />
@@ -417,14 +417,14 @@ export default function Register() {
           style={{ background: 'radial-gradient(circle, rgba(16,15,13,0.05), transparent)' }} />
 
         {/* Header mobile */}
-        <header className="lg:hidden flex items-center justify-between px-6 py-4 relative z-10">
+        <header className="auth-mobile-header lg:hidden flex items-center justify-between px-6 py-4 relative z-10">
           <BrandLogo to="/" />
           <Link to="/login" className="text-secondary font-semibold text-sm hover:underline">
             Se connecter
           </Link>
         </header>
 
-        <main className="flex-1 flex items-center justify-center px-6 py-2 relative z-10">
+        <main className="w-full flex-1 flex items-center justify-center px-6 py-2 relative z-10">
           <div className="w-full max-w-[520px] animate-fade-up">
 
             {/* ── VUE SUCCÈS ─────────────────────────────────────────────── */}
@@ -607,6 +607,30 @@ export default function Register() {
                 {/* Card */}
                 <div className="glass-card rounded-3xl shadow-elevated p-4 space-y-3">
 
+                  {/* Inscription sociale */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 h-px bg-outline-variant/30" />
+                    <span className="text-[10px] text-on-surface-variant font-medium whitespace-nowrap">OU CONTINUER AVEC</span>
+                    <div className="flex-1 h-px bg-outline-variant/30" />
+                  </div>
+
+                  <div className="auth-social-grid grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleSocialLogin('google')}
+                      className="flex items-center justify-center gap-2 px-4 py-1.5 bg-white border border-outline-variant/30 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:-translate-y-px transition-all active:scale-[0.97] shadow-sm"
+                    >
+                      <GoogleIcon /> Google
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSocialLogin('linkedin_oidc')}
+                      className="flex items-center justify-center gap-2 px-4 py-1.5 bg-white border border-outline-variant/30 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:-translate-y-px transition-all active:scale-[0.97] shadow-sm"
+                    >
+                      <LinkedInIcon /> LinkedIn
+                    </button>
+                  </div>
+
                   <form onSubmit={handleRegister} className="space-y-3">
 
                     {/* Nom / Prénom */}
@@ -784,30 +808,6 @@ export default function Register() {
                     </button>
                   </form>
 
-                  {/* Séparateur */}
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1 h-px bg-outline-variant/30" />
-                    <span className="text-[10px] text-on-surface-variant font-medium whitespace-nowrap">OU CONTINUER AVEC</span>
-                    <div className="flex-1 h-px bg-outline-variant/30" />
-                  </div>
-
-                  {/* Sociaux */}
-                  <div className="grid grid-cols-2 gap-3 mt-1">
-                    <button
-                      type="button"
-                      onClick={() => handleSocialLogin('google')}
-                      className="flex items-center justify-center gap-2 px-4 py-1.5 bg-white border border-outline-variant/30 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:-translate-y-px transition-all active:scale-[0.97] shadow-sm"
-                    >
-                      <GoogleIcon /> Google
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSocialLogin('linkedin_oidc')}
-                      className="flex items-center justify-center gap-2 px-4 py-1.5 bg-white border border-outline-variant/30 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:-translate-y-px transition-all active:scale-[0.97] shadow-sm"
-                    >
-                      <LinkedInIcon /> LinkedIn
-                    </button>
-                  </div>
                 </div>
 
                 <p className="text-center text-xs text-on-surface-variant mt-3">

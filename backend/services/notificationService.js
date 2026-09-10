@@ -3,6 +3,8 @@
 // Service centralisé pour gérer toutes les notifications automatiques
 // Email uniquement (SMS prévu mais non implémenté)
 
+const path = require('path');
+const fs = require('fs');
 const nodemailer = require('nodemailer');
 const templates = require('../templates/emailTemplates');
 
@@ -22,6 +24,28 @@ function createTransporter() {
   });
 }
 
+// ── Pièces jointes globales (Logo DeskyWork officiel en CID pour mode clair & sombre) ──
+function getMailAttachments() {
+  const lightLogoPath = path.join(__dirname, '../assets/deskywork-logo-light.png');
+  const darkLogoPath = path.join(__dirname, '../assets/deskywork-logo-dark.png');
+  const attachments = [];
+  if (fs.existsSync(lightLogoPath)) {
+    attachments.push({
+      filename: 'deskywork-logo-light.png',
+      path: lightLogoPath,
+      cid: 'deskywork-logo-light',
+    });
+  }
+  if (fs.existsSync(darkLogoPath)) {
+    attachments.push({
+      filename: 'deskywork-logo-dark.png',
+      path: darkLogoPath,
+      cid: 'deskywork-logo-dark',
+    });
+  }
+  return attachments;
+}
+
 // ── Configuration coworking ────────────────────────────────────────────────
 function getCoworkingConfig() {
   return {
@@ -30,6 +54,7 @@ function getCoworkingConfig() {
     coworkingEmail:   process.env.COWORKING_EMAIL || 'contact@33space.tn',
     coworkingTel:     process.env.COWORKING_TEL   || '+216 XX XXX XXX',
     coworkingAdresse: process.env.COWORKING_ADRESSE || 'Tunis, Tunisie',
+    frontendUrl:      process.env.FRONTEND_URL    || 'http://localhost:5173',
   };
 }
 
@@ -102,11 +127,13 @@ async function sendNotification(supabase, options) {
   }
 
   const transporter = createTransporter();
+  const attachments = getMailAttachments();
   const mailOptions = {
     from: process.env.EMAIL_FROM || `"${config.coworkingName}" <${config.coworkingEmail}>`,
     to: email,
     subject: subject || autoSubject,
     html: html,
+    attachments: attachments.length > 0 ? attachments : undefined,
   };
 
   try {
@@ -269,6 +296,14 @@ function generateEmailFromType(type, data, config) {
     case 'nouveau_message_portail':
       html = templates.templateNouveauMessagePortail(data.message, data.expediteur, config);
       autoSubject = `💬 Nouveau message : ${data.message.sujet || 'Message'}`;
+      break;
+
+    // ────────────────────────────────────────────────────────────────────
+    // 16. Nouvelle formation disponible
+    // ────────────────────────────────────────────────────────────────────
+    case 'nouvelle_formation':
+      html = templates.templateNouvelleFormation(data.formation, data.membre, config);
+      autoSubject = `🎓 Nouvelle formation disponible : ${data.formation?.titre || 'Formation'}`;
       break;
 
     default:
@@ -472,6 +507,99 @@ async function notifyNouveauMessagePortail(supabase, message, expediteur, adminE
   });
 }
 
+/**
+ * Envoie une notification pour une nouvelle formation à un membre individuel.
+ */
+async function notifyNouvelleFormation(supabase, formation, membre) {
+  return sendNotification(supabase, {
+    type: 'nouvelle_formation',
+    email: membre.email,
+    userId: membre.id,
+    data: { formation, membre },
+  });
+}
+
+/**
+ * Diffuse une notification de nouvelle formation à tous les membres (étudiant, entreprise, individuel)
+ * d'un coworking (ou de la plateforme).
+ */
+async function broadcastNouvelleFormation(supabase, formation) {
+  try {
+    const titre = formation.titre || 'Nouvelle Formation';
+    const formateurNom = formation.profiles
+      ? `${formation.profiles.prenom || ''} ${formation.profiles.nom || ''}`.trim()
+      : 'Formateur';
+    
+    let dateStr = '';
+    if (formation.date_debut) {
+      const d = new Date(formation.date_debut);
+      dateStr = ` le ${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+
+    // Récupérer tous les membres actifs du coworking (étudiant, entreprise, individuel)
+    let query = supabase
+      .from('profiles')
+      .select('id, email, nom, prenom, type_membre')
+      .in('role', ['member', 'guest']);
+
+    if (formation.tenant_id) {
+      query = query.or(`tenant_id.eq.${formation.tenant_id},tenant_id.is.null`);
+    }
+
+    const { data: members, error } = await query;
+    if (error || !members || members.length === 0) {
+      console.log('ℹ️ Aucun membre à notifier pour la nouvelle formation.');
+      return { count: 0 };
+    }
+
+    const message = `🎓 Nouvelle formation : « ${titre} » par ${formateurNom}${dateStr}. ${formation.description ? formation.description.slice(0, 120) + (formation.description.length > 120 ? '...' : '') : ''}`.trim();
+
+    // 1. Enregistrement en masse des notifications dans la base de données
+    const notifRows = members.map((m) => ({
+      user_id: m.id,
+      type: 'nouvelle_formation',
+      canal: 'Email',
+      message: message,
+      lu: false,
+    }));
+
+    const { error: insertErr } = await supabase.from('notifications').insert(notifRows);
+    if (insertErr) {
+      console.error('❌ Erreur insertion notifications nouvelle formation:', insertErr.message);
+    } else {
+      console.log(`✅ ${notifRows.length} notification(s) de formation enregistrée(s) en DB.`);
+    }
+
+    // 2. Envoi des emails en tâche asynchrone non-bloquante
+    const config = getCoworkingConfig();
+    const attachments = getMailAttachments();
+    members.forEach((m) => {
+      if (m.email) {
+        try {
+          const gen = generateEmailFromType('nouvelle_formation', { formation, membre: m }, config);
+          if (gen?.html && process.env.SMTP_USER && process.env.SMTP_PASS) {
+            const transporter = createTransporter();
+            transporter.sendMail({
+              from: process.env.EMAIL_FROM || `"${config.coworkingName}" <${config.coworkingEmail}>`,
+              to: m.email,
+              subject: gen.autoSubject || `🎓 Nouvelle formation disponible : ${titre}`,
+              html: gen.html,
+              attachments: attachments.length > 0 ? attachments : undefined,
+            }).catch((err) => console.warn(`⚠️ Erreur email formation vers ${m.email}:`, err.message));
+          }
+        } catch (e) {
+          console.warn(`⚠️ Erreur génération email formation pour ${m.email}:`, e.message);
+        }
+      }
+    });
+
+    return { count: members.length };
+  } catch (err) {
+    console.error('❌ Erreur broadcastNouvelleFormation:', err.message);
+    return { count: 0, error: err.message };
+  }
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // EXPORTS
 // ══════════════════════════════════════════════════════════════════════════
@@ -497,4 +625,6 @@ module.exports = {
   notifyRappelFormationJ1,
   notifyNouveauFormateur,
   notifyNouveauMessagePortail,
+  notifyNouvelleFormation,
+  broadcastNouvelleFormation,
 };

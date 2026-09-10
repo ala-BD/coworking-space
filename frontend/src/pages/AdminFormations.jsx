@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { formationApi, bookingApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import Pagination from '../components/Pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 /* ─── Constants ─────────────────────────────────────────────────────────── */
 const STATUT_STYLES = {
@@ -130,6 +133,8 @@ export default function AdminFormations({ session }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [pageFormations, setPageFormations] = useState(1);
+  const [pageFormateurs, setPageFormateurs] = useState(1);
 
   /* ─── Modals ─── */
   const [showFormationDrawer, setShowFormationDrawer] = useState(false);
@@ -375,15 +380,6 @@ export default function AdminFormations({ session }) {
 
           {/* CTA selon l'onglet actif */}
           <div className="shrink-0 flex flex-wrap items-center gap-3">
-            {profile?.role !== 'super_admin' && (
-              <button
-                onClick={() => { setFormateurForm({ nom: '', prenom: '', email: '', telephone: '', specialite: '', biographie: '' }); setShowFormateurDrawer(true); }}
-                className="flex items-center gap-2 px-4 py-2.5 bg-secondary text-white font-semibold rounded-2xl text-sm hover:bg-secondary/90 shadow-sm transition-all active:scale-95"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>person_add</span>
-                Créer un formateur
-              </button>
-            )}
             {activeTab === 'remunerations' && profile?.role !== 'super_admin' && (
               <button
                 onClick={() => openRemuneration()}
@@ -427,8 +423,8 @@ export default function AdminFormations({ session }) {
               key={key}
               onClick={() => setActiveTab(key)}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition-all ${activeTab === key
-                  ? 'bg-white text-secondary shadow-sm'
-                  : 'text-on-surface-variant hover:text-primary'
+                ? 'bg-white text-secondary shadow-sm'
+                : 'text-on-surface-variant hover:text-primary'
                 }`}
             >
               <span className="material-symbols-outlined hidden sm:block" style={{ fontSize: 16 }}>{icon}</span>
@@ -465,7 +461,7 @@ export default function AdminFormations({ session }) {
               <>
                 {/* Mobile Cards */}
                 <div className="sm:hidden space-y-3">
-                  {formations.map((f) => (
+                  {formations.slice((pageFormations - 1) * ITEMS_PER_PAGE, pageFormations * ITEMS_PER_PAGE).map((f) => (
                     <div key={f.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-4 shadow-sm">
                       <div className="flex justify-between items-start gap-2 mb-3">
                         <h3 className="font-sora font-bold text-primary text-sm leading-snug">{f.titre}</h3>
@@ -525,7 +521,7 @@ export default function AdminFormations({ session }) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-outline-variant/10">
-                        {formations.map((f) => (
+                        {formations.slice((pageFormations - 1) * ITEMS_PER_PAGE, pageFormations * ITEMS_PER_PAGE).map((f) => (
                           <tr key={f.id} className="hover:bg-surface-container-lowest transition-colors group">
                             <td className="p-4 font-semibold text-primary max-w-[360px] whitespace-normal break-words">
                               <div className="whitespace-normal break-words text-sm leading-snug line-clamp-2">{f.titre}</div>
@@ -578,6 +574,14 @@ export default function AdminFormations({ session }) {
                     </table>
                   </div>
                 </div>
+
+                <Pagination
+                  currentPage={pageFormations}
+                  totalItems={formations.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setPageFormations}
+                  label="formations"
+                />
               </>
             )}
           </div>
@@ -587,12 +591,12 @@ export default function AdminFormations({ session }) {
         {activeTab === 'formateurs' && (
           <div>
             {formateurs.length === 0 ? (
-              <EmptyState icon="person" title="Aucun formateur enregistré" text="Créez votre premier formateur pour pouvoir lui assigner des sessions." action={() => setShowFormateurDrawer(true)} actionLabel="Créer un formateur" />
+              <EmptyState icon="person" title="Aucun formateur enregistré" text="Aucun formateur n'a encore été ajouté à cet espace." />
             ) : (
               <>
                 {/* Mobile Cards */}
                 <div className="sm:hidden space-y-3">
-                  {formateurs.map((t) => (
+                  {formateurs.slice((pageFormateurs - 1) * ITEMS_PER_PAGE, pageFormateurs * ITEMS_PER_PAGE).map((t) => (
                     <div key={t.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-4 shadow-sm">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center font-bold text-secondary text-sm shrink-0">
@@ -619,7 +623,7 @@ export default function AdminFormations({ session }) {
 
                 {/* Desktop Grid Cards */}
                 <div className="hidden sm:grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {formateurs.map((t) => (
+                  {formateurs.slice((pageFormateurs - 1) * ITEMS_PER_PAGE, pageFormateurs * ITEMS_PER_PAGE).map((t) => (
                     <div key={t.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-secondary/20 to-secondary/5 flex items-center justify-center font-sora font-bold text-secondary text-base shrink-0">
@@ -666,8 +670,8 @@ export default function AdminFormations({ session }) {
                           <button
                             onClick={() => toggleFormateurStatus(t.id, t.statut_compte)}
                             className={`flex items-center justify-center p-2 rounded-xl border transition-colors ${t.statut_compte === 'actif'
-                                ? 'border-red-200 text-error bg-red-50 hover:bg-red-100'
-                                : 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                              ? 'border-red-200 text-error bg-red-50 hover:bg-red-100'
+                              : 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
                               }`}
                             title={t.statut_compte === 'actif' ? 'Suspendre' : 'Activer'}
                           >
@@ -680,6 +684,14 @@ export default function AdminFormations({ session }) {
                     </div>
                   ))}
                 </div>
+
+                <Pagination
+                  currentPage={pageFormateurs}
+                  totalItems={formateurs.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setPageFormateurs}
+                  label="formateurs"
+                />
               </>
             )}
           </div>
@@ -831,7 +843,7 @@ export default function AdminFormations({ session }) {
               </select>
               {formateurs.length === 0 && (
                 <p className="text-[11px] text-amber-600 mt-1">
-                  ⚠️ Aucun formateur. <button type="button" onClick={() => { setShowFormationDrawer(false); setShowFormateurDrawer(true); }} className="underline font-semibold">Créer un formateur</button>
+                  ⚠️ Aucun formateur disponible.
                 </p>
               )}
             </Field>

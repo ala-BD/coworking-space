@@ -79,6 +79,7 @@ CREATE TABLE public.notifications (
     type TEXT NOT NULL,
     canal TEXT NOT NULL CHECK (canal IN ('Email', 'SMS', 'Dashboard')),
     message TEXT NOT NULL,
+    lu BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -165,6 +166,21 @@ CREATE POLICY "Allow admins/staff to manage all subscriptions" ON public.abonnem
             WHERE profiles.id = auth.uid() AND profiles.role IN ('super_admin', 'admin', 'staff')
         )
     );
+
+-- Notifications Policies
+CREATE POLICY "Allow users to read their own notifications" ON public.notifications
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Allow admins/staff to read all notifications" ON public.notifications
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid() AND profiles.role IN ('super_admin', 'admin', 'staff')
+        )
+    );
+
+CREATE POLICY "Allow users to mark their own notifications read" ON public.notifications
+    FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- Reservations Policies
 CREATE POLICY "Allow users to read their own reservations" ON public.reservations

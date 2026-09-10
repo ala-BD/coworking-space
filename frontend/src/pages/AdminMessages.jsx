@@ -125,7 +125,7 @@ export default function AdminMessages() {
       const res = await fetch(`${SOCKET_URL}/api/admin/conversations`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       setConversations((data.conversations || []).map(c => ({ ...c, currentUserId: profile?.id })));
-    } catch (err) { console.error('Failed to fetch conversations:', err); } finally { setLoading(false); }
+    } catch (err) { /* silencieux */ } finally { setLoading(false); }
   }, [profile?.id]);
 
   useEffect(() => { if (profile) fetchConversations(); }, [profile, fetchConversations]);
@@ -161,7 +161,7 @@ export default function AdminMessages() {
       });
     });
 
-    socket.on('disconnect', () => console.log('🔌 Admin socket déconnecté'));
+    socket.on('disconnect', () => {});
     socket.on('reconnect', () => { socket.emit('join:user', profile.id); socket.emit('join:staff'); });
 
     return () => { socket.disconnect(); };
@@ -187,7 +187,7 @@ export default function AdminMessages() {
       setMessages((data.messages || []).reverse().map(m => ({ ...m, _sending: false })));
       await fetch(`${SOCKET_URL}/api/conversations/${conv.id}/read`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
       setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0, currentUserId: profile?.id } : c));
-    } catch (err) { console.error('Failed to load messages:', err); }
+    } catch (err) { /* silencieux */ }
   }, [profile?.id, joinConversation]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
@@ -213,7 +213,7 @@ export default function AdminMessages() {
         setConversations(prev => prev.map(c => c.id === activeConv.id ? { ...c, last_message: { id: data.message.id, content, sender_id: profile.id, created_at: data.message.created_at } } : c));
       } else { throw new Error(data.error || 'Erreur envoi'); }
     } catch (err) {
-      console.error('Failed to send:', err);
+      /* silencieux */
       setMessages(prev => prev.map(m => m.id === tempId ? { ...m, _sending: false, _error: true } : m));
       setNewMessage(content);
     } finally { setSending(false); inputRef.current?.focus(); }
@@ -228,7 +228,7 @@ export default function AdminMessages() {
       const res = await fetch(`${SOCKET_URL}/api/admin/members`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       setMembers(data.members || []);
-    } catch (err) { console.error('Failed to load members:', err); } finally { setSearchingMembers(false); }
+    } catch (err) { /* silencieux */ } finally { setSearchingMembers(false); }
   };
 
   const openNewConvModal = async () => {

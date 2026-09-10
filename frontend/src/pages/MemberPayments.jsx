@@ -3,9 +3,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { paymentApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import Pagination from '../components/Pagination';
 import { exportPaymentsToExcel } from '../utils/exportPaymentsExcel';
 
-const PER_PAGE = 5;
+const PER_PAGE = 10;
 
 const STATUS_CONFIG = {
   paid: {
@@ -272,39 +273,69 @@ export default function MemberPayments({ session }) {
       {/* ══════════════════════════════════════════
           SEARCH & FILTER BAR
           ══════════════════════════════════════════ */}
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-3 mb-5">
-        {/* Search input */}
-        <div className="relative flex-1 w-full md:max-w-sm">
-          <span
-            className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#75777e]"
-            style={{ fontSize: 20 }}
-          >
-            search
-          </span>
-          <input
-            type="text"
-            placeholder="Rechercher une facture..."
-            value={searchQuery}
-            onChange={handleSearch}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#c5c6ce]/30 bg-white text-sm text-[#1b1b1e] placeholder:text-[#75777e] focus:outline-none focus:ring-2 focus:ring-[#f95d00]/30 focus:border-[#f95d00] transition-all"
-          />
+      <div className="bg-white rounded-2xl p-4 md:p-5 border border-[#c5c6ce]/25 shadow-[0px_2px_8px_rgba(16,35,63,0.04)] mb-6 space-y-4">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          {/* Search input with clear visual indicators */}
+          <div className="relative flex-1 max-w-lg">
+            <span
+              className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#44474d]"
+              style={{ fontSize: 20 }}
+            >
+              search
+            </span>
+            <input
+              type="text"
+              placeholder="Rechercher par référence, montant, mode de paiement, date..."
+              value={searchQuery}
+              onChange={handleSearch}
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[#c5c6ce]/40 bg-[#f8f9fa] text-sm text-[#1b1b1e] placeholder:text-[#75777e] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#f95d00]/30 focus:border-[#f95d00] transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#75777e] hover:text-[#1b1b1e] p-0.5 rounded-full hover:bg-[#e4e4e7] transition-colors"
+                title="Effacer la recherche"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Filter pills */}
-        <div className="flex gap-2 flex-wrap">
-          {FILTER_TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => handleFilterChange(tab.key)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                activeFilter === tab.key
-                  ? 'bg-[#f95d00] text-white shadow-sm'
-                  : 'bg-white text-[#44474d] border border-[#c5c6ce]/30 hover:border-[#f95d00]/30 hover:text-[#f95d00]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* Filter pills with badges */}
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[#c5c6ce]/15">
+          <span className="text-xs font-semibold text-[#75777e] uppercase tracking-wider mr-1 hidden sm:inline">
+            Statut :
+          </span>
+          {FILTER_TABS.map((tab) => {
+            const count = tab.key === 'all'
+              ? payments.length
+              : payments.filter((p) => p.statut === tab.key).length;
+            const isActive = activeFilter === tab.key;
+
+            return (
+              <button
+                key={tab.key}
+                onClick={() => handleFilterChange(tab.key)}
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  isActive
+                    ? 'bg-[#f95d00] text-white shadow-md shadow-[#f95d00]/25 ring-2 ring-[#f95d00]/30'
+                    : 'bg-[#f4f6f9] text-[#44474d] hover:bg-[#e9ecf2] hover:text-[#000d23]'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[11px] font-bold ${
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : 'bg-[#c5c6ce]/30 text-[#44474d]'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -412,31 +443,14 @@ export default function MemberPayments({ session }) {
               </table>
             </div>
 
-            {/* ══════════════════════════════════════════
-                PAGINATION
-                ══════════════════════════════════════════ */}
-            <div className="px-6 py-4 border-t border-[#c5c6ce]/10 flex justify-between items-center bg-[#f5f3f6]">
-              <p className="text-sm text-[#44474d]">
-                Affichage {(safePage - 1) * PER_PAGE + 1}–{Math.min(safePage * PER_PAGE, filteredPayments.length)} sur{' '}
-                {filteredPayments.length}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={safePage <= 1}
-                  className="p-2 border border-[#c5c6ce]/30 rounded-lg hover:bg-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_left</span>
-                </button>
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={safePage >= totalPages}
-                  className="p-2 border border-[#c5c6ce]/30 rounded-lg hover:bg-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>chevron_right</span>
-                </button>
-              </div>
-            </div>
+            {/* PAGINATION */}
+            <Pagination
+              currentPage={safePage}
+              totalItems={filteredPayments.length}
+              itemsPerPage={PER_PAGE}
+              onPageChange={setCurrentPage}
+              label="paiements"
+            />
           </>
         )}
       </div>

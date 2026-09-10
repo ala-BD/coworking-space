@@ -43,4 +43,10 @@ export const superAdminApi = {
   deleteUser: (id) =>
     apiFetch(`/api/super-admin/users/${id}`, { method: 'DELETE' }),
   getRolesSummary: () => apiFetch('/api/super-admin/users/roles-summary'),
+  getContacts: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/api/super-admin/contacts?${qs}`);
+  },
+  updateContact: (id, statut) =>
+    apiFetch(`/api/super-admin/contacts/${id}`, { method: 'PATCH', body: JSON.stringify({ statut }) }),
 };

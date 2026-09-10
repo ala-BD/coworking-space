@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { formationApi, bookingApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import Pagination from '../components/Pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 /* ─── Shared helpers ─────────────────────────────────────────────────────── */
 const inputCls =
@@ -96,6 +99,8 @@ export default function AdminFormateurs({ session }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
+  const [pageFormateurs, setPageFormateurs] = useState(1);
+  const [pageRemus, setPageRemus] = useState(1);
 
   /* ─── Modals ─── */
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -263,13 +268,6 @@ export default function AdminFormateurs({ session }) {
             <h1 className="font-sora font-bold text-slate-900 text-2xl sm:text-3xl">Formateurs</h1>
             <p className="text-sm text-on-surface-variant mt-0.5">Gérer vos intervenants et leurs honoraires.</p>
           </div>
-          <button
-            onClick={() => { setFormateurForm(emptyFormateur); setShowCreateModal(true); }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-secondary text-white font-semibold rounded-2xl text-sm hover:bg-secondary/90 shadow-sm transition-all active:scale-95 shrink-0"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>person_add</span>
-            Créer un formateur
-          </button>
         </div>
 
         {/* ── KPIs ── */}
@@ -316,14 +314,7 @@ export default function AdminFormateurs({ session }) {
               <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: 32 }}>person_off</span>
             </div>
             <h3 className="font-sora font-bold text-slate-900 text-base mb-2">Aucun formateur enregistré</h3>
-            <p className="text-sm text-on-surface-variant mb-6">Ajoutez votre premier formateur pour commencer à planifier des formations.</p>
-            <button
-              onClick={() => { setFormateurForm(emptyFormateur); setShowCreateModal(true); }}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-secondary text-white font-semibold rounded-2xl text-sm hover:bg-secondary/90 shadow-sm"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>person_add</span>
-              Créer un formateur
-            </button>
+            <p className="text-sm text-on-surface-variant mb-6">Aucun formateur n'a encore été ajouté à cet espace.</p>
           </div>
         ) : (
           <>
@@ -341,7 +332,7 @@ export default function AdminFormateurs({ session }) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/10 text-sm">
-                    {formateurs.map((t) => {
+                    {formateurs.slice((pageFormateurs - 1) * ITEMS_PER_PAGE, pageFormateurs * ITEMS_PER_PAGE).map((t) => {
                       const initials = (t.prenom?.[0] || '') + (t.nom?.[0] || '');
                       const remu = remunerations.filter(r => r.profiles && r.profiles.nom === t.nom && r.profiles.prenom === t.prenom);
                       const pending = remu.filter(r => r.statut === 'en_attente').reduce((s, r) => s + parseFloat(r.montant || 0), 0);
@@ -426,6 +417,13 @@ export default function AdminFormateurs({ session }) {
                   </tbody>
                 </table>
               </div>
+              <Pagination
+                currentPage={pageFormateurs}
+                totalItems={formateurs.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setPageFormateurs}
+                label="formateurs"
+              />
             </div>
 
             {/* ════════════════════ TABLEAU HONORAIRES ════════════════════ */}
@@ -451,7 +449,7 @@ export default function AdminFormateurs({ session }) {
               <>
                 {/* Mobile */}
                 <div className="sm:hidden space-y-3">
-                  {remunerations.map((r) => (
+                  {remunerations.slice((pageRemus - 1) * ITEMS_PER_PAGE, pageRemus * ITEMS_PER_PAGE).map((r) => (
                     <div key={r.id} className="bg-white rounded-3xl border border-outline-variant/20 p-4 shadow-sm">
                       <div className="flex justify-between items-start mb-1.5">
                         <p className="font-semibold text-slate-900 text-sm">{r.profiles?.prenom} {r.profiles?.nom}</p>
@@ -485,7 +483,7 @@ export default function AdminFormateurs({ session }) {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/10">
-                      {remunerations.map((r) => (
+                      {remunerations.slice((pageRemus - 1) * ITEMS_PER_PAGE, pageRemus * ITEMS_PER_PAGE).map((r) => (
                         <tr key={r.id} className="hover:bg-surface-container-lowest transition-colors group">
                           <td className="p-4 font-semibold text-slate-900">{r.profiles?.prenom} {r.profiles?.nom}</td>
                           <td className="p-4 text-xs text-on-surface-variant">{r.formations?.titre || '—'}</td>
@@ -519,6 +517,13 @@ export default function AdminFormateurs({ session }) {
                       ))}
                     </tbody>
                   </table>
+                  <Pagination
+                    currentPage={pageRemus}
+                    totalItems={remunerations.length}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    onPageChange={setPageRemus}
+                    label="rémunérations"
+                  />
                 </div>
               </>
             )}

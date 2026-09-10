@@ -33,4 +33,11 @@ export const bookingApi = {
   },
 
   getEspaces: () => apiFetch('/api/espaces'),
+
+  getTenants: () => apiFetch('/api/tenants'),
+
+  getEspacesFormation: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/api/espaces/formation${qs ? `?${qs}` : ''}`);
+  },
 };

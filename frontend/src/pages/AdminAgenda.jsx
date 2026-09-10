@@ -9,17 +9,97 @@ const HOUR_START = 8;
 const HOUR_END = 20;
 const HOURS = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
 
-const STATUT_COLORS = {
-  pending: 'bg-amber-100 border-amber-400 text-amber-900',
-  confirmed: 'bg-emerald-100 border-emerald-500 text-emerald-900',
-  cancelled: 'bg-surface-container-high border-outline-variant text-on-surface-variant line-through opacity-60',
-};
-
 const STATUT_LABELS = {
   pending: 'En attente',
   confirmed: 'Confirmée',
   cancelled: 'Annulée',
 };
+
+// Palette de couleurs distinctes par salle — bg, border, text
+const SPACE_PALETTE = [
+  { bg: '#dbeafe', border: '#3b82f6', text: '#1e3a5f', badge: '#3b82f6' },  // bleu
+  { bg: '#dcfce7', border: '#22c55e', text: '#14532d', badge: '#22c55e' },  // vert
+  { bg: '#fef9c3', border: '#eab308', text: '#713f12', badge: '#ca8a04' },  // jaune
+  { bg: '#fce7f3', border: '#ec4899', text: '#831843', badge: '#ec4899' },  // rose
+  { bg: '#ede9fe', border: '#8b5cf6', text: '#3b0764', badge: '#8b5cf6' },  // violet
+  { bg: '#ffedd5', border: '#f97316', text: '#7c2d12', badge: '#ea580c' },  // orange
+  { bg: '#cffafe', border: '#06b6d4', text: '#164e63', badge: '#0891b2' },  // cyan
+  { bg: '#fef2f2', border: '#ef4444', text: '#7f1d1d', badge: '#dc2626' },  // rouge
+  { bg: '#ecfdf5', border: '#10b981', text: '#064e3b', badge: '#059669' },  // émeraude
+  { bg: '#f5f3ff', border: '#a78bfa', text: '#2e1065', badge: '#7c3aed' },  // indigo
+];
+
+// Associer un index de couleur stable à chaque espace_id
+const spaceColorCache = {};
+let spaceColorIndex = 0;
+
+function getSpaceColor(espaceId) {
+  if (!espaceId) return SPACE_PALETTE[0];
+  if (spaceColorCache[espaceId] === undefined) {
+    spaceColorCache[espaceId] = spaceColorIndex % SPACE_PALETTE.length;
+    spaceColorIndex++;
+  }
+  return SPACE_PALETTE[spaceColorCache[espaceId]];
+}
+
+// Calcule les groupes de chevauchement et retourne pour chaque réservation
+// sa colonne (col) et le nombre total de colonnes (total) dans son groupe.
+function computeOverlapLayout(bookingsForDay) {
+  const sorted = [...bookingsForDay].sort(
+    (a, b) => new Date(a.date_debut) - new Date(b.date_debut)
+  );
+
+  // Algorithme de colonnes : on place chaque réservation dans la première
+  // colonne libre (sans chevauchement).
+  const columns = []; // columns[i] = date_fin de la dernière réservation dans la col i
+  const layout = {}; // booking.id → { col, total }
+
+  sorted.forEach((b) => {
+    const start = new Date(b.date_debut).getTime();
+    const end = new Date(b.date_fin).getTime();
+    let placed = false;
+    for (let c = 0; c < columns.length; c++) {
+      if (columns[c] <= start) {
+        columns[c] = end;
+        layout[b.id] = { col: c };
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      layout[b.id] = { col: columns.length };
+      columns.push(end);
+    }
+  });
+
+  const totalCols = columns.length;
+
+  // Deuxième passe : pour chaque réservation, on calcule combien de colonnes
+  // son groupe occupe réellement (les réservations qui se chevauchent avec elle).
+  sorted.forEach((b) => {
+    const start = new Date(b.date_debut).getTime();
+    const end = new Date(b.date_fin).getTime();
+    // Trouver toutes les réservations qui chevauchent b
+    const overlapping = sorted.filter((o) => {
+      if (o.id === b.id) return false;
+      const os = new Date(o.date_debut).getTime();
+      const oe = new Date(o.date_fin).getTime();
+      return os < end && oe > start;
+    });
+    const maxCol = overlapping.reduce(
+      (max, o) => Math.max(max, layout[o.id]?.col ?? 0),
+      layout[b.id].col
+    );
+    layout[b.id].total = maxCol + 1;
+  });
+
+  // Si une réservation n'a pas de voisins, total = 1
+  sorted.forEach((b) => {
+    if (!layout[b.id].total) layout[b.id].total = 1;
+  });
+
+  return layout;
+}
 
 function startOfWeek(date) {
   const d = new Date(date);
@@ -344,6 +424,7 @@ export default function AdminAgenda({ session }) {
           <p className="text-on-surface-variant text-body-md mt-1">
             Calendrier interactif avec check-in/check-out en temps réel
           </p>
+
         </div>
         <div className="flex flex-wrap gap-sm items-center">
           <select
@@ -451,42 +532,118 @@ export default function AdminAgenda({ session }) {
               ))}
             </div>
 
-            {visibleDays.map((day) => (
-              <div key={`col-${day.toISOString()}`} className="relative border-l border-outline-variant/10">
-                {HOURS.map((hour) => (
-                  <div key={hour} className="h-16 border-b border-outline-variant/5" />
-                ))}
+            {visibleDays.map((day) => {
+              const dayBookings = bookings.filter((b) => {
+                const bDay = new Date(b.date_debut);
+                return bDay.toDateString() === day.toDateString()
+                  || (new Date(b.date_debut) <= day && new Date(b.date_fin) > day);
+              });
+              const overlapLayout = computeOverlapLayout(dayBookings);
 
-                {bookings
-                  .filter((b) => {
-                    const bDay = new Date(b.date_debut);
-                    return bDay.toDateString() === day.toDateString()
-                      || (new Date(b.date_debut) <= day && new Date(b.date_fin) > day);
-                  })
-                  .map((booking) => {
+              return (
+                <div key={`col-${day.toISOString()}`} className="relative border-l border-outline-variant/10">
+                  {HOURS.map((hour) => (
+                    <div key={hour} className="h-16 border-b border-outline-variant/5" />
+                  ))}
+
+                  {dayBookings.map((booking) => {
                     const pos = bookingPosition(booking, day);
                     if (!pos) return null;
+
                     const active = isSessionActive(booking.id);
+                    const cancelled = booking.statut === 'cancelled';
+                    const color = getSpaceColor(booking.espace_id);
+                    const { col, total } = overlapLayout[booking.id] || { col: 0, total: 1 };
+
+                    // Largeur et position horizontale pour l'affichage côte à côte
+                    const GAP = 2; // px entre colonnes
+                    const widthPct = (100 / total);
+                    const leftPct = col * widthPct;
+
                     return (
                       <button
                         key={`${booking.id}-${day.toISOString()}`}
                         type="button"
                         onClick={() => setSelectedBooking(booking)}
-                        className={`absolute left-1 right-1 rounded-lg border-l-4 px-1 py-0.5 text-left overflow-hidden text-label-sm shadow-sm hover:opacity-90 ${STATUT_COLORS[booking.statut] || STATUT_COLORS.pending}`}
-                        style={{ top: pos.top, height: pos.height, minHeight: '28px' }}
+                        style={{
+                          position: 'absolute',
+                          top: pos.top,
+                          height: pos.height,
+                          minHeight: '32px',
+                          left: `calc(${leftPct}% + ${GAP}px)`,
+                          width: `calc(${widthPct}% - ${GAP * 2}px)`,
+                          backgroundColor: cancelled ? '#f1f5f9' : color.bg,
+                          borderLeft: `4px solid ${cancelled ? '#94a3b8' : color.border}`,
+                          borderRadius: '8px',
+                          opacity: cancelled ? 0.55 : 1,
+                          boxShadow: cancelled ? 'none' : '0 1px 4px rgba(0,0,0,0.10)',
+                          padding: '3px 5px',
+                          textAlign: 'left',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          transition: 'opacity 0.15s, box-shadow 0.15s',
+                          zIndex: active ? 2 : 1,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.opacity = cancelled ? '0.7' : '0.88'; e.currentTarget.style.boxShadow = '0 3px 10px rgba(0,0,0,0.15)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.opacity = cancelled ? '0.55' : '1'; e.currentTarget.style.boxShadow = cancelled ? 'none' : '0 1px 4px rgba(0,0,0,0.10)'; }}
                       >
-                        <p className="font-semibold truncate">{booking.espaces?.nom}</p>
-                        <p className="truncate opacity-80">
+                        {/* Nom de l'espace */}
+                        <p
+                          className="font-bold truncate leading-tight"
+                          style={{
+                            fontSize: '11px',
+                            color: cancelled ? '#64748b' : color.text,
+                            textDecoration: cancelled ? 'line-through' : 'none',
+                          }}
+                        >
+                          {booking.espaces?.nom || '—'}
+                        </p>
+
+                        {/* Membre */}
+                        <p
+                          className="truncate leading-tight"
+                          style={{ fontSize: '10px', color: cancelled ? '#94a3b8' : color.text, opacity: 0.8 }}
+                        >
                           {booking.profiles?.prenom} {booking.profiles?.nom}
                         </p>
-                        {active && (
-                          <span className="text-label-sm font-bold text-secondary">● Live</span>
-                        )}
+
+                        {/* Heure */}
+                        <p
+                          className="truncate leading-tight"
+                          style={{ fontSize: '10px', color: cancelled ? '#94a3b8' : color.text, opacity: 0.65 }}
+                        >
+                          {new Date(booking.date_debut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          {' → '}
+                          {new Date(booking.date_fin).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+
+                        {/* Badges statut + live */}
+                        <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                          {active && (
+                            <span
+                              className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 font-bold"
+                              style={{ fontSize: '9px', background: '#dcfce7', color: '#15803d' }}
+                            >
+                              <span style={{ fontSize: '7px' }}>●</span> Live
+                            </span>
+                          )}
+                          <span
+                            className="inline-flex items-center rounded-full px-1.5 py-0.5 font-semibold truncate"
+                            style={{
+                              fontSize: '9px',
+                              background: cancelled ? '#e2e8f0' : color.border + '22',
+                              color: cancelled ? '#64748b' : color.border,
+                            }}
+                          >
+                            {STATUT_LABELS[booking.statut] || booking.statut}
+                          </span>
+                        </div>
                       </button>
                     );
                   })}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -495,11 +652,30 @@ export default function AdminAgenda({ session }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-md">
           <div className="bg-surface-container-lowest rounded-3xl p-lg max-w-md w-full shadow-xl space-y-md">
             <div className="flex justify-between items-start">
-              <h2 className="font-sora text-headline-sm text-primary">Détail réservation</h2>
-              <button type="button" onClick={() => setSelectedBooking(null)} className="text-on-surface-variant">✕</button>
+              <div className="flex items-center gap-2">
+                {/* Pastille couleur de la salle */}
+                <span
+                  className="w-3 h-3 rounded-full shrink-0"
+                  style={{ background: getSpaceColor(selectedBooking.espace_id).border }}
+                />
+                <h2 className="font-sora text-headline-sm text-primary">Détail réservation</h2>
+              </div>
+              <button type="button" onClick={() => setSelectedBooking(null)} className="text-on-surface-variant hover:text-primary transition-colors">✕</button>
+            </div>
+            {/* Bandeau salle */}
+            <div
+              className="rounded-xl px-4 py-2.5 flex items-center gap-2"
+              style={{
+                background: getSpaceColor(selectedBooking.espace_id).bg,
+                borderLeft: `4px solid ${getSpaceColor(selectedBooking.espace_id).border}`,
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18, color: getSpaceColor(selectedBooking.espace_id).border }}>meeting_room</span>
+              <span className="font-bold text-sm" style={{ color: getSpaceColor(selectedBooking.espace_id).text }}>
+                {selectedBooking.espaces?.nom}
+              </span>
             </div>
             <div className="space-y-xs text-body-sm">
-              <p><strong>Espace :</strong> {selectedBooking.espaces?.nom}</p>
               <p><strong>Membre :</strong> {selectedBooking.profiles?.prenom} {selectedBooking.profiles?.nom}</p>
               <p><strong>Email :</strong> {selectedBooking.profiles?.email}</p>
               <p>
@@ -508,7 +684,18 @@ export default function AdminAgenda({ session }) {
                 {' → '}
                 {new Date(selectedBooking.date_fin).toLocaleTimeString('fr-FR', { timeStyle: 'short' })}
               </p>
-              <p><strong>Statut :</strong> {STATUT_LABELS[selectedBooking.statut] || selectedBooking.statut}</p>
+              <p>
+                <strong>Statut :</strong>{' '}
+                <span
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                  style={{
+                    background: selectedBooking.statut === 'confirmed' ? '#dcfce7' : selectedBooking.statut === 'pending' ? '#fef9c3' : '#f1f5f9',
+                    color: selectedBooking.statut === 'confirmed' ? '#15803d' : selectedBooking.statut === 'pending' ? '#92400e' : '#64748b',
+                  }}
+                >
+                  {STATUT_LABELS[selectedBooking.statut] || selectedBooking.statut}
+                </span>
+              </p>
             </div>
             <div className="flex flex-wrap gap-sm">
               {selectedBooking.statut === 'pending' && (

@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { paymentApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import Pagination from '../components/Pagination';
 import { exportPaymentsToExcel } from '../utils/exportPaymentsExcel';
+
+const ITEMS_PER_PAGE = 10;
 
 const STATUT_STYLES = {
   paid: 'bg-[#D1FAE5] text-[#065F46]',
@@ -17,6 +20,14 @@ const STATUT_LABELS = {
   failed: 'Échoué',
   refunded: 'Remboursé',
 };
+
+const FILTER_TABS = [
+  { key: 'all', label: 'Tous' },
+  { key: 'paid', label: 'Payés' },
+  { key: 'pending', label: 'En attente' },
+  { key: 'failed', label: 'Échoués' },
+  { key: 'refunded', label: 'Remboursés' },
+];
 
 const MODE_LABELS = {
   cash: 'Espèces',
@@ -42,12 +53,40 @@ export default function AdminPayments({ session }) {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all');
 
-  // Modal state
-  const [editingPayment, setEditingPayment] = useState(null);
-  const [editStatut, setEditStatut] = useState('');
-  const [editMode, setEditMode] = useState('');
-  const [processing, setProcessing] = useState(false);
+  const filteredPayments = useMemo(() => {
+    let result = [...payments];
+    if (activeFilter !== 'all') {
+      result = result.filter((p) => p.statut === activeFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((p) => {
+        const memberName = p.profiles ? `${p.profiles.prenom} ${p.profiles.nom}`.toLowerCase() : '';
+        const recu = (p.numero_recu || '').toLowerCase();
+        const mode = (MODE_LABELS[p.mode] || p.mode || '').toLowerCase();
+        const montant = String(p.montant || '');
+        const dateStr = p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-FR') : '';
+        return (
+          memberName.includes(q) ||
+          recu.includes(q) ||
+          mode.includes(q) ||
+          montant.includes(q) ||
+          dateStr.includes(q)
+        );
+      });
+    }
+    return result;
+  }, [payments, activeFilter, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredPayments.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedPayments = filteredPayments.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
+
+  // États supprimés : pas de modification permise pour l'admin (lecture seule)
 
   useEffect(() => {
     fetchProfileAndPayments();
@@ -84,36 +123,6 @@ export default function AdminPayments({ session }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-  };
-
-  const handleOpenEdit = (payment) => {
-    setEditingPayment(payment);
-    setEditStatut(payment.statut);
-    setEditMode(payment.mode || 'cash');
-  };
-
-  const handleCloseEdit = () => {
-    setEditingPayment(null);
-  };
-
-  const handleSaveEdit = async (e) => {
-    e.preventDefault();
-    setProcessing(true);
-    setErrorMsg('');
-    try {
-      await paymentApi.update(editingPayment.id, {
-        statut: editStatut,
-        mode: editMode,
-      });
-
-      // Rafraîchir la liste
-      await fetchProfileAndPayments();
-      handleCloseEdit();
-    } catch (err) {
-      setErrorMsg(err.message || 'Erreur lors de la mise à jour.');
-    } finally {
-      setProcessing(false);
-    }
   };
 
   const handleDownload = async (id) => {
@@ -156,7 +165,7 @@ export default function AdminPayments({ session }) {
       <div className="mb-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-sora text-headline-md font-bold text-primary mb-xs">Gestion des Paiements</h1>
-          <p className="text-body-md text-on-surface-variant">Visualisez et mettez à jour les transactions en temps réel.</p>
+          <p className="text-body-md text-on-surface-variant">Consultez et téléchargez les reçus des transactions.</p>
         </div>
         <button
           onClick={handleExportExcel}
@@ -210,6 +219,73 @@ export default function AdminPayments({ session }) {
         </div>
       )}
 
+      {/* Barre de recherche et filtres de statut */}
+      <div className="bg-surface-container-lowest rounded-2xl p-4 md:p-5 border border-outline-variant/30 shadow-sm mb-6 space-y-4">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          {/* Champ de recherche clair */}
+          <div className="relative flex-1 max-w-lg">
+            <span
+              className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant"
+              style={{ fontSize: 20 }}
+            >
+              search
+            </span>
+            <input
+              type="text"
+              placeholder="Rechercher par membre, référence, mode, montant..."
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-low text-body-sm text-primary placeholder:text-on-surface-variant/70 focus:bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-secondary/30 focus:border-secondary transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary p-0.5 rounded-full hover:bg-surface-container transition-colors"
+                title="Effacer la recherche"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Boutons de filtres avec compteurs */}
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-outline-variant/15">
+          <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mr-1 hidden sm:inline">
+            Statut :
+          </span>
+          {FILTER_TABS.map((tab) => {
+            const count = tab.key === 'all'
+              ? payments.length
+              : payments.filter((p) => p.statut === tab.key).length;
+            const isActive = activeFilter === tab.key;
+
+            return (
+              <button
+                key={tab.key}
+                onClick={() => { setActiveFilter(tab.key); setCurrentPage(1); }}
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  isActive
+                    ? 'bg-[#f95d00] text-white shadow-md shadow-[#f95d00]/25 ring-2 ring-[#f95d00]/30'
+                    : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-primary'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[11px] font-bold ${
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : 'bg-outline-variant/30 text-on-surface-variant'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Tableau des paiements */}
       <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -225,11 +301,8 @@ export default function AdminPayments({ session }) {
               </tr>
             </thead>
             <tbody className="text-body-sm">
-              {payments.map((p) => {
-                // Pour récupérer le nom, l'API retourne profiles avec nom/prenom (si on a fait le bon select)
-                // Comme l'API existante n'a pas forcément le join dans getAll(), on va s'adapter.
-                // Normalement l'API /api/payments devrait faire un .select('*, profiles(nom,prenom)')
-                const memberName = p.profiles ? `${p.profiles.prenom} ${p.profiles.nom}` : p.user_id.slice(0, 8);
+              {paginatedPayments.map((p) => {
+                const memberName = p.profiles ? `${p.profiles.prenom} ${p.profiles.nom}` : (p.user_id ? p.user_id.slice(0, 8) : '—');
                 const dateP = p.date_paiement ? new Date(p.date_paiement) : new Date(p.created_at);
 
                 return (
@@ -254,14 +327,7 @@ export default function AdminPayments({ session }) {
                         {STATUT_LABELS[p.statut] || p.statut}
                       </span>
                     </td>
-                    <td className="px-md py-md text-right space-x-2">
-                      <button
-                        onClick={() => handleOpenEdit(p)}
-                        className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded transition-colors"
-                        title="Modifier le statut"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">edit</span>
-                      </button>
+                    <td className="px-md py-md text-right">
                       <button
                         onClick={() => handleDownload(p.id)}
                         className="p-1.5 text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded transition-colors"
@@ -274,89 +340,28 @@ export default function AdminPayments({ session }) {
                 );
               })}
 
-              {payments.length === 0 && (
+              {filteredPayments.length === 0 && (
                 <tr>
                   <td colSpan="6" className="px-md py-xl text-center text-on-surface-variant">
-                    Aucun paiement trouvé.
+                    {searchQuery || activeFilter !== 'all'
+                      ? 'Aucun paiement ne correspond aux critères de recherche.'
+                      : 'Aucun paiement trouvé.'}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination 10 par page */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredPayments.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+          label="paiements"
+        />
       </div>
-
-      {/* Modal d'édition */}
-      {editingPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-surface-container-lowest rounded-3xl w-[400px] max-w-[90vw] overflow-hidden shadow-2xl">
-            <div className="px-lg py-md border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low">
-              <h3 className="font-sora font-semibold text-primary">Mettre à jour le paiement</h3>
-              <button onClick={handleCloseEdit} className="text-on-surface-variant hover:text-error transition-colors">
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveEdit} className="p-lg space-y-md">
-              <div className="bg-surface-container px-sm py-xs rounded-lg text-body-sm font-mono text-primary mb-md text-center">
-                Ref: {editingPayment.numero_recu || editingPayment.id.slice(0, 8)} — {editingPayment.montant} DT
-              </div>
-
-              <div>
-                <label className="block text-label-sm font-semibold text-on-surface mb-1">Mode de paiement</label>
-                <select
-                  value={editMode}
-                  onChange={(e) => setEditMode(e.target.value)}
-                  className="w-full bg-white border border-outline-variant/30 rounded-xl px-sm py-2 text-body-md focus:border-secondary outline-none"
-                >
-                  <option value="cash">Espèces</option>
-                  <option value="bank_transfer">Virement bancaire</option>
-                  <option value="check">Chèque</option>
-                  <option value="online">En ligne</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-label-sm font-semibold text-on-surface mb-1">Statut</label>
-                <select
-                  value={editStatut}
-                  onChange={(e) => setEditStatut(e.target.value)}
-                  className="w-full bg-white border border-outline-variant/30 rounded-xl px-sm py-2 text-body-md focus:border-secondary outline-none"
-                >
-                  <option value="pending">En attente</option>
-                  <option value="paid">Payé</option>
-                  <option value="failed">Échoué</option>
-                  <option value="refunded">Remboursé</option>
-                </select>
-                {editStatut === 'paid' && editingPayment.statut !== 'paid' && (
-                  <p className="mt-2 text-xs text-secondary font-medium">
-                    <span className="material-symbols-outlined text-[14px] align-middle mr-1">mail</span>
-                    Un email contenant le reçu PDF sera automatiquement envoyé au membre.
-                  </p>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-sm pt-4">
-                <button
-                  type="button"
-                  onClick={handleCloseEdit}
-                  className="px-4 py-2 rounded-lg font-semibold text-label-md text-on-surface-variant hover:bg-surface-container-high transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={processing}
-                  className="px-4 py-2 bg-primary text-white rounded-lg font-semibold text-label-md hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
-                >
-                  {processing && <span className="material-symbols-outlined animate-spin text-[16px]">sync</span>}
-                  Enregistrer
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
     </PortalLayout>
   );

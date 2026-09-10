@@ -286,7 +286,7 @@ async function updateSettings(req, res) {
 async function myFormations(req, res) {
   const { data, error } = await supabaseAdmin
     .from('inscriptions_formations')
-    .select('*, formations (id, titre, date_debut, date_fin, statut, prix_inscription, profiles!formateur_id (nom, prenom))')
+    .select('*, formations (id, titre, date_debut, date_fin, statut, prix_inscription, profiles!formateur_id (nom, prenom)), paiements (id, mode, statut, montant)')
     .eq('user_id', req.user.id)
     .order('created_at', { ascending: false });
 

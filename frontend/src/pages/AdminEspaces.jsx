@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { tenantAdminApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import Pagination from '../components/Pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 const ESPACE_TYPES = [
   { value: 'open_space', label: 'Open Space', icon: 'desk', color: '#f95d00' },
@@ -46,6 +49,7 @@ export default function AdminEspaces({ session }) {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [toast, setToast] = useState('');
   const [toastErr, setToastErr] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const fileRef = useRef(null);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
@@ -293,72 +297,84 @@ export default function AdminEspaces({ session }) {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-            {espaces.map((espace) => {
-              const typeInfo = getTypeInfo(espace.type);
-              return (
-                <div key={espace.id}
-                  className="bg-white rounded-3xl border border-outline-variant/15 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all overflow-hidden">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              {espaces.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((espace) => {
+                const typeInfo = getTypeInfo(espace.type);
+                return (
+                  <div key={espace.id}
+                    className="bg-white rounded-3xl border border-outline-variant/15 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all overflow-hidden">
 
-                  {/* Photo ou placeholder */}
-                  {espace.photo_url ? (
-                    <div className="relative h-44 overflow-hidden">
-                      <img src={espace.photo_url} alt={espace.nom}
-                        className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                      <div className="absolute top-3 right-3">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold text-white"
-                          style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 13 }}>{typeInfo.icon}</span>
-                          {typeInfo.label}
-                        </span>
+                    {/* Photo ou placeholder */}
+                    {espace.photo_url ? (
+                      <div className="relative h-44 overflow-hidden">
+                        <img src={espace.photo_url} alt={espace.nom}
+                          className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                        <div className="absolute top-3 right-3">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold text-white"
+                            style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>{typeInfo.icon}</span>
+                            {typeInfo.label}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="h-44 flex items-center justify-center"
-                      style={{ background: `${typeInfo.color}12` }}>
-                      <div className="flex flex-col items-center gap-2">
-                        <span className="material-symbols-outlined" style={{ fontSize: 48, color: `${typeInfo.color}80` }}>{typeInfo.icon}</span>
-                        <span className="text-xs font-semibold" style={{ color: `${typeInfo.color}90` }}>{typeInfo.label}</span>
+                    ) : (
+                      <div className="h-44 flex items-center justify-center"
+                        style={{ background: `${typeInfo.color}12` }}>
+                        <div className="flex flex-col items-center gap-2">
+                          <span className="material-symbols-outlined" style={{ fontSize: 48, color: `${typeInfo.color}80` }}>{typeInfo.icon}</span>
+                          <span className="text-xs font-semibold" style={{ color: `${typeInfo.color}90` }}>{typeInfo.label}</span>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  <div className="p-5">
-                    <h3 className="font-sora font-bold text-primary text-base mb-3">{espace.nom}</h3>
+                    <div className="p-5">
+                      <h3 className="font-sora font-bold text-primary text-base mb-3">{espace.nom}</h3>
 
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div className="flex items-center gap-2 text-xs text-on-surface-variant">
-                        <span className="material-symbols-outlined" style={{ fontSize: 15 }}>group</span>
-                        <span>{espace.capacite} pers.</span>
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="flex items-center gap-2 text-xs text-on-surface-variant">
+                          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>group</span>
+                          <span>{espace.capacite} pers.</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-on-surface-variant">
+                          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>payments</span>
+                          <span>{espace.tarif_horaire > 0 ? `${espace.tarif_horaire} DT/h` : 'Gratuit'}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-on-surface-variant">
-                        <span className="material-symbols-outlined" style={{ fontSize: 15 }}>payments</span>
-                        <span>{espace.tarif_horaire > 0 ? `${espace.tarif_horaire} DT/h` : 'Gratuit'}</span>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 pt-3 border-t border-outline-variant/10">
-                      <button
-                        onClick={() => handleEdit(espace)}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold text-secondary hover:bg-secondary/8 transition-colors"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
-                        Modifier
-                      </button>
-                      <div className="w-px h-5 bg-outline-variant/20" />
-                      <button
-                        onClick={() => handleDelete(espace)}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
-                        Supprimer
-                      </button>
+                      <div className="flex items-center gap-2 pt-3 border-t border-outline-variant/10">
+                        <button
+                          onClick={() => handleEdit(espace)}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold text-secondary hover:bg-secondary/8 transition-colors"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+                          Modifier
+                        </button>
+                        <div className="w-px h-5 bg-outline-variant/20" />
+                        <button
+                          onClick={() => handleDelete(espace)}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+                          Supprimer
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+
+            <div className="rounded-3xl overflow-hidden shadow-sm">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={espaces.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setCurrentPage}
+                label="espaces"
+              />
+            </div>
           </div>
         )}
       </div>

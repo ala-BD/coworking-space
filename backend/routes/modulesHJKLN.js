@@ -271,12 +271,34 @@ router.get('/public/coworkings', async (req, res) => {
 
     if (error) return res.status(500).json({ error: error.message });
 
+    const today = new Date().toISOString().split('T')[0];
+
     const enriched = await Promise.all((data || []).map(async (t) => {
-      const [{ count: spaceCount }, { count: membersCount }] = await Promise.all([
+      const [
+        { count: spaceCount },
+        { count: membersCount },
+        { data: promos },
+      ] = await Promise.all([
         supabaseAdmin.from('espaces').select('*', { count: 'exact', head: true }).eq('tenant_id', t.id),
         supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).eq('tenant_id', t.id).in('role', ['member', 'guest']),
+        supabaseAdmin
+          .from('codes_promo')
+          .select('id, type_reduction, valeur, date_fin')
+          .eq('tenant_id', t.id)
+          .eq('actif', true)
+          .lte('date_debut', today),
       ]);
-      return { ...t, space_count: spaceCount || 0, member_count: membersCount || 0 };
+
+      // Filtrer les promos non expirées
+      const activePromos = (promos || []).filter(p => !p.date_fin || p.date_fin >= today);
+
+      return {
+        ...t,
+        space_count: spaceCount || 0,
+        member_count: membersCount || 0,
+        has_promo: activePromos.length > 0,
+        promo_count: activePromos.length,
+      };
     }));
 
     res.json({ coworkings: enriched || [] });
@@ -303,6 +325,59 @@ router.get('/public/coworkings/:id', async (req, res) => {
       .order('tarif_horaire', { ascending: true });
 
     res.json({ coworking: { ...tenant, espaces: espaces || [] } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/public/coworkings/:id/promos — Promos actives publiques d'un coworking
+router.get('/public/coworkings/:id/promos', async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Vérifier que le coworking est actif
+    const { data: tenant } = await supabaseAdmin
+      .from('tenants')
+      .select('id, nom')
+      .eq('id', req.params.id)
+      .eq('statut', 'actif')
+      .single();
+    if (!tenant) return res.status(404).json({ error: 'Coworking introuvable.' });
+
+    // Récupérer les codes promo actifs (on expose code, valeur, type, date_fin — pas les usages internes)
+    const { data: promos, error } = await supabaseAdmin
+      .from('codes_promo')
+      .select('id, code, type_reduction, valeur, date_debut, date_fin, utilisations_max, utilisations_count')
+      .eq('tenant_id', req.params.id)
+      .eq('actif', true)
+      .lte('date_debut', today)
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Filtrer les promos non expirées et pas saturées
+    const activePromos = (promos || []).filter(p => {
+      const notExpired = !p.date_fin || p.date_fin >= today;
+      const notSaturated = !p.utilisations_max || p.utilisations_count < p.utilisations_max;
+      return notExpired && notSaturated;
+    });
+
+    // Récupérer les tarifs en promotion pour ce tenant (tarifs avec date_fin définie = durée limitée)
+    const { data: tarifs } = await supabaseAdmin
+      .from('tarifs_abonnements')
+      .select('id, type_abonnement, plan_tarifaire, type_espace, prix, tva_pct, date_debut, date_fin')
+      .eq('tenant_id', req.params.id)
+      .eq('actif', true)
+      .lte('date_debut', today)
+      .not('date_fin', 'is', null)
+      .gte('date_fin', today)
+      .order('date_fin', { ascending: true });
+
+    res.json({
+      coworking: { id: tenant.id, nom: tenant.nom },
+      promo_codes: activePromos,
+      tarifs_limites: tarifs || [],
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

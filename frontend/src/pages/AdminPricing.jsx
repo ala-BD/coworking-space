@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { pricingApi, bookingApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import Pagination from '../components/Pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 const SUBSCRIPTION_LABELS = {
   day_pass: 'Day Pass',
@@ -32,6 +35,9 @@ export default function AdminPricing({ session }) {
   const [tarifs, setTarifs] = useState([]);
   const [promoCodes, setPromoCodes] = useState([]);
   const [occupation, setOccupation] = useState([]);
+  const [pageTarifs, setPageTarifs] = useState(1);
+  const [pagePromo, setPagePromo] = useState(1);
+  const [pageOccupation, setPageOccupation] = useState(1);
   const [actionId, setActionId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -160,6 +166,10 @@ export default function AdminPricing({ session }) {
     );
   }
 
+  const pagedTarifs = tarifs.slice((pageTarifs - 1) * ITEMS_PER_PAGE, pageTarifs * ITEMS_PER_PAGE);
+  const pagedPromoCodes = promoCodes.slice((pagePromo - 1) * ITEMS_PER_PAGE, pagePromo * ITEMS_PER_PAGE);
+  const pagedOccupation = occupation.slice((pageOccupation - 1) * ITEMS_PER_PAGE, pageOccupation * ITEMS_PER_PAGE);
+
   return (
     <PortalLayout profile={profile} onLogout={handleLogout}>
       <header className="mb-lg">
@@ -183,9 +193,12 @@ export default function AdminPricing({ session }) {
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`px-md py-sm rounded-xl font-semibold text-label-sm ${
-              tab === t.id ? 'bg-primary text-white' : 'bg-white border border-outline-variant/20'
+            className={`px-md py-sm rounded-xl font-semibold text-label-sm transition-all ${
+              tab === t.id
+                ? 'text-white border border-transparent'
+                : 'bg-white border border-outline-variant/20 hover:border-orange-400'
             }`}
+            style={tab === t.id ? { backgroundColor: '#f95d00' } : {}}
           >
             {t.label}
           </button>
@@ -273,7 +286,7 @@ export default function AdminPricing({ session }) {
                 </tr>
               </thead>
               <tbody>
-                {tarifs.map((t) => (
+                {pagedTarifs.map((t) => (
                   <tr key={t.id} className="border-t border-outline-variant/10">
                     <td className="p-sm">{SUBSCRIPTION_LABELS[t.type_abonnement] || t.type_abonnement}</td>
                     <td className="p-sm">{PLAN_LABELS[t.plan_tarifaire] || t.plan_tarifaire}</td>
@@ -302,6 +315,13 @@ export default function AdminPricing({ session }) {
                 ))}
               </tbody>
             </table>
+            <Pagination
+              currentPage={pageTarifs}
+              totalItems={tarifs.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setPageTarifs}
+              label="tarifs"
+            />
           </div>
         </div>
       )}
@@ -369,7 +389,7 @@ export default function AdminPricing({ session }) {
                 </tr>
               </thead>
               <tbody>
-                {promoCodes.map((p) => (
+                {pagedPromoCodes.map((p) => (
                   <tr key={p.id} className="border-t border-outline-variant/10">
                     <td className="p-sm font-mono font-semibold">{p.code}</td>
                     <td className="p-sm">
@@ -397,6 +417,13 @@ export default function AdminPricing({ session }) {
                 ))}
               </tbody>
             </table>
+            <Pagination
+              currentPage={pagePromo}
+              totalItems={promoCodes.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setPagePromo}
+              label="codes promo"
+            />
           </div>
         </div>
       )}
@@ -414,7 +441,7 @@ export default function AdminPricing({ session }) {
               </tr>
             </thead>
             <tbody>
-              {occupation.map((row) => (
+              {pagedOccupation.map((row) => (
                 <tr key={row.espace_id} className="border-t border-outline-variant/10">
                   <td className="p-sm font-semibold">{row.nom}</td>
                   <td className="p-sm">{row.type.replace('_', ' ')}</td>
@@ -435,6 +462,13 @@ export default function AdminPricing({ session }) {
               ))}
             </tbody>
           </table>
+          <Pagination
+            currentPage={pageOccupation}
+            totalItems={occupation.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setPageOccupation}
+            label="espaces"
+          />
         </div>
       )}
     </PortalLayout>

@@ -27,8 +27,11 @@ export const formationApi = {
     apiFetch(`/api/formations/${id}`, { method: 'DELETE' }),
 
   // ── Inscriptions ────────────────────────────────────────────────────────
-  inscrire: (formationId) =>
-    apiFetch(`/api/formations/${formationId}/inscriptions`, { method: 'POST' }),
+  inscrire: (formationId, payload = {}) =>
+    apiFetch(`/api/formations/${formationId}/inscriptions`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   desinscrire: (formationId, userId) =>
     apiFetch(`/api/formations/${formationId}/inscriptions`, {
       method: 'DELETE',
@@ -46,5 +49,9 @@ export const formationApi = {
 
   // ── Espace membre ────────────────────────────────────────────────────────
   getMesFormations: () => apiFetch('/api/members/me/formations'),
-  createFormationPayment: (formationId) => apiFetch(`/api/formations/${formationId}/inscriptions/payment`, { method: 'POST' }),
+  createFormationPayment: (formationId, payload = {}) =>
+    apiFetch(`/api/formations/${formationId}/inscriptions/payment`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 };

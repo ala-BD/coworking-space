@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { formationApi, bookingApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import Pagination from '../components/Pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 /* ─── Constants ─────────────────────────────────────────────────────────── */
 const STATUT_STYLES = {
   planifiee: 'bg-amber-50 text-amber-800 border border-amber-200',
-  en_cours:  'bg-emerald-50 text-emerald-800 border border-emerald-200',
-  terminee:  'bg-sky-50 text-sky-800 border border-sky-200',
-  annulee:   'bg-red-50 text-red-800 border border-red-200',
+  en_cours: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
+  terminee: 'bg-sky-50 text-sky-800 border border-sky-200',
+  annulee: 'bg-red-50 text-red-800 border border-red-200',
 };
 const STATUT_LABELS = {
   planifiee: 'Planifiée',
@@ -18,10 +21,10 @@ const STATUT_LABELS = {
 };
 
 const PAIEMENT_STYLES = {
-  gratuit:    'bg-slate-100 text-slate-700',
-  paye:       'bg-emerald-100 text-emerald-800',
+  gratuit: 'bg-slate-100 text-slate-700',
+  paye: 'bg-emerald-100 text-emerald-800',
   en_attente: 'bg-amber-100 text-amber-800',
-  rembourse:  'bg-sky-100 text-sky-800',
+  rembourse: 'bg-sky-100 text-sky-800',
 };
 const PAIEMENT_LABELS = {
   gratuit: 'Gratuit',
@@ -154,11 +157,10 @@ function ParticipantsModal({ open, onClose, formation, inscriptions }) {
               {(inscriptions[formation.id] || []).map((insc) => (
                 <div
                   key={insc.id}
-                  className={`grid grid-cols-12 gap-2 items-center px-3 py-3 rounded-2xl border transition-colors ${
-                    insc.statut === 'annulee'
-                      ? 'border-red-100 bg-red-50/40 opacity-60'
-                      : 'border-outline-variant/15 hover:bg-surface-container-low'
-                  }`}
+                  className={`grid grid-cols-12 gap-2 items-center px-3 py-3 rounded-2xl border transition-colors ${insc.statut === 'annulee'
+                    ? 'border-red-100 bg-red-50/40 opacity-60'
+                    : 'border-outline-variant/15 hover:bg-surface-container-low'
+                    }`}
                 >
                   <div className="col-span-5 flex items-center gap-2 min-w-0">
                     <div
@@ -176,11 +178,10 @@ function ParticipantsModal({ open, onClose, formation, inscriptions }) {
                   </div>
 
                   <div className="col-span-3">
-                    <span className={`text-[9px] font-bold px-2 py-1 rounded-full ${
-                      insc.statut === 'confirmee' ? 'bg-emerald-100 text-emerald-800' :
+                    <span className={`text-[9px] font-bold px-2 py-1 rounded-full ${insc.statut === 'confirmee' ? 'bg-emerald-100 text-emerald-800' :
                       insc.statut === 'en_attente' ? 'bg-amber-100 text-amber-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                        'bg-red-100 text-red-800'
+                      }`}>
                       {insc.statut === 'confirmee' ? 'Confirmée' : insc.statut === 'en_attente' ? 'En attente' : 'Annulée'}
                     </span>
                   </div>
@@ -320,9 +321,37 @@ export default function TrainerFormations({ session }) {
     programme: '', prerequis: '', materiel: '',
     statut: 'planifiee',
     reservation_id: '',
+    mode: 'sur_place', // 'sur_place' | 'online'
   };
   const [form, setForm] = useState(emptyForm);
   const [spaceCheck, setSpaceCheck] = useState({ status: 'idle', message: '' });
+
+  /* ─── Coworking & Espaces formation ─── */
+  const [tenants, setTenants] = useState([]);
+  const [selectedTenantId, setSelectedTenantId] = useState('');
+  const [espacesFormation, setEspacesFormation] = useState([]);
+  const [loadingEspaces, setLoadingEspaces] = useState(false);
+
+  /* Calcul du coût et espace sélectionné */
+  const getSelectedSpace = () => {
+    if (!form.espace_id) return null;
+    return espacesFormation.find(e => e.id === form.espace_id) || espaces.find(e => e.id === form.espace_id);
+  };
+
+  const calculateSpaceHours = () => {
+    if (!form.date_debut || !form.date_fin) return 0;
+    const d1 = new Date(form.date_debut);
+    const d2 = new Date(form.date_fin);
+    if (isNaN(d1) || isNaN(d2) || d2 <= d1) return 0;
+    return Math.max(1, (d2 - d1) / (1000 * 60 * 60));
+  };
+
+  const calculateSpacePrice = () => {
+    const esp = getSelectedSpace();
+    if (!esp || !esp.tarif_horaire) return 0;
+    const hours = calculateSpaceHours();
+    return parseFloat((hours * parseFloat(esp.tarif_horaire)).toFixed(2));
+  };
 
   useEffect(() => { loadUserData(); }, []);
   useEffect(() => {
@@ -331,52 +360,62 @@ export default function TrainerFormations({ session }) {
     return () => clearTimeout(t);
   }, [success]);
 
+  /* ─── Chargement des espaces selon tenant + dates ─── */
   useEffect(() => {
-    if (!showFormModal || !form.espace_id || !form.date_debut || !form.date_fin) {
-      setSpaceCheck({ status: 'idle', message: '' });
-      return;
-    }
-    const start = new Date(form.date_debut);
-    const end = new Date(form.date_fin);
-    if (!(start < end)) {
+    if (!showFormModal || !selectedTenantId) {
+      setEspacesFormation([]);
       setSpaceCheck({ status: 'idle', message: '' });
       return;
     }
     let cancelled = false;
     const timer = setTimeout(async () => {
-      setSpaceCheck({ status: 'checking', message: 'Vérification de la salle…' });
+      setLoadingEspaces(true);
       try {
-        const payload = {
-          espace_id: form.espace_id,
-          date_debut: start.toISOString(),
-          date_fin: end.toISOString(),
-          exclusive: true,
-        };
-        if (form.reservation_id) payload.exclude_reservation_id = form.reservation_id;
-        const res = await bookingApi.checkAvailability(payload);
-        if (cancelled) return;
-        if (res.isAvailable) {
-          setSpaceCheck({
-            status: 'ok',
-            message: 'Salle disponible. Une réservation d’espace sera créée en même temps que la formation.',
-          });
-        } else {
-          setSpaceCheck({
-            status: 'conflict',
-            message: res.message || "Cette salle n'est pas disponible à cette date. Changez la date de la formation ou choisissez une autre salle.",
-          });
+        const params = { tenant_id: selectedTenantId };
+        if (form.date_debut && form.date_fin && new Date(form.date_debut) < new Date(form.date_fin)) {
+          params.date_debut = new Date(form.date_debut).toISOString();
+          params.date_fin = new Date(form.date_fin).toISOString();
         }
-      } catch (err) {
+        if (form.reservation_id) params.exclude_reservation_id = form.reservation_id;
+        const res = await bookingApi.getEspacesFormation(params);
         if (!cancelled) {
-          setSpaceCheck({ status: 'conflict', message: err.message });
+          setEspacesFormation(res.espaces || []);
+          const ids = (res.espaces || []).map(e => e.id);
+          if (form.espace_id && !ids.includes(form.espace_id)) {
+            setForm(p => ({ ...p, espace_id: '' }));
+          }
         }
+      } catch {
+        if (!cancelled) setEspacesFormation([]);
+      } finally {
+        if (!cancelled) setLoadingEspaces(false);
       }
-    }, 400);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [showFormModal, form.espace_id, form.date_debut, form.date_fin, form.reservation_id]);
+    }, 350);
+    return () => { cancelled = true; clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showFormModal, selectedTenantId, form.date_debut, form.date_fin, form.reservation_id]);
+
+  /* ─── Mise à jour du spaceCheck selon l'espace sélectionné ─── */
+  useEffect(() => {
+    if (!form.espace_id || espacesFormation.length === 0) {
+      setSpaceCheck({ status: 'idle', message: '' });
+      return;
+    }
+    const espace = espacesFormation.find(e => e.id === form.espace_id);
+    if (!espace) { setSpaceCheck({ status: 'idle', message: '' }); return; }
+    if (espace.disponible === false) {
+      setSpaceCheck({ status: 'conflict', message: espace.raison_indisponibilite || "Cet espace n'est pas disponible." });
+    } else if (espace.disponible === true) {
+      setSpaceCheck({
+        status: 'ok',
+        message: espace.type === 'open_space'
+          ? 'Open space disponible. Une réservation sera créée automatiquement.'
+          : 'Salle de formation disponible. Une réservation sera créée automatiquement.',
+      });
+    } else {
+      setSpaceCheck({ status: 'idle', message: '' });
+    }
+  }, [form.espace_id, espacesFormation]);
 
   /* ─── Data Loading ─── */
   const loadUserData = async () => {
@@ -393,13 +432,15 @@ export default function TrainerFormations({ session }) {
   const refreshData = async (trainerId) => {
     try {
       const id = trainerId || profile?.id;
-      const [fList, eList] = await Promise.all([
+      const [fList, eList, tList] = await Promise.all([
         formationApi.getAll({ formateur_id: id }),
         bookingApi.getEspaces(),
+        bookingApi.getTenants(),
       ]);
       const fData = fList.formations || [];
       setFormations(fData);
       setEspaces(eList.espaces || []);
+      setTenants(tList.tenants || []);
 
       // Charger les inscriptions
       if (fData.length > 0) {
@@ -426,6 +467,9 @@ export default function TrainerFormations({ session }) {
   const openCreate = () => {
     setForm({ ...emptyForm });
     setSelectedFormation(null);
+    setSelectedTenantId('');
+    setEspacesFormation([]);
+    setSpaceCheck({ status: 'idle', message: '' });
     setError('');
     setShowFormModal(true);
   };
@@ -433,6 +477,9 @@ export default function TrainerFormations({ session }) {
   /* ─── Open Edit Modal ─── */
   const openEdit = (f) => {
     setSelectedFormation(f);
+    // Retrouver le tenant de l'espace existant
+    const espaceExistant = espaces.find(e => e.id === f.espace_id);
+    setSelectedTenantId(espaceExistant?.tenant_id || '');
     setForm({
       id: f.id,
       titre: f.titre || '',
@@ -447,6 +494,7 @@ export default function TrainerFormations({ session }) {
       materiel: f.materiel || '',
       statut: f.statut || 'planifiee',
       reservation_id: f.reservation_id || '',
+      mode: f.reservations?.mode === 'online' ? 'online' : 'sur_place',
     });
     setError('');
     setShowFormModal(true);
@@ -472,6 +520,8 @@ export default function TrainerFormations({ session }) {
         date_debut: new Date(form.date_debut).toISOString(),
         date_fin: new Date(form.date_fin).toISOString(),
         espace_id: form.espace_id || null,
+        mode: form.mode || 'sur_place',
+        tenant_id: selectedTenantId || undefined,
       };
 
       if (form.id) {
@@ -484,6 +534,8 @@ export default function TrainerFormations({ session }) {
 
       setShowFormModal(false);
       setForm(emptyForm);
+      setSelectedTenantId('');
+      setEspacesFormation([]);
       await refreshData();
     } catch (err) { setError(err.message); }
     finally { setFormSaving(false); }
@@ -513,9 +565,19 @@ export default function TrainerFormations({ session }) {
   }, 0);
 
   /* ─── Filtered List ─── */
+  const [currentPage, setCurrentPage] = useState(1);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatut]);
+
   const filteredFormations = filterStatut
     ? formations.filter(f => f.statut === filterStatut)
     : formations;
+
+  const pagedFormations = filteredFormations.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center">
@@ -600,11 +662,10 @@ export default function TrainerFormations({ session }) {
             <button
               key={key}
               onClick={() => setFilterStatut(key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs transition-all ${
-                filterStatut === key
-                  ? 'bg-secondary text-white shadow-sm'
-                  : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs transition-all ${filterStatut === key
+                ? 'bg-secondary text-white shadow-sm'
+                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
+                }`}
             >
               {label}
               <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${filterStatut === key ? 'bg-white/20' : 'bg-outline-variant/20'}`}>
@@ -640,7 +701,7 @@ export default function TrainerFormations({ session }) {
           <>
             {/* Mobile Cards */}
             <div className="sm:hidden space-y-3">
-              {filteredFormations.map((f) => {
+              {pagedFormations.map((f) => {
                 const formInscrits = (inscriptions[f.id] || []).filter(i => i.statut !== 'annulee');
                 const nbInscrits = formInscrits.length;
                 const fillPct = f.capacite_max > 0 ? Math.min(100, Math.round((nbInscrits / f.capacite_max) * 100)) : 0;
@@ -709,7 +770,7 @@ export default function TrainerFormations({ session }) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/10">
-                    {filteredFormations.map((f) => {
+                    {pagedFormations.map((f) => {
                       const nbInscrits = (inscriptions[f.id] || []).filter(i => i.statut !== 'annulee').length;
                       const fillPct = f.capacite_max > 0 ? Math.min(100, Math.round((nbInscrits / f.capacite_max) * 100)) : 0;
                       return (
@@ -783,6 +844,23 @@ export default function TrainerFormations({ session }) {
                   </tbody>
                 </table>
               </div>
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredFormations.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setCurrentPage}
+                label="formations"
+              />
+            </div>
+            {/* Mobile Pagination */}
+            <div className="sm:hidden">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredFormations.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setCurrentPage}
+                label="formations"
+              />
             </div>
           </>
         )}
@@ -837,57 +915,260 @@ export default function TrainerFormations({ session }) {
             />
           </Field>
 
-          <Field label="Salle / Espace">
-            <select
-              className={inputCls}
-              value={form.espace_id}
-              onChange={e => setForm(p => ({ ...p, espace_id: e.target.value }))}
-            >
-              <option value="">— Sélectionner un espace (optionnel) —</option>
-              {espaces.map(e => (
-                <option key={e.id} value={e.id}>{e.nom} ({e.type?.replace(/_/g, ' ')})</option>
-              ))}
-            </select>
-            <p className="text-[11px] text-on-surface-variant mt-1">
-              Si vous choisissez une salle, une réservation d’espace est créée automatiquement pour les mêmes dates.
-            </p>
-          </Field>
+          {/* ══ ÉTAPE 1 : Créneau horaire ══ */}
+          <div className="rounded-2xl border border-indigo-200 p-4 space-y-3" style={{ background: '#f5f3ff' }}>
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-indigo-600" style={{ fontSize: 14 }}>calendar_today</span>
+              </span>
+              <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider">
+                Étape 1 — Créneau horaire
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Date & Heure de début" required>
+                <input
+                  type="datetime-local"
+                  className={inputCls}
+                  required
+                  value={form.date_debut}
+                  onChange={e => setForm(p => ({ ...p, date_debut: e.target.value, espace_id: '' }))}
+                />
+              </Field>
+              <Field label="Date & Heure de fin" required>
+                <input
+                  type="datetime-local"
+                  className={inputCls}
+                  required
+                  value={form.date_fin}
+                  onChange={e => setForm(p => ({ ...p, date_fin: e.target.value, espace_id: '' }))}
+                />
+              </Field>
+            </div>
+            {form.date_debut && form.date_fin && new Date(form.date_debut) >= new Date(form.date_fin) && (
+              <p className="text-xs text-red-600 font-semibold flex items-center gap-1">
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>error</span>
+                La date de fin doit être postérieure à la date de début.
+              </p>
+            )}
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Date & Heure de début" required>
-              <input
-                type="datetime-local"
+          {/* ══ ÉTAPE 2 : Coworking Space (désactivé si dates invalides) ══ */}
+          <div className={`rounded-2xl border p-4 space-y-3 transition-all duration-200 ${!form.date_debut || !form.date_fin || new Date(form.date_debut) >= new Date(form.date_fin)
+            ? 'border-slate-200 bg-slate-50 opacity-50 pointer-events-none select-none'
+            : 'border-amber-200 bg-amber-50'
+            }`}>
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-amber-600" style={{ fontSize: 14 }}>apartment</span>
+              </span>
+              <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">
+                Étape 2 — Coworking Space
+              </span>
+            </div>
+            <Field label="Choisir un coworking space">
+              <select
                 className={inputCls}
-                required
-                value={form.date_debut}
-                onChange={e => setForm(p => ({ ...p, date_debut: e.target.value }))}
-              />
-            </Field>
-            <Field label="Date & Heure de fin" required>
-              <input
-                type="datetime-local"
-                className={inputCls}
-                required
-                value={form.date_fin}
-                onChange={e => setForm(p => ({ ...p, date_fin: e.target.value }))}
-              />
+                value={selectedTenantId}
+                onChange={e => {
+                  setSelectedTenantId(e.target.value);
+                  setForm(p => ({ ...p, espace_id: '' }));
+                }}
+              >
+                <option value="">— Sélectionner un coworking —</option>
+                {tenants.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.nom}{t.ville ? ` — ${t.ville}` : ''}
+                  </option>
+                ))}
+              </select>
+              {tenants.length === 0 && (
+                <p className="text-[11px] text-on-surface-variant/60 mt-1">
+                  Aucun coworking disponible sur la plateforme.
+                </p>
+              )}
             </Field>
           </div>
 
-          {spaceCheck.status !== 'idle' && (
-            <div className={`p-3 rounded-xl text-xs font-semibold flex items-start gap-2 ${
-              spaceCheck.status === 'ok'
-                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                : spaceCheck.status === 'conflict'
-                  ? 'bg-red-50 text-red-800 border border-red-200'
-                  : 'bg-amber-50 text-amber-800 border border-amber-200'
+          {/* ══ ÉTAPE 3 : Espace (désactivé si pas de tenant choisi) ══ */}
+          <div className={`rounded-2xl border p-4 space-y-3 transition-all duration-200 ${!selectedTenantId
+            ? 'border-slate-200 bg-slate-50 opacity-50 pointer-events-none select-none'
+            : 'border-emerald-200 bg-emerald-50'
             }`}>
-              <span className="material-symbols-outlined shrink-0" style={{ fontSize: 16 }}>
-                {spaceCheck.status === 'ok' ? 'check_circle' : spaceCheck.status === 'conflict' ? 'event_busy' : 'hourglass_top'}
-              </span>
-              <span>{spaceCheck.message}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 14 }}>door_open</span>
+                </span>
+                <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
+                  Étape 3 — Espace
+                </span>
+              </div>
+              {loadingEspaces && (
+                <span className="animate-spin h-4 w-4 border-2 border-emerald-500 border-t-transparent rounded-full shrink-0" />
+              )}
             </div>
-          )}
+
+            {selectedTenantId && !loadingEspaces && espacesFormation.length === 0 && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                <span className="material-symbols-outlined shrink-0" style={{ fontSize: 15 }}>warning</span>
+                Aucune salle de formation ou open space disponible dans ce coworking.
+              </div>
+            )}
+
+            {selectedTenantId && !loadingEspaces && espacesFormation.length > 0 && (
+              <Field label="Salle de formation ou Open space">
+                <select
+                  className={inputCls}
+                  value={form.espace_id}
+                  onChange={e => setForm(p => ({ ...p, espace_id: e.target.value }))}
+                >
+                  <option value="">— Sélectionner un espace (optionnel) —</option>
+                  {espacesFormation.filter(e => e.type === 'training_room').length > 0 && (
+                    <optgroup label="Salles de formation">
+                      {espacesFormation
+                        .filter(e => e.type === 'training_room')
+                        .map(e => (
+                          <option key={e.id} value={e.id} disabled={e.disponible === false}>
+                            {e.disponible === false ? '[Indisponible] ' : ''}{e.nom} — {e.capacite} places
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                  {espacesFormation.filter(e => e.type === 'open_space').length > 0 && (
+                    <optgroup label="Open spaces">
+                      {espacesFormation
+                        .filter(e => e.type === 'open_space')
+                        .map(e => (
+                          <option key={e.id} value={e.id} disabled={e.disponible === false}>
+                            {e.disponible === false ? '[Occupé] ' : ''}{e.nom} — {e.capacite} places
+                            {e.disponible === false ? ' (choisir une salle de formation)' : ''}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                </select>
+
+                {spaceCheck.status !== 'idle' && (
+                  <div className={`mt-2 p-3 rounded-xl text-xs font-semibold flex items-start gap-2 ${spaceCheck.status === 'ok'
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    : spaceCheck.status === 'conflict'
+                      ? 'bg-red-50 text-red-800 border border-red-200'
+                      : 'bg-amber-50 text-amber-800 border border-amber-200'
+                    }`}>
+                    <span className="material-symbols-outlined shrink-0" style={{ fontSize: 16 }}>
+                      {spaceCheck.status === 'ok' ? 'check_circle' : spaceCheck.status === 'conflict' ? 'event_busy' : 'hourglass_top'}
+                    </span>
+                    <span>{spaceCheck.message}</span>
+                  </div>
+                )}
+
+                <p className="text-[11px] text-on-surface-variant mt-1">
+                  Seules les salles de formation et open spaces sont affichés.
+                  Un open space est bloqué dès qu'une réservation existe dans le même créneau.
+                </p>
+              </Field>
+            )}
+
+            {/* Si un espace est sélectionné et disponible : Estimation du coût & Mode de paiement */}
+            {form.espace_id && getSelectedSpace() && spaceCheck.status !== 'conflict' && (
+              <div className="mt-3 pt-3 border-t border-emerald-200/80 space-y-3">
+                {/* Récapitulatif du coût de location */}
+                <div className="p-3.5 rounded-2xl bg-white/90 border border-emerald-200 flex items-center justify-between shadow-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-emerald-700" style={{ fontSize: 18 }}>payments</span>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-800">Coût de location de l'espace</p>
+                      <p className="text-[11px] text-slate-500">
+                        {getSelectedSpace()?.tarif_horaire || 0} DT/h × {calculateSpaceHours().toFixed(1)} h
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-sora font-bold text-xl text-emerald-700">{calculateSpacePrice()}</span>
+                    <span className="text-xs font-bold text-emerald-600 ml-1">DT</span>
+                  </div>
+                </div>
+
+                {/* Sélection du mode de paiement */}
+                <div>
+                  <label className="block text-xs font-bold text-emerald-950 mb-2">
+                    Mode de paiement de la réservation *
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {/* Option 1 : Sur place */}
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setForm(p => ({ ...p, mode: 'sur_place' }))}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setForm(p => ({ ...p, mode: 'sur_place' })); }}
+                      className={`p-3 rounded-2xl border-2 cursor-pointer transition-all duration-150 relative ${form.mode === 'sur_place'
+                        ? 'border-secondary bg-secondary/5 shadow-xs'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`material-symbols-outlined text-lg ${form.mode === 'sur_place' ? 'text-secondary' : 'text-slate-500'}`}>
+                          storefront
+                        </span>
+                        <span className={`text-xs font-bold ${form.mode === 'sur_place' ? 'text-slate-900' : 'text-slate-700'}`}>
+                          Sur place
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-tight">
+                        À l'accueil le jour J (Espèces, chèque ou TPE).
+                      </p>
+                      {form.mode === 'sur_place' && (
+                        <span className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-secondary" />
+                      )}
+                    </div>
+
+                    {/* Option 2 : En ligne */}
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setForm(p => ({ ...p, mode: 'online' }))}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setForm(p => ({ ...p, mode: 'online' })); }}
+                      className={`p-3 rounded-2xl border-2 cursor-pointer transition-all duration-150 relative ${form.mode === 'online'
+                        ? 'border-secondary bg-secondary/5 shadow-xs'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`material-symbols-outlined text-lg ${form.mode === 'online' ? 'text-secondary' : 'text-slate-500'}`}>
+                          credit_card
+                        </span>
+                        <span className={`text-xs font-bold ${form.mode === 'online' ? 'text-slate-900' : 'text-slate-700'}`}>
+                          En ligne
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-tight">
+                        Par carte bancaire (dès acceptation admin).
+                      </p>
+                      {form.mode === 'online' && (
+                        <span className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-secondary" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Note explicative du workflow */}
+                  <div className="mt-2.5 p-3 rounded-xl bg-white/95 border border-emerald-200/90 text-[11px] text-slate-600 leading-relaxed">
+                    {form.mode === 'sur_place' ? (
+                      <>
+                        ℹ️ <strong>Processus :</strong> Votre réservation sera transmise au coworking en attente. Une fois acceptée par l'administrateur, votre salle est garantie et vous réglerez à votre arrivée à l'accueil.
+                      </>
+                    ) : (
+                      <>
+                        ℹ️ <strong>Processus :</strong> Votre réservation sera transmise au coworking en attente. Dès que l'administrateur l'aura acceptée, vous pourrez régler en ligne par carte bancaire.
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Capacité max (places)" required>

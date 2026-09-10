@@ -35,6 +35,8 @@ const conversationsRoutes = require('./routes/conversations.routes');
 const memberPortalRoutes  = require('./routes/memberPortal.routes');
 const createModulesHJKLNRouter = require('./routes/modulesHJKLN');
 const otpRoutes               = require('./routes/otp.routes');
+const contactRoutes           = require('./routes/contact.routes');
+const passwordRoutes          = require('./routes/password.routes');
 
 // ── Middleware de supabase (partagé pour les middlewares legacy) ───────────
 const { authenticate } = require('./middleware/authenticate');
@@ -70,6 +72,8 @@ app.use('/api', kpisRoutes);
 app.use('/api', conversationsRoutes);
 app.use('/api', memberPortalRoutes);
 app.use('/api', otpRoutes);
+app.use('/api', contactRoutes);
+app.use('/api', passwordRoutes);
 
 // ── Modules H, J, K, L, N (router factory) ───────────────────────────────
 const modulesHJKLNRouter = createModulesHJKLNRouter({ supabaseAdmin, authenticate, requireRoles, applyTenantFilter });

@@ -244,23 +244,23 @@ async function getStats(req, res) {
       };
     });
 
-    // ── Coworkings les plus performants (CA généré par tenant sur la période) ──
+    // ── Coworkings les plus performants — en parallèle ───────────────────
     const tenantNames = {};
     (tenants || []).forEach((t) => { tenantNames[t.id] = t.nom; });
     const perfMap = {};
 
-    const { data: topPaiements } = await supabaseAdmin
-      .from('paiements').select('tenant_id, montant').eq('statut', 'paid')
-      .gte('date_paiement', win.from).lte('date_paiement', win.to);
+    const [{ data: topPaiements }, { data: topReservations }] = await Promise.all([
+      supabaseAdmin.from('paiements').select('tenant_id, montant').eq('statut', 'paid')
+        .gte('date_paiement', win.from).lte('date_paiement', win.to),
+      supabaseAdmin.from('reservations').select('tenant_id').in('statut', ['confirmed', 'pending'])
+        .gte('date_debut', win.from).lte('date_debut', win.to),
+    ]);
+
     (topPaiements || []).forEach((p) => {
       if (!p.tenant_id) return;
       if (!perfMap[p.tenant_id]) perfMap[p.tenant_id] = { nom: tenantNames[p.tenant_id] || 'Inconnu', ca: 0, bookings: 0 };
       perfMap[p.tenant_id].ca += parseFloat(p.montant || 0);
     });
-
-    const { data: topReservations } = await supabaseAdmin
-      .from('reservations').select('tenant_id').in('statut', ['confirmed', 'pending'])
-      .gte('date_debut', win.from).lte('date_debut', win.to);
     (topReservations || []).forEach((r) => {
       if (!r.tenant_id) return;
       if (!perfMap[r.tenant_id]) perfMap[r.tenant_id] = { nom: tenantNames[r.tenant_id] || 'Inconnu', ca: 0, bookings: 0 };

@@ -1,6 +1,7 @@
 // controllers/espacesController.js — MODULE B + ADMIN : Espaces & Tenant config
 const { supabaseAdmin } = require('../config/supabase');
 const { applyTenantFilter } = require('../middleware/guards');
+const { getBookingAvailability, FORMATION_ROOM_UNAVAILABLE } = require('../models/helpers');
 
 async function listEspaces(req, res) {
   try {
@@ -216,8 +217,81 @@ async function completeOnboarding(req, res) {
   }
 }
 
+async function listTenants(req, res) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('tenants')
+      .select('id, nom, adresse, ville, email, telephone, logo_url, statut')
+      .eq('statut', 'actif')
+      .order('nom', { ascending: true });
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ tenants: data || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function listEspacesFormation(req, res) {
+  try {
+    const { tenant_id, date_debut, date_fin, exclude_reservation_id } = req.query;
+    if (!tenant_id) {
+      return res.status(400).json({ error: 'tenant_id est requis.' });
+    }
+
+    const { data: espaces, error } = await supabaseAdmin
+      .from('espaces')
+      .select('*')
+      .eq('tenant_id', tenant_id)
+      .in('type', ['training_room', 'open_space', 'salle_formation'])
+      .order('nom', { ascending: true });
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    if (!date_debut || !date_fin) {
+      return res.json({ espaces: (espaces || []).map(e => ({ ...e, disponible: true })) });
+    }
+
+    const enriched = await Promise.all((espaces || []).map(async (espace) => {
+      try {
+        const avail = await getBookingAvailability(
+          espace.id,
+          date_debut,
+          date_fin,
+          exclude_reservation_id,
+          { exclusive: true }
+        );
+        let raison = null;
+        if (!avail.isAvailable) {
+          if (espace.type === 'open_space') {
+            raison = "Cet open space a déjà des réservations sur ce créneau. Une formation requiert l'espace complet libre.";
+          } else {
+            raison = avail.conflictMessage || "Cette salle est déjà réservée sur ce créneau.";
+          }
+        }
+        return {
+          ...espace,
+          disponible: avail.isAvailable,
+          raison_indisponibilite: raison,
+        };
+      } catch (err) {
+        return {
+          ...espace,
+          disponible: false,
+          raison_indisponibilite: err.message,
+        };
+      }
+    }));
+
+    res.json({ espaces: enriched });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   listEspaces,
+  listTenants,
+  listEspacesFormation,
   getAdminTenant,
   updateAdminTenant,
   createAdminEspace,
@@ -225,3 +299,4 @@ module.exports = {
   deleteAdminEspace,
   completeOnboarding,
 };
+

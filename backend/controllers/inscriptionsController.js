@@ -2,8 +2,41 @@
 const { supabaseAdmin } = require('../config/supabase');
 const { notifyInscriptionFormation } = require('../services/notificationService');
 
+async function resolveFormationReservationId(formation) {
+  if (formation?.espace_id) {
+    const { data: matchedRes } = await supabaseAdmin
+      .from('reservations')
+      .select('id')
+      .eq('espace_id', formation.espace_id)
+      .eq('date_debut', formation.date_debut)
+      .maybeSingle();
+    if (matchedRes?.id) return matchedRes.id;
+  }
+
+  if (formation?.tenant_id) {
+    const { data: tenantRes } = await supabaseAdmin
+      .from('reservations')
+      .select('id')
+      .eq('tenant_id', formation.tenant_id)
+      .limit(1)
+      .maybeSingle();
+    if (tenantRes?.id) return tenantRes.id;
+  }
+
+  const { data: anyRes } = await supabaseAdmin
+    .from('reservations')
+    .select('id')
+    .limit(1)
+    .maybeSingle();
+  if (anyRes?.id) return anyRes.id;
+
+  return null;
+}
+
 async function createInscription(req, res) {
   const formationId = req.params.id;
+  const rawMode = req.body?.mode || 'sur_place';
+  const paymentMode = (rawMode === 'sur_place' || rawMode === 'cash' || rawMode === 'on_site') ? 'cash' : 'online';
 
   try {
     const { data: formation, error: fErr } = await supabaseAdmin
@@ -41,25 +74,31 @@ async function createInscription(req, res) {
 
     if (insErr) return res.status(400).json({ error: insErr.message });
 
+    let createdPayment = null;
     if (formation.prix_inscription > 0 && !inscription.paiement_id) {
+      const reservationId = await resolveFormationReservationId(formation);
+      const targetTenantId = formation.tenant_id || req.tenantId || null;
+
       const { data: payment, error: payErr } = await supabaseAdmin
         .from('paiements')
         .insert({
           user_id: req.user.id,
-          reservation_id: null,
+          reservation_id: reservationId,
           abonnement_id: null,
           montant: parseFloat(formation.prix_inscription),
-          mode: 'online',
+          mode: paymentMode,
           statut: 'pending',
-          date_paiement: null,
+          tenant_id: targetTenantId,
         })
         .select()
         .single();
 
       if (payErr) {
         console.error('Erreur création paiement formation:', payErr.message);
-        return res.status(500).json({ error: 'Impossible de créer le paiement associé à l\'inscription.' });
+        return res.status(500).json({ error: 'Impossible de créer le paiement associé à l\'inscription: ' + payErr.message });
       }
+
+      createdPayment = payment;
 
       await supabaseAdmin
         .from('inscriptions_formations')
@@ -76,7 +115,16 @@ async function createInscription(req, res) {
       );
     } catch (notifErr) { console.warn('⚠️ Notif inscription formation:', notifErr.message); }
 
-    res.status(201).json({ inscription, message: 'Inscription confirmée.', places_restantes: placesRestantes - 1 });
+    const confirmMsg = formation.prix_inscription > 0
+      ? (paymentMode === 'cash' ? 'Inscription confirmée ! Le règlement s\'effectuera sur place à l\'accueil.' : 'Inscription confirmée ! Vous pouvez procéder au paiement en ligne.')
+      : 'Inscription confirmée avec succès !';
+
+    res.status(201).json({
+      inscription,
+      payment: createdPayment,
+      message: confirmMsg,
+      places_restantes: placesRestantes - 1,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -84,6 +132,8 @@ async function createInscription(req, res) {
 
 async function createInscriptionPayment(req, res) {
   const formationId = req.params.id;
+  const rawMode = req.body?.mode || 'online';
+  const paymentMode = (rawMode === 'sur_place' || rawMode === 'cash' || rawMode === 'on_site') ? 'cash' : 'online';
 
   try {
     const { data: inscription, error: insErr } = await supabaseAdmin
@@ -100,7 +150,7 @@ async function createInscriptionPayment(req, res) {
 
     const { data: formation, error: formationErr } = await supabaseAdmin
       .from('formations')
-      .select('id, titre, prix_inscription')
+      .select('id, titre, prix_inscription, espace_id, date_debut, tenant_id')
       .eq('id', formationId)
       .single();
 
@@ -117,22 +167,33 @@ async function createInscriptionPayment(req, res) {
         .select('*')
         .eq('id', inscription.paiement_id)
         .single();
-      if (payErr || !existingPayment) {
-        return res.status(500).json({ error: 'Impossible de retrouver le paiement existant.' });
+      if (!payErr && existingPayment) {
+        if (existingPayment.mode !== paymentMode) {
+          const { data: updatedPay } = await supabaseAdmin
+            .from('paiements')
+            .update({ mode: paymentMode })
+            .eq('id', existingPayment.id)
+            .select()
+            .single();
+          return res.json({ payment: updatedPay || existingPayment });
+        }
+        return res.json({ payment: existingPayment });
       }
-      return res.json({ payment: existingPayment });
     }
+
+    const reservationId = await resolveFormationReservationId(formation);
+    const targetTenantId = formation.tenant_id || req.tenantId || null;
 
     const { data: payment, error: payErr } = await supabaseAdmin
       .from('paiements')
       .insert({
         user_id: req.user.id,
-        reservation_id: null,
+        reservation_id: reservationId,
         abonnement_id: null,
         montant: parseFloat(formation.prix_inscription),
-        mode: 'online',
+        mode: paymentMode,
         statut: 'pending',
-        date_paiement: null,
+        tenant_id: targetTenantId,
       })
       .select()
       .single();
@@ -173,23 +234,24 @@ async function cancelInscription(req, res) {
     if (premier) {
       const { data: payment } = await supabaseAdmin
         .from('formations')
-        .select('prix_inscription')
+        .select('prix_inscription, espace_id, date_debut, tenant_id')
         .eq('id', req.params.id)
         .single();
 
       const updates = { statut: 'confirmee', updated_at: new Date().toISOString() };
 
       if (payment?.prix_inscription > 0 && !premier.paiement_id) {
+        const reservationId = await resolveFormationReservationId(payment);
         const { data: newPayment, error: payInsertErr } = await supabaseAdmin
           .from('paiements')
           .insert({
             user_id: premier.user_id,
-            reservation_id: null,
+            reservation_id: reservationId,
             abonnement_id: null,
             montant: parseFloat(payment.prix_inscription),
             mode: 'online',
             statut: 'pending',
-            date_paiement: null,
+            tenant_id: payment.tenant_id || null,
           })
           .select()
           .single();
@@ -305,4 +367,5 @@ module.exports = {
   listInscriptions,
   updatePresence,
   getEmargement,
+  resolveFormationReservationId,
 };

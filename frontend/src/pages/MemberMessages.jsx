@@ -152,7 +152,7 @@ export default function MemberMessages() {
       }
       setConversations(convs);
     } catch (err) {
-      console.error('Failed to fetch conversations:', err);
+      /* silencieux */
     } finally {
       setLoading(false);
     }
@@ -167,7 +167,7 @@ export default function MemberMessages() {
       const data = await res.json();
       setTeam(data.team || []);
     } catch (err) {
-      console.error('Failed to fetch team:', err);
+      /* silencieux */
     }
   }, []);
 
@@ -189,7 +189,7 @@ export default function MemberMessages() {
           setConversations(prev => [conv, ...prev]);
         }
       } catch (err) {
-        console.error('Failed to create support conversation:', err);
+        /* silencieux */
       }
     }
     if (conv) selectConversation(conv);
@@ -245,7 +245,7 @@ export default function MemberMessages() {
       });
     });
 
-    socket.on('disconnect', () => console.log('🔌 Socket déconnecté'));
+    socket.on('disconnect', () => {});
     socket.on('reconnect', () => {
       socket.emit('join:user', profile.id);
     });
@@ -279,7 +279,7 @@ export default function MemberMessages() {
 
       setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0, currentUserId: profile?.id } : c));
     } catch (err) {
-      console.error('Failed to load messages:', err);
+      /* silencieux */
     }
   }, [profile?.id, joinConversation]);
 

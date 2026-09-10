@@ -81,7 +81,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex font-inter text-on-surface">
+    <div className="min-h-screen min-w-0 flex font-inter text-on-surface">
 
       {/* ══════════════════════════════════════════
           PANNEAU GAUCHE — Illustratif (desktop only)
@@ -201,7 +201,7 @@ export default function Login() {
       {/* ══════════════════════════════════════════
           PANNEAU DROIT — Formulaire
           ══════════════════════════════════════════ */}
-      <div className="flex-1 page-gradient flex flex-col relative overflow-hidden">
+      <div className="w-full min-w-0 flex-1 page-gradient flex flex-col relative overflow-hidden">
         {/* Blobs background */}
         <div className="absolute -bottom-24 -right-24 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(circle, rgba(249,93,0,0.08), transparent)' }} />
@@ -209,7 +209,7 @@ export default function Login() {
           style={{ background: 'radial-gradient(circle, rgba(16,15,13,0.06), transparent)' }} />
 
         {/* Header mobile — logo visible uniquement sur petit écran */}
-        <header className="lg:hidden flex items-center justify-between px-6 py-4 relative z-10">
+        <header className="auth-mobile-header lg:hidden flex items-center justify-between px-6 py-4 relative z-10">
           <BrandLogo to="/" />
           <Link to="/register" className="text-secondary font-semibold text-sm hover:underline">
             Créer un compte
@@ -217,12 +217,12 @@ export default function Login() {
         </header>
 
         {/* Formulaire centré */}
-        <main className="flex-1 flex items-center justify-center px-6 py-4 relative z-10">
+        <main className="w-full flex-1 flex items-center justify-center px-6 py-4 relative z-10">
           <div className="w-full max-w-[440px] animate-fade-up">
 
             {/* En-tête form */}
             <div className="text-center mb-5">
-              <h1 className="font-sora text-2xl font-bold text-[#100f0d] mb-1">Bon retour 👋</h1>
+              <h1 className="font-sora text-2xl font-bold text-[#100f0d] mb-1">Bon retour</h1>
               <p className="text-body-sm text-on-surface-variant">
                 Connectez-vous pour accéder à votre espace
               </p>
@@ -259,6 +259,29 @@ export default function Login() {
 
             {/* Card form */}
             <div className="glass-card rounded-3xl shadow-elevated p-6 space-y-5">
+              {/* Connexion sociale */}
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-px bg-outline-variant/30" />
+                <span className="text-label-sm text-on-surface-variant font-medium whitespace-nowrap">OU CONTINUER AVEC</span>
+                <div className="flex-1 h-px bg-outline-variant/30" />
+              </div>
+
+              <div className="auth-social-grid grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleSocialLogin('google')}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:-translate-y-px transition-all active:scale-[0.97] shadow-sm"
+                >
+                  <GoogleIcon /> Google
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSocialLogin('linkedin_oidc')}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:-translate-y-px transition-all active:scale-[0.97] shadow-sm"
+                >
+                  <LinkedInIcon /> LinkedIn
+                </button>
+              </div>
 
               <form onSubmit={handleLogin} className="space-y-4">
                 {/* Email */}
@@ -316,6 +339,12 @@ export default function Login() {
                   </div>
                 </div>
 
+                <div className="text-right -mt-1">
+                  <Link to="/forgot-password" className="text-sm font-semibold text-secondary hover:underline">
+                    Mot de passe oublié ?
+                  </Link>
+                </div>
+
                 {/* CTA */}
                 <button
                   type="submit"
@@ -330,30 +359,6 @@ export default function Login() {
                 </button>
               </form>
 
-              {/* Séparateur */}
-              <div className="flex items-center gap-4">
-                <div className="flex-1 h-px bg-outline-variant/30" />
-                <span className="text-label-sm text-on-surface-variant font-medium whitespace-nowrap">OU CONTINUER AVEC</span>
-                <div className="flex-1 h-px bg-outline-variant/30" />
-              </div>
-
-              {/* Boutons sociaux */}
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleSocialLogin('google')}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:-translate-y-px transition-all active:scale-[0.97] shadow-sm"
-                >
-                  <GoogleIcon /> Google
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSocialLogin('linkedin_oidc')}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:-translate-y-px transition-all active:scale-[0.97] shadow-sm"
-                >
-                  <LinkedInIcon /> LinkedIn
-                </button>
-              </div>
             </div>
 
             {/* Lien inscription */}

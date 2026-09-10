@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { bookingApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import Pagination from '../components/Pagination';
 
 const STATUT_CONFIG = {
   pending: {
@@ -22,6 +23,8 @@ const STATUT_CONFIG = {
   },
 };
 
+const ITEMS_PER_PAGE = 10;
+
 export default function AdminReservations({ session }) {
   const [profile, setProfile] = useState(null);
   const [bookings, setBookings] = useState([]);
@@ -30,6 +33,7 @@ export default function AdminReservations({ session }) {
   const [actionId, setActionId] = useState(null);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Filtres
   const [filterStatut, setFilterStatut] = useState('all');
@@ -136,6 +140,17 @@ export default function AdminReservations({ session }) {
       return true;
     });
   }, [bookings, filterStatut, filterEspace, searchQuery]);
+
+  // Réinitialiser la page quand les filtres changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatut, filterEspace, searchQuery]);
+
+  // Découpage paginé (10 par page)
+  const paginatedBookings = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredBookings.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredBookings, currentPage]);
 
   // Statistiques rapides
   const stats = useMemo(() => {
@@ -301,24 +316,24 @@ export default function AdminReservations({ session }) {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-surface-container-low border-b border-outline-variant/10 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
-                <th className="py-3.5 px-5">Membre</th>
-                <th className="py-3.5 px-5">Espace réservé</th>
-                <th className="py-3.5 px-5">Date & Créneau</th>
-                <th className="py-3.5 px-5">Paiement</th>
-                <th className="py-3.5 px-5">Statut</th>
-                <th className="py-3.5 px-5 text-right">Actions</th>
+              <tr className="bg-surface-container-low border-b border-outline-variant/10 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
+                <th className="py-3 px-3.5">Membre</th>
+                <th className="py-3 px-3">Espace réservé</th>
+                <th className="py-3 px-3">Date & Créneau</th>
+                <th className="py-3 px-2.5 text-center">Paiement</th>
+                <th className="py-3 px-2.5 text-center">Statut</th>
+                <th className="py-3 px-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant/10 text-sm">
+            <tbody className="divide-y divide-outline-variant/10 text-xs sm:text-sm">
               {filteredBookings.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 px-5 text-center text-on-surface-variant">
+                  <td colSpan={6} className="py-12 px-4 text-center text-on-surface-variant">
                     <div className="flex flex-col items-center justify-center">
-                      <span className="material-symbols-outlined text-on-surface-variant/30 mb-2" style={{ fontSize: 48 }}>
+                      <span className="material-symbols-outlined text-on-surface-variant/30 mb-2" style={{ fontSize: 44 }}>
                         event_busy
                       </span>
-                      <p className="font-semibold text-base text-primary">Aucune réservation trouvée</p>
+                      <p className="font-semibold text-sm text-primary">Aucune réservation trouvée</p>
                       <p className="text-xs text-on-surface-variant mt-1">
                         Modifiez vos filtres ou attendez de nouvelles demandes de réservation.
                       </p>
@@ -326,7 +341,7 @@ export default function AdminReservations({ session }) {
                   </td>
                 </tr>
               ) : (
-                filteredBookings.map((b) => {
+                paginatedBookings.map((b) => {
                   const cfg = STATUT_CONFIG[b.statut] || {
                     label: b.statut,
                     badgeClass: 'bg-gray-100 text-gray-800 border-gray-300',
@@ -336,7 +351,7 @@ export default function AdminReservations({ session }) {
                   const member = b.profiles || b.guests || {};
                   const memberName = [member.prenom || b.guests?.prenom, member.nom || b.guests?.nom].filter(Boolean).join(' ') || 'Guest';
                   const memberEmail = member.email || b.guests?.email || 'Sans email';
-                  const memberPhone = member.telephone || b.guests?.telephone || 'Sans téléphone';
+                  const memberPhone = member.telephone || b.guests?.telephone || '';
                   const memberRole = member.role === 'formateur' ? 'Formateur' : 'Membre';
                   const startDate = new Date(b.date_debut);
                   const endDate = new Date(b.date_fin);
@@ -345,47 +360,49 @@ export default function AdminReservations({ session }) {
                   return (
                     <tr key={b.id} className="hover:bg-surface-container-low/40 transition-colors">
                       {/* Membre */}
-                      <td className="py-4 px-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-secondary/10 text-secondary font-bold flex items-center justify-center text-xs shrink-0">
+                      <td className="py-2.5 px-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-secondary/10 text-secondary font-bold flex items-center justify-center text-[11px] shrink-0">
                             {(member.prenom || b.guests?.prenom || 'G')?.[0] || 'G'}{(member.nom || b.guests?.nom || '')?.[0] || ''}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-semibold text-primary truncate">
-                              {memberName}
-                            </p>
-                            <p className="text-xs text-on-surface-variant truncate">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="font-semibold text-primary truncate max-w-[150px] text-xs sm:text-sm">
+                                {memberName}
+                              </p>
+                              <span className="inline-flex items-center gap-0.5 rounded bg-slate-100 text-slate-700 px-1.5 py-0.2 text-[9px] font-semibold">
+                                <span className="material-symbols-outlined" style={{ fontSize: 10 }}>{memberRole === 'Formateur' ? 'school' : 'person'}</span>
+                                {memberRole}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-on-surface-variant truncate max-w-[160px]">
                               {memberEmail}
                             </p>
-                            <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 text-[10px] font-semibold">
-                              <span className="material-symbols-outlined" style={{ fontSize: 11 }}>{memberRole === 'Formateur' ? 'school' : 'person'}</span>
-                              {memberRole}
-                            </div>
-                            <p className="mt-1 text-[11px] text-on-surface-variant flex items-center gap-1 truncate">
-                              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>call</span>
-                              <span>{memberPhone}</span>
-                            </p>
+                            {memberPhone && (
+                              <p className="text-[10px] text-on-surface-variant/70 flex items-center gap-0.5 truncate">
+                                <span className="material-symbols-outlined" style={{ fontSize: 11 }}>call</span>
+                                <span>{memberPhone}</span>
+                              </p>
+                            )}
                           </div>
                         </div>
                       </td>
 
                       {/* Espace */}
-                      <td className="py-4 px-5 font-semibold text-primary">
-                        <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-secondary" style={{ fontSize: 18 }}>meeting_room</span>
-                          <span>{b.espaces?.nom || 'Espace inconnu'}</span>
+                      <td className="py-2.5 px-3 font-semibold text-primary">
+                        <div className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-secondary shrink-0" style={{ fontSize: 16 }}>meeting_room</span>
+                          <span className="truncate max-w-[130px] text-xs sm:text-sm" title={b.espaces?.nom}>{b.espaces?.nom || 'Espace inconnu'}</span>
                         </div>
                       </td>
 
                       {/* Date & Heures */}
-                      <td className="py-4 px-5 text-on-surface-variant">
-                        <div>
-                          <span className="font-medium text-primary">
-                            {startDate.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-                          </span>
-                        </div>
-                        <div className="text-xs text-on-surface-variant/80 mt-0.5 flex items-center gap-1">
-                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
+                      <td className="py-2.5 px-3 text-on-surface-variant whitespace-nowrap">
+                        <span className="font-medium text-primary text-xs sm:text-sm">
+                          {startDate.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                        <div className="text-[11px] text-on-surface-variant/80 mt-0.5 flex items-center gap-1">
+                          <span className="material-symbols-outlined" style={{ fontSize: 13 }}>schedule</span>
                           <span>
                             {startDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                             {' → '}
@@ -395,39 +412,41 @@ export default function AdminReservations({ session }) {
                       </td>
 
                       {/* Mode de Paiement */}
-                      <td className="py-4 px-5">
-                        {(b.mode === 'sur_place' || b.mode === 'on_site') ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-                            💵 Sur place
+                      <td className="py-2.5 px-2.5 text-center whitespace-nowrap">
+                        {(b.mode === 'sur_place' || b.mode === 'on_site' || b.mode === 'cash') ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-900 border border-amber-200 shadow-xs">
+                            <span className="material-symbols-outlined text-amber-600" style={{ fontSize: 14 }}>storefront</span>
+                            <span>Sur place</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
-                            💳 En ligne
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-900 border border-blue-200 shadow-xs">
+                            <span className="material-symbols-outlined text-blue-600" style={{ fontSize: 14 }}>credit_card</span>
+                            <span>En ligne</span>
                           </span>
                         )}
                       </td>
 
                       {/* Statut Badge */}
-                      <td className="py-4 px-5">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${cfg.badgeClass}`}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{cfg.icon}</span>
-                          {cfg.label}
+                      <td className="py-2.5 px-2.5 text-center whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${cfg.badgeClass}`}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 13 }}>{cfg.icon}</span>
+                          <span>{cfg.label}</span>
                         </span>
                       </td>
 
                       {/* Actions */}
-                      <td className="py-4 px-5 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
                           {b.statut === 'pending' && (
                             <button
                               type="button"
                               onClick={() => handleConfirmBooking(b)}
                               disabled={isActing}
-                              title={b.mode === 'sur_place' ? "Accepter (le client paiera sur place à l'accueil)" : "Accepter (autorise le client à payer en ligne)"}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50"
+                              title={b.mode === 'sur_place' || b.mode === 'on_site' ? "Accepter (paiement sur place à l'accueil)" : "Accepter (autorise le paiement en ligne)"}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-xs disabled:opacity-50"
                             >
-                              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check</span>
-                              {b.mode === 'sur_place' ? 'Accepter (sur place)' : 'Accepter (en ligne)'}
+                              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>check</span>
+                              <span>Accepter</span>
                             </button>
                           )}
 
@@ -436,19 +455,20 @@ export default function AdminReservations({ session }) {
                               type="button"
                               onClick={() => handleCancelBooking(b.id)}
                               disabled={isActing}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold transition-all disabled:opacity-50"
+                              title="Annuler la réservation"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold transition-all disabled:opacity-50"
                             >
                               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
-                              Annuler
+                              <span>Annuler</span>
                             </button>
                           )}
 
                           <Link
                             to="/admin/agenda"
                             title="Voir dans le calendrier"
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-xl border border-outline-variant/30 text-on-surface-variant hover:text-secondary hover:border-secondary transition-all"
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-xl border border-outline-variant/30 text-on-surface-variant hover:text-secondary hover:border-secondary transition-all"
                           >
-                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>calendar_month</span>
+                            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>calendar_month</span>
                           </Link>
                         </div>
                       </td>
@@ -460,11 +480,14 @@ export default function AdminReservations({ session }) {
           </table>
         </div>
 
-        {/* Footer avec résumé */}
-        <div className="py-3.5 px-5 bg-surface-container-low/50 border-t border-outline-variant/10 text-xs text-on-surface-variant flex items-center justify-between">
-          <span>{filteredBookings.length} réservation{filteredBookings.length > 1 ? 's' : ''} affichée{filteredBookings.length > 1 ? 's' : ''}</span>
-          <span className="text-secondary font-medium">Les réservations confirmées s'affichent automatiquement dans l'Agenda</span>
-        </div>
+        {/* Pagination 10 par page */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredBookings.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+          label="réservations"
+        />
       </div>
     </PortalLayout>
   );

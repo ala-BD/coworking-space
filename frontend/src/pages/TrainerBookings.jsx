@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { bookingApi, paymentApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
+import Pagination from '../components/Pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 const STATUS_CONFIG = {
   confirmed: { label: 'Confirmée',  color: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', dot: 'bg-emerald-500' },
@@ -26,6 +29,7 @@ export default function TrainerBookings({ session }) {
   const navigate = useNavigate();
   const [profile,    setProfile]    = useState(null);
   const [bookings,   setBookings]   = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading,    setLoading]    = useState(true);
   const [payingId,   setPayingId]   = useState(null);
   const [cancelId,   setCancelId]   = useState(null);
@@ -156,7 +160,7 @@ export default function TrainerBookings({ session }) {
           </div>
         ) : (
           <div className="space-y-3">
-            {bookings.map((b) => {
+            {bookings.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((b) => {
               const st = STATUS_CONFIG[b.statut] || STATUS_CONFIG.pending;
               const canCancel = ['confirmed', 'pending'].includes(b.statut);
               const canPayOnline = b.statut === 'confirmed' && b.mode === 'online' && b.paiements?.[0]?.statut !== 'paid';
@@ -231,6 +235,15 @@ export default function TrainerBookings({ session }) {
                 </div>
               );
             })}
+            <div className="bg-white rounded-2xl border border-outline-variant/15 overflow-hidden">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={bookings.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setCurrentPage}
+                label="réservations"
+              />
+            </div>
           </div>
         )}
       </div>

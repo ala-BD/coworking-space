@@ -4,25 +4,40 @@
 // Style : DeskyWork — Orange · Blanc · Noir — Design Professionnel
 
 // ── Palette couleurs (DeskyWork) ──────────────────────────────────────────────
-const PRIMARY   = '#100f0d';
+const PRIMARY = '#100f0d';
 const SECONDARY = '#f95d00';
-const ACCENT    = '#ff7a28';
-const LIGHT     = '#fff4ec';
-const MUTED     = '#6B7280';
-const SUCCESS   = '#059669';
-const WARNING   = '#D97706';
-const DANGER    = '#DC2626';
-const WHITE     = '#FFFFFF';
-const BG_PAGE   = '#F2F2F2';
+const ACCENT = '#ff7a28';
+const LIGHT = '#fff4ec';
+const MUTED = '#6B7280';
+const SUCCESS = '#059669';
+const WARNING = '#D97706';
+const DANGER = '#DC2626';
+const WHITE = '#FFFFFF';
+const BG_PAGE = '#F2F2F2';
 
 // ── Helper : en-tête DeskyWork — design professionnel ────────────────────────
 function buildHeader(config) {
   const coworkingName = config?.coworkingName || 'Espace Coworking';
   const coworkingEmail = config?.coworkingEmail || '';
-  const coworkingTel   = config?.coworkingTel   || '';
+  const coworkingTel = config?.coworkingTel || '';
+  const frontendUrl = config?.frontendUrl || process.env.FRONTEND_URL || 'http://localhost:5173';
 
   return `
     <!-- ══ HEADER ══════════════════════════════════════════════════════ -->
+    <style type="text/css">
+      :root {
+        color-scheme: light dark;
+        supported-color-schemes: light dark;
+      }
+      .desky-logo-dark { display: block !important; }
+      .desky-logo-light { display: none !important; }
+      @media (prefers-color-scheme: dark) {
+        .desky-logo-dark { display: none !important; }
+        .desky-logo-light { display: block !important; }
+      }
+      [data-ogsc] .desky-logo-dark { display: none !important; }
+      [data-ogsc] .desky-logo-light { display: block !important; }
+    </style>
     <tr>
       <td style="padding:0;">
         <!-- Bande supérieure fine orange -->
@@ -34,64 +49,44 @@ function buildHeader(config) {
         <!-- Corps de l'en-tête -->
         <table width="100%" cellpadding="0" cellspacing="0" style="background:${PRIMARY};">
           <tr>
-            <td style="padding:28px 36px 24px;">
+            <td style="padding:26px 36px 22px;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <!-- Logo DeskyWork -->
-                  <td style="vertical-align:middle;" width="60%">
-                    <table cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <!-- Icône carrée avec initiale stylisée -->
-                        <td style="vertical-align:middle;padding-right:14px;">
-                          <table cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td style="
-                                width:44px;height:44px;
-                                background:linear-gradient(135deg,${SECONDARY} 0%,${ACCENT} 100%);
-                                border-radius:12px;
-                                text-align:center;vertical-align:middle;
-                                box-shadow:0 4px 12px rgba(249,93,0,0.45);
-                              ">
-                                <span style="
-                                  font-family:'Segoe UI',Arial,sans-serif;
-                                  font-size:22px;font-weight:900;
-                                  color:#ffffff;line-height:44px;
-                                  display:block;
-                                ">D</span>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                        <!-- Nom de la marque -->
-                        <td style="vertical-align:middle;">
-                          <p style="
-                            margin:0;
-                            font-family:'Segoe UI',Arial,sans-serif;
-                            font-size:22px;font-weight:900;
-                            letter-spacing:-0.5px;
-                            color:#ffffff;line-height:1;
-                          ">DESKY<span style="color:${SECONDARY};">WORK</span></p>
-                          <p style="
-                            margin:4px 0 0;
-                            font-family:'Segoe UI',Arial,sans-serif;
-                            font-size:11px;font-weight:500;
-                            color:rgba(255,255,255,0.55);
-                            letter-spacing:0.3px;
-                          ">Solution de Gestion Coworking</p>
-                        </td>
-                      </tr>
-                    </table>
+                  <!-- Logo DeskyWork officiel adaptatif (Mode Clair & Sombre) -->
+                  <td style="vertical-align:middle;" width="55%">
+                    <a href="${frontendUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+                      <!-- Logo 2 : Texte blanc sur fond sombre (PC / Défaut) -->
+                      <div class="desky-logo-dark">
+                        <img
+                          src="cid:deskywork-logo-dark"
+                          alt="DeskyWork"
+                          width="210"
+                          style="display:block;width:210px;max-width:210px;height:auto;border:0;outline:none;text-decoration:none;"
+                        />
+                      </div>
+                      <!-- Logo 1 : Texte noir sur fond clair (Smartphone / Apple Mail Dark Mode Invert) -->
+                      <!--[if !mso]><!-->
+                      <div class="desky-logo-light" style="display:none;mso-hide:all;">
+                        <img
+                          src="cid:deskywork-logo-light"
+                          alt="DeskyWork"
+                          width="210"
+                          style="display:block;width:210px;max-width:210px;height:auto;border:0;outline:none;text-decoration:none;"
+                        />
+                      </div>
+                      <!--<![endif]-->
+                    </a>
                   </td>
                   <!-- Infos coworking à droite -->
-                  <td align="right" style="vertical-align:middle;" width="40%">
+                  <td align="right" style="vertical-align:middle;" width="45%">
                     <p style="
                       margin:0;
                       font-family:'Segoe UI',Arial,sans-serif;
-                      font-size:13px;font-weight:700;
+                      font-size:14px;font-weight:700;
                       color:#ffffff;
                     ">${coworkingName}</p>
-                    ${coworkingEmail ? `<p style="margin:4px 0 0;font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.55);">${coworkingEmail}</p>` : ''}
-                    ${coworkingTel   ? `<p style="margin:3px 0 0;font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.45);">${coworkingTel}</p>` : ''}
+                    ${coworkingEmail ? `<p style="margin:4px 0 0;font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:rgba(255,255,255,0.7);"><a href="mailto:${coworkingEmail}" style="color:rgba(255,255,255,0.7);text-decoration:none;">${coworkingEmail}</a></p>` : ''}
+                    ${coworkingTel ? `<p style="margin:3px 0 0;font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.55);"><a href="tel:${coworkingTel}" style="color:rgba(255,255,255,0.55);text-decoration:none;">${coworkingTel}</a></p>` : ''}
                   </td>
                 </tr>
               </table>
@@ -109,6 +104,7 @@ function buildHeader(config) {
 // ── Helper : pied de page DeskyWork ──────────────────────────────────────────
 function buildFooter(config) {
   const coworkingName = config?.coworkingName || 'Notre espace';
+  const frontendUrl = config?.frontendUrl || process.env.FRONTEND_URL || 'http://localhost:5173';
   const year = new Date().getFullYear();
 
   return `
@@ -122,41 +118,45 @@ function buildFooter(config) {
         <!-- Corps du footer -->
         <table width="100%" cellpadding="0" cellspacing="0" style="background:${PRIMARY};">
           <tr>
-            <td style="padding:24px 36px;text-align:center;">
-              <!-- Logo petit -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;">
+            <td style="padding:28px 36px;text-align:center;">
+              <!-- Logo DeskyWork adaptatif au footer -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
                 <tr>
                   <td align="center">
-                    <table cellpadding="0" cellspacing="0" style="display:inline-table;">
-                      <tr>
-                        <td style="
-                          width:28px;height:28px;
-                          background:${SECONDARY};
-                          border-radius:8px;
-                          text-align:center;vertical-align:middle;
-                          display:inline-block;
-                        ">
-                          <span style="font-family:'Segoe UI',Arial,sans-serif;font-size:14px;font-weight:900;color:#fff;line-height:28px;display:block;">D</span>
-                        </td>
-                        <td style="vertical-align:middle;padding-left:8px;">
-                          <span style="font-family:'Segoe UI',Arial,sans-serif;font-size:14px;font-weight:800;color:#ffffff;">DESKY<span style="color:${SECONDARY};">WORK</span></span>
-                        </td>
-                      </tr>
-                    </table>
+                    <a href="${frontendUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
+                      <div class="desky-logo-dark">
+                        <img
+                          src="cid:deskywork-logo-dark"
+                          alt="DeskyWork"
+                          width="150"
+                          style="display:block;width:150px;max-width:150px;height:auto;border:0;outline:none;margin:0 auto;"
+                        />
+                      </div>
+                      <!--[if !mso]><!-->
+                      <div class="desky-logo-light" style="display:none;mso-hide:all;">
+                        <img
+                          src="cid:deskywork-logo-light"
+                          alt="DeskyWork"
+                          width="150"
+                          style="display:block;width:150px;max-width:150px;height:auto;border:0;outline:none;margin:0 auto;"
+                        />
+                      </div>
+                      <!--<![endif]-->
+                    </a>
                   </td>
                 </tr>
               </table>
-              <p style="margin:0 0 6px;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.55);font-size:11px;">
+              <p style="margin:0 0 6px;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.7);font-size:12px;">
                 ${coworkingName} · Propulsé par <strong style="color:${SECONDARY};">DeskyWork</strong>
               </p>
-              <p style="margin:0 0 10px;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.35);font-size:10px;">
+              <p style="margin:0 0 10px;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.45);font-size:11px;">
                 Cet email est généré automatiquement. Merci de ne pas y répondre directement.
               </p>
               <!-- Ligne de séparation fine -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0;">
-                <tr><td style="border-top:1px solid rgba(255,255,255,0.08);font-size:0;line-height:0;">&nbsp;</td></tr>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0;">
+                <tr><td style="border-top:1px solid rgba(255,255,255,0.12);font-size:0;line-height:0;">&nbsp;</td></tr>
               </table>
-              <p style="margin:0;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.25);font-size:10px;">
+              <p style="margin:0;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.35);font-size:10px;">
                 © ${year} DeskyWork — Tous droits réservés
               </p>
             </td>
@@ -207,7 +207,7 @@ function wrapEmail(innerRows, title = 'DeskyWork') {
 function templateNouveauMembre(membre, config) {
   const prenom = membre.prenom || 'Membre';
   const nom = membre.nom || '';
-  
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -275,7 +275,7 @@ function templateConfirmationReservation(reservation, membre, config) {
   const heureFin = dateFin.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const isSurPlace = reservation.mode === 'sur_place' || reservation.mode === 'on_site' || reservation.mode === 'cash';
   const modeLabel = isSurPlace ? '💵 Sur place (à l\'accueil)' : '💳 En ligne par carte bancaire';
-  
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -333,9 +333,9 @@ function templateConfirmationReservation(reservation, membre, config) {
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffaf5;border:1px solid #ffedd8;border-left:4px solid ${SECONDARY};border-radius:10px;padding:16px;margin-bottom:28px;">
               <tr><td>
                 <p style="margin:0;color:#9a3412;font-size:13px;line-height:1.6;">
-                  ${isSurPlace 
-                    ? '💡 <strong>Paiement sur place :</strong> Votre place est réservée. Vous pourrez procéder au règlement directement à l\'accueil le jour de votre arrivée (espèces, carte, TPE).'
-                    : '💡 <strong>Paiement en ligne :</strong> Votre réservation a été approuvée ! Vous pouvez dès à présent régler par carte bancaire en toute sécurité depuis votre espace membre.'}
+                  ${isSurPlace
+      ? '💡 <strong>Paiement sur place :</strong> Votre place est réservée. Vous pourrez procéder au règlement directement à l\'accueil le jour de votre arrivée (espèces, carte, TPE).'
+      : '💡 <strong>Paiement en ligne :</strong> Votre réservation a été approuvée ! Vous pouvez dès à présent régler par carte bancaire en toute sécurité depuis votre espace membre.'}
                 </p>
               </td></tr>
             </table>
@@ -373,7 +373,7 @@ function templateRappelReservationJ1(reservation, membre, config) {
   const dateDebut = new Date(reservation.date_debut);
   const dateStr = dateDebut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   const heureDebut = dateDebut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -435,7 +435,7 @@ function templateAlerte15MinAvantFin(session, membre, config) {
   const prenom = membre.prenom || 'Membre';
   const espace = session.reservations?.espaces?.nom || 'Espace';
   const heureFin = new Date(session.reservations?.date_fin).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -491,7 +491,7 @@ function templateAlerte15MinAvantFin(session, membre, config) {
 function templateFinSession(session, membre, config) {
   const prenom = membre.prenom || 'Membre';
   const espace = session.reservations?.espaces?.nom || 'Espace';
-  
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -544,7 +544,7 @@ function templateFinSession(session, membre, config) {
 function templateDepassementSession(session, membre, minutesDepassement, config) {
   const prenom = membre.prenom || 'Membre';
   const espace = session.reservations?.espaces?.nom || 'Espace';
-  
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -609,12 +609,12 @@ function templateAbonnementExpirantJ7(abonnement, membre, config) {
     trimestriel: 'Trimestriel',
     annuel: 'Annuel',
     bureau_prive: 'Bureau Privé'
-  }[abonnement.type] || abonnement.type;
-  
-  const dateFin = new Date(abonnement.date_fin).toLocaleDateString('fr-FR', { 
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' 
+  }[abonnement.type || abonnement.type_forfait] || abonnement.type_forfait || abonnement.type || 'Abonnement Coworking';
+
+  const dateFin = new Date(abonnement.date_fin).toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   });
-  
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -679,8 +679,8 @@ function templateAbonnementExpire(abonnement, membre, config) {
     trimestriel: 'Trimestriel',
     annuel: 'Annuel',
     bureau_prive: 'Bureau Privé'
-  }[abonnement.type] || abonnement.type;
-  
+  }[abonnement.type || abonnement.type_forfait] || abonnement.type_forfait || abonnement.type || 'Abonnement Coworking';
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -744,7 +744,7 @@ function templatePaiementEnregistre(payment, membre, config) {
   const numero = payment.numero_recu || payment.id;
   const statut = payment.statut === 'paid' ? '✅ Payé' : '⏳ En attente';
   const statutColor = payment.statut === 'paid' ? SUCCESS : WARNING;
-  
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -765,9 +765,9 @@ function templatePaiementEnregistre(payment, membre, config) {
               Bonjour <strong>${prenom}</strong>,
             </p>
             <p style="margin:0 0 28px;color:#374151;font-size:14px;line-height:1.7;">
-              ${payment.statut === 'paid' 
-                ? 'Votre paiement a bien été enregistré. Vous trouverez votre reçu en pièce jointe.' 
-                : 'Votre paiement est en attente de validation. Vous recevrez une confirmation dès qu\'il sera traité.'}
+              ${payment.statut === 'paid'
+      ? 'Votre paiement a bien été enregistré. Vous trouverez votre reçu en pièce jointe.'
+      : 'Votre paiement est en attente de validation. Vous recevrez une confirmation dès qu\'il sera traité.'}
             </p>
             <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;margin-bottom:28px;">
               <tr>
@@ -817,7 +817,7 @@ function templatePaiementRetardJ3(payment, membre, config) {
   const prenom = membre.prenom || 'Membre';
   const montant = parseFloat(payment.montant || 0).toFixed(3);
   const numero = payment.numero_recu || payment.id;
-  
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -893,7 +893,7 @@ function templatePaiementRetardJ7(payment, membre, config) {
   const prenom = membre.prenom || 'Membre';
   const montant = parseFloat(payment.montant || 0).toFixed(3);
   const numero = payment.numero_recu || payment.id;
-  
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -978,7 +978,7 @@ function templateAnnulationReservation(reservation, membre, config) {
   const dateDebut = new Date(reservation.date_debut);
   const dateStr = dateDebut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   const heureDebut = dateDebut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -1134,7 +1134,7 @@ function templateInscriptionFormation(formation, membre, config) {
   const heureDebut = dateDebut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const formateur = formation.formateurs?.nom || 'Formateur';
   const salle = formation.espaces?.nom || 'Salle à définir';
-  
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -1227,7 +1227,7 @@ function templateRappelFormationJ1(formation, membre, config) {
   const heureDebut = dateDebut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const formateur = formation.formateurs?.nom || 'Formateur';
   const salle = formation.espaces?.nom || 'Salle à définir';
-  
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -1296,7 +1296,7 @@ function templateNouveauMessagePortail(message, expediteur, config) {
   const nomExpediteur = expediteur?.nom || '';
   const contenuMessage = message.contenu || 'Nouveau message';
   const sujet = message.sujet || 'Message';
-  
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -1358,6 +1358,121 @@ function templateNouveauMessagePortail(message, expediteur, config) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// TEMPLATE 16 — Nouvelle formation disponible
+// ══════════════════════════════════════════════════════════════════════════════
+
+function templateNouvelleFormation(formation, membre, config) {
+  const prenom = membre?.prenom || 'Membre';
+  const titre = formation?.titre || 'Nouvelle Formation';
+  const description = formation?.description || 'Une nouvelle opportunité d\'apprentissage est disponible.';
+  const formateur = formation?.profiles ? `${formation.profiles.prenom || ''} ${formation.profiles.nom || ''}`.trim() : (formation?.formateur_nom || 'Formateur qualifié');
+  const salle = formation?.espaces?.nom || 'Salle dédiée';
+  const prix = formation?.prix_inscription > 0 ? `${formation.prix_inscription} DT` : 'Gratuit';
+  const capacite = formation?.capacite_max ? `${formation.capacite_max} places` : 'Places limitées';
+
+  let dateStr = 'Date à venir';
+  let heureStr = '';
+  if (formation?.date_debut) {
+    const dDebut = new Date(formation.date_debut);
+    dateStr = dDebut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    heureStr = dDebut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    if (formation?.date_fin) {
+      const dFin = new Date(formation.date_fin);
+      heureStr += ` - ${dFin.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+  }
+
+  return `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><title>Nouvelle Formation Disponible</title></head>
+<body style="margin:0;padding:0;background:#F4F6F9;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2F2F2;padding:36px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.13);">
+        ${buildHeader(config)}
+        <tr>
+          <td style="background:${SECONDARY};padding:16px 40px;text-align:center;">
+            <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">🎓 Nouvelle formation disponible !</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#ffffff;padding:36px 40px;">
+            <p style="margin:0 0 20px;color:${PRIMARY};font-size:16px;">
+              Bonjour <strong>${prenom}</strong>,
+            </p>
+            <p style="margin:0 0 24px;color:#374151;font-size:14px;line-height:1.7;">
+              Une nouvelle session de formation vient d'être planifiée : <strong>${titre}</strong>. Les inscriptions sont désormais ouvertes !
+            </p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;margin-bottom:24px;">
+              <tr>
+                <td style="background:${PRIMARY};padding:12px 20px;">
+                  <p style="margin:0;color:#ffffff;font-size:12px;font-weight:700;">DÉTAILS DU WORKSHOP</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:20px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="color:${MUTED};font-size:12px;padding-bottom:10px;">Formation</td>
+                      <td align="right" style="color:#111827;font-size:14px;font-weight:700;padding-bottom:10px;">${titre}</td>
+                    </tr>
+                    <tr>
+                      <td style="color:${MUTED};font-size:12px;padding-bottom:10px;">Formateur</td>
+                      <td align="right" style="color:#111827;font-size:14px;font-weight:600;padding-bottom:10px;">${formateur}</td>
+                    </tr>
+                    <tr>
+                      <td style="color:${MUTED};font-size:12px;padding-bottom:10px;">Date</td>
+                      <td align="right" style="color:#111827;font-size:14px;font-weight:600;padding-bottom:10px;">${dateStr}</td>
+                    </tr>
+                    ${heureStr ? `
+                    <tr>
+                      <td style="color:${MUTED};font-size:12px;padding-bottom:10px;">Horaire</td>
+                      <td align="right" style="color:#111827;font-size:14px;font-weight:600;padding-bottom:10px;">${heureStr}</td>
+                    </tr>` : ''}
+                    <tr>
+                      <td style="color:${MUTED};font-size:12px;padding-bottom:10px;">Lieu</td>
+                      <td align="right" style="color:#111827;font-size:14px;font-weight:600;padding-bottom:10px;">${salle}</td>
+                    </tr>
+                    <tr>
+                      <td style="color:${MUTED};font-size:12px;padding-bottom:10px;">Tarif</td>
+                      <td align="right" style="color:${SECONDARY};font-size:14px;font-weight:700;padding-bottom:10px;">${prix}</td>
+                    </tr>
+                    <tr>
+                      <td style="color:${MUTED};font-size:12px;">Places</td>
+                      <td align="right" style="color:#111827;font-size:14px;font-weight:600;">${capacite}</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            ${description ? `
+            <div style="background:#F9FAFB;border-left:4px solid ${SECONDARY};padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:24px;">
+              <p style="margin:0 0 4px;color:${MUTED};font-size:11px;font-weight:700;text-transform:uppercase;">Description</p>
+              <p style="margin:0;color:#374151;font-size:13px;line-height:1.6;">${description}</p>
+            </div>` : ''}
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+              <tr><td align="center">
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/formations" 
+                   style="display:inline-block;background:${SECONDARY};color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.2px;box-shadow:0 4px 14px rgba(249,93,0,0.35);">
+                  Découvrir & S'inscrire
+                </a>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+        ${buildFooter(config)}
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // EXPORTS — Toutes les fonctions de templates
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -1365,8 +1480,8 @@ module.exports = {
   // Helpers
   buildHeader,
   buildFooter,
-  
-  // Templates (15 notifications du Tableau F)
+
+  // Templates (15 notifications du Tableau F + 16 Nouvelle Formation)
   templateNouveauMembre,                  // 1. Nouvelle inscription membre
   templateNouveauFormateur,                // 1b. Nouveau formateur
   templateConfirmationReservation,        // 2. Confirmation réservation
@@ -1383,4 +1498,5 @@ module.exports = {
   templateInscriptionFormation,           // 13. Inscription à une formation
   templateRappelFormationJ1,              // 14. Rappel formation J-1
   templateNouveauMessagePortail,          // 15. Nouveau message portail
+  templateNouvelleFormation,              // 16. Nouvelle formation disponible
 };
