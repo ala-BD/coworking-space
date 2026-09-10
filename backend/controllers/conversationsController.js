@@ -248,7 +248,7 @@ async function listAdminMembers(req, res) {
     let query = supabaseAdmin
       .from('profiles')
       .select('id, nom, prenom, email, telephone, type_membre, role, created_at')
-      .in('role', ['member', 'guest'])
+      .in('role', ['member', 'guest', 'formateur'])
       .order('nom', { ascending: true });
 
     query = applyTenantFilter(query, req);

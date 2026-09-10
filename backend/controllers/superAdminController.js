@@ -359,15 +359,30 @@ async function updateUser(req, res) {
 
 // DELETE /api/super-admin/users/:id
 async function deleteUser(req, res) {
-  if (req.params.id === req.user.id) return res.status(400).json({ error: 'Vous ne pouvez pas supprimer votre propre compte.' });
+  const userId = req.params.id;
+  if (userId === req.user.id) return res.status(400).json({ error: 'Vous ne pouvez pas supprimer votre propre compte.' });
 
-  const { data: target } = await supabaseAdmin.from('profiles').select('nom, prenom, role').eq('id', req.params.id).single();
+  const { data: target } = await supabaseAdmin.from('profiles').select('nom, prenom, role').eq('id', userId).single();
   if (!target) return res.status(404).json({ error: 'Utilisateur introuvable.' });
 
-  const { error: authErr } = await supabaseAdmin.auth.admin.deleteUser(req.params.id);
+  // Nettoyage des données liées (FK sans ON DELETE CASCADE) avant suppression du profil
+  await supabaseAdmin.from('messages').delete().eq('sender_id', userId);
+  await supabaseAdmin.from('conversation_members').delete().eq('user_id', userId);
+
+  const { data: convs } = await supabaseAdmin.from('conversations').select('id').or(`created_by.eq.${userId}`);
+  const convIds = (convs || []).map(c => c.id);
+  if (convIds.length > 0) {
+    await supabaseAdmin.from('messages').delete().in('conversation_id', convIds);
+    await supabaseAdmin.from('conversation_members').delete().in('conversation_id', convIds);
+    await supabaseAdmin.from('conversations').delete().in('id', convIds);
+  }
+
+  await supabaseAdmin.from('super_admin_audit_log').delete().eq('user_id', userId);
+
+  const { error: authErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
   if (authErr) return res.status(400).json({ error: authErr.message });
 
-  await auditLog(req.user.id, 'user_deleted', 'user', req.params.id, `${target.prenom} ${target.nom}`, { role: target.role }, req.ip);
+  await auditLog(req.user.id, 'user_deleted', 'user', userId, `${target.prenom} ${target.nom}`, { role: target.role }, req.ip);
   res.json({ message: `Utilisateur "${target.prenom} ${target.nom}" supprimé.` });
 }
 

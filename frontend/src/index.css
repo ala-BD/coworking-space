@@ -169,6 +169,14 @@ html {
   scroll-padding-top: 5.5rem;
 }
 
+/* Fix Tailwind v4: les tokens custom --spacing-sm/md/lg/xl (tokens Material 3)
+   détournent les utilitaires max-w-sm/md/lg/xl → largeurs cassées (ex: modale à 24px).
+   On restaure les tailles de conteneur standard. */
+.max-w-sm { max-width: 24rem; }
+.max-w-md { max-width: 28rem; }
+.max-w-lg { max-width: 32rem; }
+.max-w-xl { max-width: 36rem; }
+
 body {
   background-color: var(--color-background);
   color: var(--color-on-surface);

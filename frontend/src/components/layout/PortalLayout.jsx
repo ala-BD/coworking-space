@@ -137,6 +137,12 @@ function NavLink({ item, isActive, onClick, dark }) {
 export default function PortalLayout({ children, profile, onLogout }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const defaultLogout = () => {
+    supabase.auth.signOut()
+      .then(() => navigate('/login'))
+      .catch(() => navigate('/login'));
+  };
+  const handleLogout = onLogout || defaultLogout;
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -738,7 +744,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
                   <div style={{ margin: '6px 0', borderTop: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(16,15,13,0.08)' }} />
 
                   <button
-                    onClick={() => { setDropdownOpen(false); onLogout(); }}
+                    onClick={() => { setDropdownOpen(false); handleLogout(); }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10,
                       padding: '10px 12px', borderRadius: 12,
@@ -813,7 +819,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
             borderTop: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(16,15,13,0.08)',
           }}>
             <button
-              onClick={onLogout}
+              onClick={handleLogout}
               style={{
                 display: 'flex',
                 alignItems: 'center',
