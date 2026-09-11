@@ -1010,7 +1010,14 @@ export default function Landing({ session }) {
                     </div>
                     <div>
                       <div style={{ fontSize: '.72rem', fontWeight: 700, color: EC.muted, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 3 }}>{label}</div>
-                      <div style={{ color: EC.navy, fontWeight: 500, whiteSpace: 'pre-line' }}>{val}</div>
+                      {icon === 'phone' ? (
+                        <div style={{ color: EC.navy, fontWeight: 500 }}>
+                          <a href="tel:+21652882880" style={{ color: 'inherit', display: 'block' }}>+216 52 882 880</a>
+                          <a href="tel:+21652882930" style={{ color: 'inherit', display: 'block' }}>+216 52 882 930</a>
+                        </div>
+                      ) : (
+                        <div style={{ color: EC.navy, fontWeight: 500, whiteSpace: 'pre-line' }}>{val}</div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1119,7 +1126,8 @@ export default function Landing({ session }) {
             <div className="col-lg-2 col-md-3 col-6">
               <h6 className="fw-bold mb-3" style={{ color: '#ffffff', fontSize: '.8rem', textTransform: 'uppercase', letterSpacing: '.08em' }}>Contact</h6>
               <ul className="list-unstyled d-flex flex-column gap-2 mb-0">
-                <li><a href="tel:+21600000000" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>+216 00 000 000</a></li>
+                <li><a href="tel:+21652882880" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>+216 52 882 880</a></li>
+                <li><a href="tel:+21652882930" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>+216 52 882 930</a></li>
                 <li><a href="mailto:contact@vclow.com" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>contact@vclow.com</a></li>
                 <li><a href="#contact" style={{ color: '#f8fafc', fontWeight: 500, textDecoration: 'none' }}>Tunis, Tunisie</a></li>
               </ul>
