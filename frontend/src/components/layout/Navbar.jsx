@@ -108,8 +108,10 @@ export default function Navbar({ session, activeLink = '', transparent = false }
           white-space: nowrap;
         }
         .ec-navbar .btn-login:hover {
-          background: #100f0d;
-          color: #fbffff;
+          background: #f95d00;
+          color: #ffffff !important;
+          border-color: #f95d00;
+          box-shadow: 0 6px 16px rgba(249,93,0,.24);
         }
         .ec-navbar .btn-cta {
           background: #f95d00;
