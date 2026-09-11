@@ -445,6 +445,21 @@ export default function Landing({ session }) {
   const [contactForm, setContactForm] = useState({ nom: '', email: '', sujet: '', message: '' });
   const [contactStatus, setContactStatus] = useState({ type: '', text: '' });
   const [contactLoading, setContactLoading] = useState(false);
+  const [isAtTop, setIsAtTop] = useState(true);
+
+  useEffect(() => {
+    const updateScrollState = () => setIsAtTop(window.scrollY <= 24);
+    updateScrollState();
+    window.addEventListener('scroll', updateScrollState, { passive: true });
+    return () => window.removeEventListener('scroll', updateScrollState);
+  }, []);
+
+  const handleScrollButton = () => {
+    window.scrollTo({
+      top: isAtTop ? document.documentElement.scrollHeight : 0,
+      behavior: 'smooth',
+    });
+  };
 
   const handleContactSubmit = async (event) => {
     event.preventDefault();
@@ -1122,6 +1137,21 @@ export default function Landing({ session }) {
           </div>
         </div>
       </footer>
+
+      <button
+        type="button"
+        aria-label={isAtTop ? 'Faire défiler vers le bas' : 'Retour en haut'}
+        title={isAtTop ? 'Faire défiler vers le bas' : 'Retour en haut'}
+        onClick={handleScrollButton}
+        className="back-to-top"
+      >
+        <span
+          className="material-symbols-outlined"
+          style={{ fontSize: 28, transition: 'transform 0.3s ease', transform: `rotate(${isAtTop ? 180 : 0}deg)` }}
+        >
+          keyboard_arrow_up
+        </span>
+      </button>
 
       {/* ══ MODALE PROMOS ══ */}
       {promoTenant && (

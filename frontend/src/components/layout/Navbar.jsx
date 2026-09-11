@@ -216,7 +216,11 @@ export default function Navbar({ session, activeLink = '', transparent = false }
           <div style={{ display: 'flex', alignItems: 'center', height: 76, gap: 32 }}>
 
             {/* Brand — DeskyWork */}
-            <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            <Link
+              to="/"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+            >
               <img
                 src="/logo 1.png"
                 alt="DeskyWork"

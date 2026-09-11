@@ -450,6 +450,40 @@ a:hover.hover\:underline,
   cursor: not-allowed;
 }
 
+.back-to-top {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 40;
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #100f0d;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.back-to-top:hover,
+.back-to-top:focus-visible {
+  background: #f95d00;
+  color: #ffffff;
+  transform: translateY(-4px);
+  box-shadow: 0 10px 22px rgba(249, 93, 0, 0.42);
+}
+
+@media (max-width: 767px) {
+  .back-to-top {
+    right: 14px;
+    bottom: 14px;
+  }
+}
+
 .btn-outline {
   display: inline-flex;
   align-items: center;
