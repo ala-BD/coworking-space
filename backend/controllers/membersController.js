@@ -2,7 +2,7 @@
 const { supabaseAdmin } = require('../config/supabase');
 const { ensureQrToken, sanitizeProfileForClient } = require('../models/helpers');
 const { applyTenantFilter } = require('../middleware/guards');
-const { notifyNouveauMembre } = require('../services/notificationService');
+const { notifyNouveauMembre, sendNotification } = require('../services/notificationService');
 
 async function getMe(req, res) {
   try {
@@ -26,7 +26,7 @@ async function getMe(req, res) {
 
 async function updateMe(req, res) {
   try {
-    const allowed = ['nom', 'prenom', 'telephone', 'cin', 'type_membre', 'photo_url'];
+    const allowed = ['nom', 'prenom', 'telephone', 'cin', 'type_membre', 'photo_url', 'canal_notification', 'notifications'];
     const updates = {};
 
     for (const field of allowed) {
@@ -46,7 +46,7 @@ async function updateMe(req, res) {
 
     updates.updated_at = new Date().toISOString();
 
-    const { data, error } = await req.db
+    const { data, error } = await supabaseAdmin
       .from('profiles')
       .update(updates)
       .eq('id', req.user.id)
@@ -305,6 +305,39 @@ async function sendWelcomeEmail(req, res) {
   }
 }
 
+async function testNotification(req, res) {
+  try {
+    const { canal, telephone } = req.body;
+    const { data: prof, error } = await supabaseAdmin
+      .from('profiles')
+      .select('id, nom, prenom, email, telephone, canal_notification, notifications')
+      .eq('id', req.user.id)
+      .single();
+
+    if (error || !prof) return res.status(404).json({ error: 'Profil introuvable.' });
+
+    const chosenChannel = canal || prof.canal_notification || prof.notifications?.canal || 'email';
+    const chosenPhone = telephone || prof.telephone;
+
+    const sendRes = await sendNotification(supabaseAdmin, {
+      type: 'test_notification',
+      email: prof.email,
+      userId: prof.id,
+      phone: chosenPhone,
+      channel: chosenChannel,
+      data: { nom: `${prof.prenom || ''} ${prof.nom || ''}`.trim() || 'Membre' },
+      subject: '✨ Test de notification DeskyWork',
+    });
+
+    res.json({
+      message: `Notification de test envoyée avec succès sur le canal ${sendRes.canal}.`,
+      details: sendRes,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   getMe,
   updateMe,
@@ -317,4 +350,5 @@ module.exports = {
   listMembers,
   getMember,
   sendWelcomeEmail,
+  testNotification,
 };

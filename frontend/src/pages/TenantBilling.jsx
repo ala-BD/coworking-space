@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { superAdminApi } from '../services/superAdminApi';
 import { supabase } from '../supabaseClient';
+import { useSessionUser } from '../hooks/useSessionUser';
 import PortalLayout from '../components/layout/PortalLayout';
 import { exportBillingToExcel } from '../utils/exportBillingExcel';
 
@@ -17,7 +18,10 @@ const MONTHS = ['JAN', 'FÉV', 'MAR', 'AVR', 'MAI', 'JUN'];
 
 export default function TenantBilling({ session }) {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
+  const { userId, email, metadata } = useSessionUser(session);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'super_admin', ...metadata } : null
+  );
   const [tenants, setTenants] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,28 +33,21 @@ export default function TenantBilling({ session }) {
 
   const load = useCallback(async () => {
     try {
-      const data = await superAdminApi.getTenants({ page, limit: 10 });
-      setTenants(data.tenants || []);
-      setPagination(data.pagination || { total: 0 });
-      const s = await superAdminApi.getStats();
-      setStats(s);
+      const [data, s] = await Promise.all([
+        superAdminApi.getTenants({ page, limit: 10 }),
+        superAdminApi.getStats().catch(() => null),
+      ]);
+      setTenants(data?.tenants || []);
+      setPagination(data?.pagination || { total: 0 });
+      if (s) setStats(s);
     } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   }, [page]);
 
   useEffect(() => {
-    async function init() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return navigate('/login');
-        const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        setProfile(prof);
-        if (prof?.role !== 'super_admin') return navigate('/admin/dashboard');
-        await load();
-      } catch (e) { console.error(e); }
-      setLoading(false);
-    }
-    init();
-  }, [navigate]);
+    if (!userId) { navigate('/login'); return; }
+    if (profile?.role && profile.role !== 'super_admin') { navigate('/admin/dashboard'); }
+  }, [userId, profile, navigate]);
 
   useEffect(() => { if (profile) load(); }, [load, profile]);
 
@@ -63,9 +60,10 @@ export default function TenantBilling({ session }) {
   const mrr = (tenants || []).filter(t => t.statut === 'actif').reduce((acc, t) => acc + (parseFloat(t.montant_mensuel) || 0), 0);
   const unpaid = (tenants || []).filter(t => t.statut === 'suspendu').reduce((acc, t) => acc + (parseFloat(t.montant_mensuel) || 0), 0);
 
-  if (loading || !profile) {
-    return <div className="flex h-screen items-center justify-center" style={{ background: '#f4f6f9' }}><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" /></div>;
+  if (!profile) {
+    return null;
   }
+
 
   const barData = [32000, 35500, 38200, 41000, 43800, mrr || 45200];
   const maxBar = Math.max(...barData);
@@ -73,27 +71,28 @@ export default function TenantBilling({ session }) {
   return (
     <PortalLayout profile={profile} onLogout={handleLogout}>
       <div className="mb-6">
-        <h1 className="font-sora text-2xl font-bold text-primary">Facturation B2B</h1>
+        <h1 className="font-sora text-xl sm:text-2xl font-bold text-primary">Facturation B2B</h1>
         <p className="text-on-surface-variant text-sm mt-1">Suivi des abonnements mensuels des coworkings clients</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {[
           { label: 'MRR Total', value: `${mrr.toLocaleString('fr-TN')} DT`, icon: 'payments', color: '#f95d00', sub: '+2.4% vs dernier mois' },
           { label: 'Coworkings Actifs', value: stats?.activeTenants ?? 0, icon: 'person_pin', color: '#f95d00', sub: `${stats?.suspendedTenants || 0} suspendus` },
           { label: 'Impayés B2B', value: `${unpaid.toLocaleString('fr-TN')} DT`, icon: 'warning', color: '#100f0d', sub: 'Nécessite une action' },
           { label: 'Croissance MRR', value: '+12.5%', icon: 'trending_up', color: '#f95d00', sub: 'Objectif atteint' },
         ].map((c, i) => (
-          <div key={i} className="bg-surface-container-lowest rounded-3xl p-5 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
+          <div key={i} className="bg-surface-container-lowest rounded-2xl p-4 sm:p-5 shadow-[0px_2px_4px_rgba(16,35,63,0.04)] border border-outline-variant/10">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">{c.label}</span>
               <span className="material-symbols-outlined p-2 rounded-xl" style={{ fontSize: 18, color: c.color, background: `${c.color}12` }}>{c.icon}</span>
             </div>
-            <p className="font-sora text-2xl font-bold text-primary">{c.value}</p>
+            <p className="font-sora text-xl sm:text-2xl font-bold text-primary">{c.value}</p>
             <p className="text-xs text-on-surface-variant mt-1">{c.sub}</p>
           </div>
         ))}
       </div>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
         <div className="lg:col-span-2 bg-surface-container-lowest rounded-3xl p-6 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
@@ -152,58 +151,137 @@ export default function TenantBilling({ session }) {
         </div>
       </div>
 
-      <div className="bg-surface-container-lowest rounded-3xl shadow-[0px_16px_32px_rgba(16,35,63,0.12)] overflow-hidden">
-        <div className="px-5 py-4 border-b border-outline-variant/15">
-          <h2 className="font-sora text-base font-semibold text-primary">Suivi des Facturations Coworkings</h2>
+      <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/10 shadow-[0px_2px_4px_rgba(16,35,63,0.04)] overflow-hidden">
+        <div className="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between">
+          <div>
+            <h2 className="font-sora text-base font-bold text-primary flex items-center gap-2">
+              <span className="material-symbols-outlined text-secondary" style={{ fontSize: 20 }}>receipt_long</span>
+              Suivi des Facturations Coworkings
+            </h2>
+            <p className="text-xs text-on-surface-variant mt-0.5">Statut de facturation et abonnement de chaque espace client</p>
+          </div>
+          <span className="text-xs font-semibold text-on-surface-variant px-3 py-1 bg-surface-container-low rounded-full">
+            {pagination.total || tenants.length} coworking(s)
+          </span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+
+        <div className="table-responsive-wrapper">
+          <table className="w-full text-sm min-w-[750px]">
             <thead>
-              <tr className="bg-primary-container text-white">
-                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Coworking</th>
-                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Offre</th>
-                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Montant mensuel</th>
-                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Créé le</th>
-                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Statut</th>
-                <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Prochaine échéance</th>
-                <th className="px-5 py-3.5 text-right font-semibold uppercase tracking-wider text-xs">Action</th>
+              <tr className="bg-surface-container-low/60 border-b border-outline-variant/10">
+                <th className="px-5 py-3.5 text-left font-bold uppercase tracking-wider text-[11px] text-on-surface-variant">Coworking</th>
+                <th className="px-5 py-3.5 text-left font-bold uppercase tracking-wider text-[11px] text-on-surface-variant">Offre</th>
+                <th className="px-5 py-3.5 text-left font-bold uppercase tracking-wider text-[11px] text-on-surface-variant">Montant mensuel</th>
+                <th className="px-5 py-3.5 text-left font-bold uppercase tracking-wider text-[11px] text-on-surface-variant">Créé le</th>
+                <th className="px-5 py-3.5 text-left font-bold uppercase tracking-wider text-[11px] text-on-surface-variant">Statut Facturation</th>
+                <th className="px-5 py-3.5 text-left font-bold uppercase tracking-wider text-[11px] text-on-surface-variant">Prochaine échéance</th>
+                <th className="px-5 py-3.5 text-right font-bold uppercase tracking-wider text-[11px] text-on-surface-variant">Action</th>
               </tr>
             </thead>
-            <tbody>
-              {tenants.map((t) => (
-                <tr key={t.id} className="border-b border-outline-variant/15 hover:bg-surface-container-low/50 transition-colors">
-                  <td className="px-5 py-4 font-semibold text-primary">{t.nom}</td>
-                  <td className="px-5 py-4"><span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant">{t.plan?.toUpperCase() || 'STARTER'}</span></td>
-                  <td className="px-5 py-4 font-semibold text-primary">{parseFloat(t.montant_mensuel || 0).toLocaleString('fr-TN')} DT</td>
-                  <td className="px-5 py-4 text-xs text-on-surface-variant">{new Date(t.created_at).toLocaleDateString('fr-FR')}</td>
-                  <td className="px-5 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${t.statut === 'actif' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                      {t.statut === 'actif' ? 'Payé / Actif' : 'Suspendu'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 text-xs text-on-surface-variant">{t.prochaine_echeance ? new Date(t.prochaine_echeance).toLocaleDateString('fr-FR') : '1er du mois'}</td>
-                  <td className="px-5 py-4 text-right">
-                    {t.statut === 'suspendu' ? (
-                      <button onClick={async () => { await superAdminApi.updateTenant(t.id, { statut: 'actif' }); load(); }} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-secondary text-white hover:bg-secondary/90">Réactiver</button>
-                    ) : (
-                      <button onClick={async () => { await superAdminApi.updateTenant(t.id, { statut: 'suspendu' }); load(); }} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white hover:bg-red-700">Suspendre</button>
-                    )}
+            <tbody className="divide-y divide-outline-variant/10">
+              {tenants.map((t) => {
+                const isActif = t.statut === 'actif';
+                const planLabel = t.plan ? (PLAN_LABELS[t.plan.toLowerCase()] || t.plan.toUpperCase()) : 'STARTER';
+                return (
+                  <tr key={t.id} className="hover:bg-surface-container-low/40 transition-colors">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined" style={{ fontSize: 17 }}>domain</span>
+                        </div>
+                        <div>
+                          <p className="font-bold text-primary text-sm">{t.nom}</p>
+                          <p className="text-[11px] text-on-surface-variant">{t.ville ? `${t.ville}, ` : ''}{t.pays || 'Tunisie'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-surface-container-high text-on-surface border border-outline-variant/15">
+                        {planLabel}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="font-sora font-bold text-primary">
+                        {parseFloat(t.montant_mensuel || 0).toLocaleString('fr-TN')} <span className="text-xs font-normal text-on-surface-variant">DT/mois</span>
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-xs text-on-surface-variant font-medium">
+                      {new Date(t.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-5 py-4">
+                      {isActif ? (
+                        <span className="whitespace-nowrap inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-xs">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          Payé · Actif
+                        </span>
+                      ) : (
+                        <span className="whitespace-nowrap inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200/60 shadow-xs">
+                          <span className="w-2 h-2 rounded-full bg-red-500" />
+                          Suspendu
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-4 text-xs text-on-surface-variant font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-on-surface-variant/70" style={{ fontSize: 14 }}>event</span>
+                        {t.prochaine_echeance ? new Date(t.prochaine_echeance).toLocaleDateString('fr-FR') : '1er du mois'}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      {!isActif ? (
+                        <button
+                          onClick={async () => { await superAdminApi.updateTenant(t.id, { statut: 'actif' }); load(); }}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-xs"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>play_arrow</span>
+                          Réactiver
+                        </button>
+                      ) : (
+                        <button
+                          onClick={async () => { await superAdminApi.updateTenant(t.id, { statut: 'suspendu' }); load(); }}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>pause</span>
+                          Suspendre
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {tenants.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-5 py-12 text-center text-on-surface-variant text-sm">
+                    Aucun coworking trouvé.
                   </td>
                 </tr>
-              ))}
-              {tenants.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-on-surface-variant">Aucun coworking trouvé.</td></tr>
               )}
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-3 border-t border-outline-variant/15 flex items-center justify-between">
-          <span className="text-xs text-on-surface-variant">Affichage de {tenants.length > 0 ? ((page - 1) * 10 + 1) : 0}–{Math.min(page * 10, pagination.total)} sur {pagination.total} coworkings</span>
+
+        <div className="px-6 py-4 border-t border-outline-variant/10 flex items-center justify-between">
+          <span className="text-xs text-on-surface-variant">
+            Affichage de {tenants.length > 0 ? ((page - 1) * 10 + 1) : 0}–{Math.min(page * 10, pagination.total || tenants.length)} sur {pagination.total || tenants.length} coworkings
+          </span>
           <div className="flex items-center gap-2">
-            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="px-3 py-1.5 rounded-lg border border-outline-variant/30 text-xs font-semibold disabled:opacity-40 hover:bg-surface-container-low">Précédent</button>
-            <span className="text-xs font-semibold text-secondary px-2 bg-secondary/10 rounded-lg py-1">{page}</span>
-            <button disabled={tenants.length < 10} onClick={() => setPage((p) => p + 1)} className="px-3 py-1.5 rounded-lg border border-outline-variant/30 text-xs font-semibold disabled:opacity-40 hover:bg-surface-container-low">Suivant</button>
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="px-3 py-1.5 rounded-xl border border-outline-variant/30 text-xs font-semibold disabled:opacity-40 hover:bg-surface-container-low transition-colors"
+            >
+              Précédent
+            </button>
+            <span className="text-xs font-bold text-secondary px-3 bg-secondary/10 rounded-xl py-1.5">
+              {page}
+            </span>
+            <button
+              disabled={tenants.length < 10}
+              onClick={() => setPage((p) => p + 1)}
+              className="px-3 py-1.5 rounded-xl border border-outline-variant/30 text-xs font-semibold disabled:opacity-40 hover:bg-surface-container-low transition-colors"
+            >
+              Suivant
+            </button>
           </div>
         </div>
       </div>

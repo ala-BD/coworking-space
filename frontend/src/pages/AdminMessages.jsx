@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { useSessionUser } from '../hooks/useSessionUser';
 import PortalLayout from '../components/layout/PortalLayout';
 import { io } from 'socket.io-client';
 
@@ -83,9 +84,12 @@ function MessageBubble({ msg, isOwn, showSender }) {
   );
 }
 
-export default function AdminMessages() {
+export default function AdminMessages({ session }) {
+  const { userId, email, metadata } = useSessionUser(session);
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'admin', ...metadata } : null
+  );
   const [conversations, setConversations] = useState([]);
   const [activeConv, setActiveConv] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -109,15 +113,7 @@ export default function AdminMessages() {
   useEffect(() => { profileRef.current = profile; }, [profile]);
   useEffect(() => { activeConvRef.current = activeConv; }, [activeConv]);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
-      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      setProfile(data);
-    };
-    fetchProfile();
-  }, [navigate]);
+  // profile déjà initialisé depuis le JWT — aucun appel DB nécessaire
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -272,17 +268,17 @@ export default function AdminMessages() {
 
   return (
     <PortalLayout profile={profile}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-6xl mx-auto px-1 sm:px-6 py-4 sm:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: 'Sora, sans-serif' }}>Messagerie</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-primary" style={{ fontFamily: 'Sora, sans-serif' }}>Messagerie</h1>
             {totalUnread > 0 && <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full text-xs font-bold text-white" style={{ background: '#f95d00' }}>{totalUnread}</span>}
           </div>
-          <button onClick={openNewConvModal} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: 'linear-gradient(135deg, #f95d00, #ff7a28)', boxShadow: '0 4px 12px rgba(249,93,0,0.2)' }}>
+          <button onClick={openNewConvModal} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: 'linear-gradient(135deg, #f95d00, #ff7a28)', boxShadow: '0 4px 12px rgba(249,93,0,0.2)' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>Nouvelle conversation
           </button>
         </div>
-        <div className="flex rounded-3xl overflow-hidden border border-outline-variant/10 bg-white" style={{ height: 'calc(100vh - 200px)', minHeight: '500px', boxShadow: '0 8px 32px rgba(16,35,63,0.08)' }}>
+        <div className="flex rounded-2xl sm:rounded-3xl overflow-hidden border border-outline-variant/10 bg-white" style={{ height: 'calc(100dvh - 180px)', minHeight: '420px', boxShadow: '0 8px 32px rgba(16,35,63,0.08)' }}>
           {/* Left */}
           <div className={`w-full md:w-[340px] shrink-0 border-r border-outline-variant/10 flex flex-col bg-surface-variant/10 ${showMobileChat ? 'hidden md:flex' : 'flex'}`}>
             <div className="p-4 border-b border-outline-variant/10">

@@ -17,10 +17,20 @@ const BG_PAGE = '#F2F2F2';
 
 // ── Helper : en-tête DeskyWork — design professionnel ────────────────────────
 function buildHeader(config) {
-  const coworkingName = config?.coworkingName || 'Espace Coworking';
-  const coworkingEmail = config?.coworkingEmail || '';
-  const coworkingTel = config?.coworkingTel || '';
+  const coworkingName = config?.coworkingName || 'DeskyWork';
+  const coworkingEmail = config?.coworkingEmail || process.env.COWORKING_EMAIL || 'contact@deskywork.tn';
+  const coworkingTel = config?.coworkingTel || process.env.COWORKING_TEL || '+216 52 882 880 / +216 52 882 930';
   const frontendUrl = config?.frontendUrl || process.env.FRONTEND_URL || 'http://localhost:5173';
+
+  let telHtml = '';
+  if (coworkingTel) {
+    const nums = coworkingTel.split(/[\/\n]+/).map(n => n.trim()).filter(Boolean);
+    telHtml = nums.map(num => `
+      <p style="margin:2px 0 0;font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.75);">
+        <a href="tel:${num.replace(/[^\d+]/g, '')}" style="color:inherit;text-decoration:none;">📞 ${num}</a>
+      </p>
+    `).join('');
+  }
 
   return `
     <!-- ══ HEADER ══════════════════════════════════════════════════════ -->
@@ -29,14 +39,19 @@ function buildHeader(config) {
         color-scheme: light dark;
         supported-color-schemes: light dark;
       }
-      .desky-logo-dark { display: block !important; }
-      .desky-logo-light { display: none !important; }
+      /* Mode clair par défaut : logo blanc sur fond sombre */
+      .desky-logo-white { display: block !important; }
+      .desky-logo-dark { display: none !important; }
+
+      /* Mode sombre mobile (Apple Mail, iOS, Outlook Dark) : bascule sur le logo foncé contrasté */
       @media (prefers-color-scheme: dark) {
-        .desky-logo-dark { display: none !important; }
-        .desky-logo-light { display: block !important; }
+        .desky-logo-white { display: none !important; }
+        .desky-logo-dark { display: block !important; }
+        .dark-header-bg { background-color: #100f0d !important; }
+        .dark-header-text { color: #ffffff !important; }
       }
-      [data-ogsc] .desky-logo-dark { display: none !important; }
-      [data-ogsc] .desky-logo-light { display: block !important; }
+      [data-ogsc] .desky-logo-white { display: none !important; }
+      [data-ogsc] .desky-logo-dark { display: block !important; }
     </style>
     <tr>
       <td style="padding:0;">
@@ -46,27 +61,17 @@ function buildHeader(config) {
             <td style="background:${SECONDARY};height:4px;font-size:0;line-height:0;">&nbsp;</td>
           </tr>
         </table>
-        <!-- Corps de l'en-tête -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:${PRIMARY};">
+        <!-- Corps de l'en-tête avec protection de couleur sombre -->
+        <table width="100%" cellpadding="0" cellspacing="0" class="dark-header-bg" style="background-color:${PRIMARY};background-image:linear-gradient(${PRIMARY},${PRIMARY});">
           <tr>
-            <td style="padding:26px 36px 22px;">
+            <td style="padding:24px 32px 20px;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <!-- Logo DeskyWork officiel adaptatif (Mode Clair & Sombre) -->
-                  <td style="vertical-align:middle;" width="55%">
+                  <td style="vertical-align:middle;" width="52%">
                     <a href="${frontendUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
-                      <!-- Logo 2 : Texte blanc sur fond sombre (PC / Défaut) -->
-                      <div class="desky-logo-dark">
-                        <img
-                          src="cid:deskywork-logo-dark"
-                          alt="DeskyWork"
-                          width="210"
-                          style="display:block;width:210px;max-width:210px;height:auto;border:0;outline:none;text-decoration:none;"
-                        />
-                      </div>
-                      <!-- Logo 1 : Texte noir sur fond clair (Smartphone / Apple Mail Dark Mode Invert) -->
-                      <!--[if !mso]><!-->
-                      <div class="desky-logo-light" style="display:none;mso-hide:all;">
+                      <!-- Logo 1 (Texte sombre) : affiché si le client email inverse le fond en mode sombre -->
+                      <div class="desky-logo-dark" style="display:none;">
                         <img
                           src="cid:deskywork-logo-light"
                           alt="DeskyWork"
@@ -74,19 +79,27 @@ function buildHeader(config) {
                           style="display:block;width:210px;max-width:210px;height:auto;border:0;outline:none;text-decoration:none;"
                         />
                       </div>
-                      <!--<![endif]-->
+                      <!-- Logo 2 (Texte blanc) : affiché par défaut sur fond noir -->
+                      <div class="desky-logo-white">
+                        <img
+                          src="cid:deskywork-logo-dark"
+                          alt="DeskyWork"
+                          width="210"
+                          style="display:block;width:210px;max-width:210px;height:auto;border:0;outline:none;text-decoration:none;"
+                        />
+                      </div>
                     </a>
                   </td>
                   <!-- Infos coworking à droite -->
-                  <td align="right" style="vertical-align:middle;" width="45%">
-                    <p style="
+                  <td align="right" style="vertical-align:middle;" width="48%">
+                    <p class="dark-header-text" style="
                       margin:0;
                       font-family:'Segoe UI',Arial,sans-serif;
                       font-size:14px;font-weight:700;
                       color:#ffffff;
                     ">${coworkingName}</p>
-                    ${coworkingEmail ? `<p style="margin:4px 0 0;font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:rgba(255,255,255,0.7);"><a href="mailto:${coworkingEmail}" style="color:rgba(255,255,255,0.7);text-decoration:none;">${coworkingEmail}</a></p>` : ''}
-                    ${coworkingTel ? `<p style="margin:3px 0 0;font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.55);"><a href="tel:${coworkingTel}" style="color:rgba(255,255,255,0.55);text-decoration:none;">${coworkingTel}</a></p>` : ''}
+                    ${coworkingEmail ? `<p style="margin:4px 0 0;font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:rgba(255,255,255,0.75);"><a href="mailto:${coworkingEmail}" style="color:inherit;text-decoration:none;">${coworkingEmail}</a></p>` : ''}
+                    ${telHtml}
                   </td>
                 </tr>
               </table>
@@ -103,7 +116,8 @@ function buildHeader(config) {
 
 // ── Helper : pied de page DeskyWork ──────────────────────────────────────────
 function buildFooter(config) {
-  const coworkingName = config?.coworkingName || 'Notre espace';
+  const coworkingName = config?.coworkingName || 'DeskyWork';
+  const coworkingTel = config?.coworkingTel || process.env.COWORKING_TEL || '+216 52 882 880 / +216 52 882 930';
   const frontendUrl = config?.frontendUrl || process.env.FRONTEND_URL || 'http://localhost:5173';
   const year = new Date().getFullYear();
 
@@ -115,8 +129,8 @@ function buildFooter(config) {
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="background:${SECONDARY};height:2px;font-size:0;line-height:0;">&nbsp;</td></tr>
         </table>
-        <!-- Corps du footer -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:${PRIMARY};">
+        <!-- Corps du footer avec protection de couleur sombre -->
+        <table width="100%" cellpadding="0" cellspacing="0" class="dark-header-bg" style="background-color:${PRIMARY};background-image:linear-gradient(${PRIMARY},${PRIMARY});">
           <tr>
             <td style="padding:28px 36px;text-align:center;">
               <!-- Logo DeskyWork adaptatif au footer -->
@@ -124,16 +138,7 @@ function buildFooter(config) {
                 <tr>
                   <td align="center">
                     <a href="${frontendUrl}" target="_blank" style="text-decoration:none;display:inline-block;">
-                      <div class="desky-logo-dark">
-                        <img
-                          src="cid:deskywork-logo-dark"
-                          alt="DeskyWork"
-                          width="150"
-                          style="display:block;width:150px;max-width:150px;height:auto;border:0;outline:none;margin:0 auto;"
-                        />
-                      </div>
-                      <!--[if !mso]><!-->
-                      <div class="desky-logo-light" style="display:none;mso-hide:all;">
+                      <div class="desky-logo-dark" style="display:none;">
                         <img
                           src="cid:deskywork-logo-light"
                           alt="DeskyWork"
@@ -141,22 +146,29 @@ function buildFooter(config) {
                           style="display:block;width:150px;max-width:150px;height:auto;border:0;outline:none;margin:0 auto;"
                         />
                       </div>
-                      <!--<![endif]-->
+                      <div class="desky-logo-white">
+                        <img
+                          src="cid:deskywork-logo-dark"
+                          alt="DeskyWork"
+                          width="150"
+                          style="display:block;width:150px;max-width:150px;height:auto;border:0;outline:none;margin:0 auto;"
+                        />
+                      </div>
                     </a>
                   </td>
                 </tr>
               </table>
-              <p style="margin:0 0 6px;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.7);font-size:12px;">
-                ${coworkingName} · Propulsé par <strong style="color:${SECONDARY};">DeskyWork</strong>
+              <p style="margin:0 0 6px;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.8);font-size:12px;">
+                ${coworkingName} · 📞 +216 52 882 880 / +216 52 882 930 · Propulsé par <strong style="color:${SECONDARY};">DeskyWork</strong>
               </p>
-              <p style="margin:0 0 10px;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.45);font-size:11px;">
+              <p style="margin:0 0 10px;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.5);font-size:11px;">
                 Cet email est généré automatiquement. Merci de ne pas y répondre directement.
               </p>
               <!-- Ligne de séparation fine -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0;">
-                <tr><td style="border-top:1px solid rgba(255,255,255,0.12);font-size:0;line-height:0;">&nbsp;</td></tr>
+                <tr><td style="border-top:1px solid rgba(255,255,255,0.15);font-size:0;line-height:0;">&nbsp;</td></tr>
               </table>
-              <p style="margin:0;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.35);font-size:10px;">
+              <p style="margin:0;font-family:'Segoe UI',Arial,sans-serif;color:rgba(255,255,255,0.4);font-size:10px;">
                 © ${year} DeskyWork — Tous droits réservés
               </p>
             </td>
@@ -167,12 +179,15 @@ function buildFooter(config) {
 }
 
 // ── Helper : wrapper HTML commun ─────────────────────────────────────────────
-function wrapEmail(innerRows, title = 'DeskyWork') {
+function wrapEmail(innerRows, title = 'DeskyWork', config = {}) {
+  const cName = config?.coworkingName || process.env.COWORKING_NAME || 'DeskyWork';
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>${title}</title>
   <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 </head>
@@ -189,7 +204,7 @@ function wrapEmail(innerRows, title = 'DeskyWork') {
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;margin-top:18px;">
         <tr>
           <td align="center" style="font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#9ca3af;">
-            Vous recevez cet email car vous êtes membre de <strong>${'${coworkingName}'}</strong>.
+            Vous recevez cet email car vous êtes membre de <strong>${cName}</strong>.
           </td>
         </tr>
       </table>
@@ -1480,6 +1495,7 @@ module.exports = {
   // Helpers
   buildHeader,
   buildFooter,
+  wrapEmail,
 
   // Templates (15 notifications du Tableau F + 16 Nouvelle Formation)
   templateNouveauMembre,                  // 1. Nouvelle inscription membre

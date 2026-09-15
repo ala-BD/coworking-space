@@ -20,8 +20,8 @@ export default function PeriodFilter({ value, onChange, className = '' }) {
   };
 
   return (
-    <div className={`flex items-center gap-2 bg-white border border-outline-variant/10 rounded-2xl p-1.5 shadow-sm ${className}`}>
-      <div ref={menuRef} className="relative">
+    <div className={`flex items-center gap-1.5 sm:gap-2 bg-white border border-outline-variant/10 rounded-2xl p-1 sm:p-1.5 shadow-sm max-w-full overflow-x-auto ${className}`}>
+      <div ref={menuRef} className="relative shrink-0">
         <button
           type="button"
           title="Filtrer par période"
@@ -34,7 +34,7 @@ export default function PeriodFilter({ value, onChange, className = '' }) {
           <span className="material-symbols-outlined" style={{ fontSize: 18 }}>tune</span>
         </button>
         {open && (
-          <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-2xl border border-outline-variant/10 shadow-xl py-1.5 z-40 overflow-hidden">
+          <div className="absolute left-0 sm:right-0 top-full mt-2 w-44 bg-white rounded-2xl border border-outline-variant/10 shadow-xl py-1.5 z-40 overflow-hidden">
             {PERIOD_OPTIONS.map((o) => (
               <button
                 key={o.key}
@@ -56,7 +56,7 @@ export default function PeriodFilter({ value, onChange, className = '' }) {
           </div>
         )}
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 shrink-0">
         {PERIOD_OPTIONS.map((o) => {
           const active = value === o.key;
           return (
@@ -64,7 +64,7 @@ export default function PeriodFilter({ value, onChange, className = '' }) {
               type="button"
               key={o.key}
               onClick={() => onChange(o.key)}
-              className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 ${
                 active
                   ? 'text-white shadow-md'
                   : 'text-on-surface-variant hover:bg-surface-container-low'
@@ -77,10 +77,11 @@ export default function PeriodFilter({ value, onChange, className = '' }) {
           );
         })}
       </div>
-      <span className="hidden lg:flex items-center gap-1.5 pl-2 pr-1 text-[11px] font-semibold text-on-surface-variant/70 capitalize border-l border-outline-variant/10">
+      <span className="hidden lg:flex items-center gap-1.5 pl-2 pr-1 text-[11px] font-semibold text-on-surface-variant/70 capitalize border-l border-outline-variant/10 whitespace-nowrap">
         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>calendar_today</span>
         {windowLabel(value)}
       </span>
     </div>
   );
+
 }

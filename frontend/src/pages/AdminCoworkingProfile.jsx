@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { tenantAdminApi } from '../services/api';
+import { useSessionUser } from '../hooks/useSessionUser';
 import PortalLayout from '../components/layout/PortalLayout';
 
 const BUCKET = 'coworking-images';
@@ -77,7 +78,10 @@ function ImageUploadZone({ label, hint, imageUrl, onUpload, uploading, onRemove,
 }
 
 export default function AdminCoworkingProfile({ session }) {
-  const [profile, setProfile] = useState(null);
+  const { userId, email, metadata } = useSessionUser(session);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'admin', prenom: metadata.prenom || '', nom: metadata.nom || '', ...metadata } : null
+  );
   const [tenant, setTenant] = useState(null);
 const [form, setForm] = useState({
     nom: '', description: '', adresse: '', ville: '', pays: 'Tunisie',
@@ -99,8 +103,6 @@ const [form, setForm] = useState({
   const loadData = async () => {
     try {
       setLoading(true);
-      const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-      setProfile(prof);
       const res = await tenantAdminApi.getTenant();
       const t = res.tenant;
       setTenant(t);
@@ -163,9 +165,14 @@ const [form, setForm] = useState({
   };
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
-    </div>
+    <PortalLayout profile={profile} onLogout={() => supabase.auth.signOut()}>
+      <div className="p-6 max-w-3xl mx-auto">
+        <div className="h-8 w-64 bg-gray-200 rounded animate-pulse mb-6" />
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="bg-white rounded-2xl p-5 shadow-sm animate-pulse mb-4 h-32" />
+        ))}
+      </div>
+    </PortalLayout>
   );
 
   return (

@@ -15,6 +15,7 @@ import PortalLayout from '../components/layout/PortalLayout';
 import PeriodFilter from '../components/dashboard/PeriodFilter';
 import { DEFAULT_PERIOD, periodWindow, windowLabel } from '../utils/dashboardPeriod';
 import { ROLE_LABELS } from '../utils/roles';
+import { useSessionUser } from '../hooks/useSessionUser';
 import { QRCodeSVG } from 'qrcode.react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -130,9 +131,12 @@ function greeting() {
    ═══════════════════════════════════════════════════════════════════════════ */
 export default function Dashboard({ session }) {
   const navigate = useNavigate();
+  const { userId, email, metadata } = useSessionUser(session);
 
-  /* ── Data state ── */
-  const [profile, setProfile] = useState(null);
+  /* ── Data state — profile initialisé depuis JWT (0 appel DB) ── */
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'member', prenom: metadata.prenom || '', nom: metadata.nom || '', ...metadata } : null
+  );
   const [activeSubscription, setActiveSubscription] = useState(null);
   const [subscriptionHistory, setSubscriptionHistory] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -465,13 +469,37 @@ export default function Dashboard({ session }) {
     }
   };
 
-  /* ── Loading screen ── */
+  /* ── Skeleton (données pas encore chargées) ── */
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: '#f4f6f9' }}>
-        <div className="w-14 h-14 rounded-full border-4 border-[#f95d00]/20 border-t-[#f95d00] animate-spin mb-4" />
-        <p className="text-sm text-on-surface-variant font-medium">Chargement…</p>
-      </div>
+      <PortalLayout profile={profile} onLogout={handleLogout}>
+        <style>{styleSheet}</style>
+        {/* Header skeleton */}
+        <div className="mb-7">
+          <div className="h-3 w-32 bg-gray-200 rounded animate-pulse mb-2" />
+          <div className="h-8 w-56 bg-gray-200 rounded animate-pulse mb-1" />
+          <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
+        </div>
+        {/* Cards skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl p-5 shadow-sm animate-pulse">
+              <div className="h-3 w-24 bg-gray-200 rounded mb-3" />
+              <div className="h-7 w-16 bg-gray-200 rounded" />
+            </div>
+          ))}
+        </div>
+        {/* Content skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl p-5 shadow-sm animate-pulse h-40">
+              <div className="h-4 w-32 bg-gray-200 rounded mb-4" />
+              <div className="h-3 w-full bg-gray-100 rounded mb-2" />
+              <div className="h-3 w-3/4 bg-gray-100 rounded" />
+            </div>
+          ))}
+        </div>
+      </PortalLayout>
     );
   }
 

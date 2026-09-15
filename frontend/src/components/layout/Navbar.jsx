@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
+import { useTheme } from '../../context/ThemeContext';
 
 /**
  * Navbar principale — DeskyWork
- * Utilisable sur toutes les pages publiques.
+ * Utilisable sur toutes les pages publiques (Landing, etc.).
  * Props:
  *   session        — objet session Supabase (ou null)
  *   activeLink     — href du lien actif (ex: '#espaces')
@@ -12,6 +13,7 @@ import { supabase } from '../../supabaseClient';
  */
 export default function Navbar({ session, activeLink = '', transparent = false }) {
   const navigate = useNavigate();
+  const { dark, toggle } = useTheme();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -35,6 +37,7 @@ export default function Navbar({ session, activeLink = '', transparent = false }
   ];
 
   const isScrolledOrSolid = scrolled || !transparent;
+  const logoSrc = dark ? '/logo 2.png' : '/logo 1.png';
 
   return (
     <>
@@ -46,11 +49,16 @@ export default function Navbar({ session, activeLink = '', transparent = false }
           transition: background .3s ease, box-shadow .3s ease, backdrop-filter .3s;
         }
         .ec-navbar.solid {
-          background: rgba(255,255,255,0.97);
+          background: rgba(255,255,255,0.96);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
           box-shadow: 0 2px 20px rgba(0,13,35,.08);
           border-bottom: 1px solid rgba(0,13,35,.06);
+        }
+        .dark .ec-navbar.solid {
+          background: rgba(16,15,13,0.96);
+          box-shadow: 0 4px 24px rgba(0,0,0,.5);
+          border-bottom: 1px solid rgba(255,255,255,0.08);
         }
         .ec-navbar.transparent-nav {
           background: transparent;
@@ -77,6 +85,9 @@ export default function Navbar({ session, activeLink = '', transparent = false }
           transition: color .2s;
           white-space: nowrap;
         }
+        .dark .ec-navbar .nav-link-item {
+          color: #cfcac3;
+        }
         .ec-navbar .nav-link-item::after {
           content: '';
           position: absolute;
@@ -90,9 +101,41 @@ export default function Navbar({ session, activeLink = '', transparent = false }
         .ec-navbar .nav-link-item.active {
           color: #f95d00;
         }
+        .dark .ec-navbar .nav-link-item:hover,
+        .dark .ec-navbar .nav-link-item.active {
+          color: #ff8a3d;
+        }
         .ec-navbar .nav-link-item:hover::after,
         .ec-navbar .nav-link-item.active::after {
           width: 100%;
+        }
+        .ec-navbar .btn-theme-toggle {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 38px;
+          height: 38px;
+          border-radius: 12px;
+          border: none;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          background: rgba(16,15,13,0.06);
+          color: #100f0d;
+          box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .dark .ec-navbar .btn-theme-toggle {
+          background: rgba(255,255,255,0.08);
+          color: #ffd966;
+          box-shadow: inset 0 1px 2px rgba(255,255,255,0.1);
+        }
+        .ec-navbar .btn-theme-toggle:hover {
+          background: rgba(249,93,0,0.15);
+          color: #f95d00;
+          transform: scale(1.05);
+        }
+        .dark .ec-navbar .btn-theme-toggle:hover {
+          background: rgba(249,93,0,0.25);
+          color: #ff8a3d;
         }
         .ec-navbar .btn-login {
           background: transparent;
@@ -106,6 +149,10 @@ export default function Navbar({ session, activeLink = '', transparent = false }
           transition: all .22s;
           text-decoration: none;
           white-space: nowrap;
+        }
+        .dark .ec-navbar .btn-login {
+          color: #fbffff;
+          border-color: rgba(255,255,255,0.3);
         }
         .ec-navbar .btn-login:hover {
           background: #f95d00;
@@ -167,8 +214,11 @@ export default function Navbar({ session, activeLink = '', transparent = false }
           border: none;
           padding: 4px;
           cursor: pointer;
-          color: #000d23;
+          color: #100f0d;
           display: flex; align-items: center;
+        }
+        .dark .ec-navbar .menu-toggle {
+          color: #fbffff;
         }
         /* Mobile menu */
         .ec-mobile-menu {
@@ -179,6 +229,10 @@ export default function Navbar({ session, activeLink = '', transparent = false }
           border-top: 1px solid rgba(0,13,35,.07);
           background: rgba(255,255,255,0.98);
           backdrop-filter: blur(16px);
+        }
+        .dark .ec-mobile-menu {
+          background: rgba(16,15,13,0.98);
+          border-top: 1px solid rgba(255,255,255,0.1);
         }
         .ec-mobile-menu.open { display: flex; }
         .ec-mobile-menu .mob-link {
@@ -191,14 +245,20 @@ export default function Navbar({ session, activeLink = '', transparent = false }
           border-bottom: 1px solid rgba(0,13,35,.05);
           transition: color .2s;
         }
+        .dark .ec-mobile-menu .mob-link {
+          color: #cfcac3;
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
         .ec-mobile-menu .mob-link:hover { color: #f95d00; }
         .ec-mobile-menu .mob-actions {
           display: flex;
+          flex-wrap: wrap;
           gap: 10px;
           padding-top: 12px;
+          align-items: center;
         }
         .ec-mobile-menu .mob-actions a,
-        .ec-mobile-menu .mob-actions button {
+        .ec-mobile-menu .mob-actions button.btn-action {
           flex: 1;
           text-align: center;
         }
@@ -224,7 +284,7 @@ export default function Navbar({ session, activeLink = '', transparent = false }
               style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', flexShrink: 0 }}
             >
               <img
-                src="/logo 1.png"
+                src={logoSrc}
                 alt="DeskyWork"
                 className="brand-logo-img"
               />
@@ -243,8 +303,21 @@ export default function Navbar({ session, activeLink = '', transparent = false }
               ))}
             </div>
 
-            {/* Desktop actions */}
-            <div className="desktop-nav" style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            {/* Desktop actions + Theme Toggle */}
+            <div className="desktop-nav" style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+              {/* Bouton bascule de thème */}
+              <button
+                type="button"
+                onClick={toggle}
+                className="btn-theme-toggle"
+                title={dark ? 'Passer au mode clair' : 'Passer au mode sombre'}
+                aria-label="Basculer le thème"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>
+                  {dark ? 'light_mode' : 'dark_mode'}
+                </span>
+              </button>
+
               {session ? (
                 <>
                   <Link to="/dashboard" className="btn-portal">
@@ -267,12 +340,26 @@ export default function Navbar({ session, activeLink = '', transparent = false }
               )}
             </div>
 
-            {/* Mobile hamburger */}
-            <button className="menu-toggle ms-auto" onClick={() => setMenuOpen(o => !o)} aria-label="Menu">
-              <span className="material-symbols-outlined" style={{ fontSize: 26 }}>
-                {menuOpen ? 'close' : 'menu'}
-              </span>
-            </button>
+            {/* Mobile Actions: Theme toggle + Hamburger */}
+            <div className="d-flex d-lg-none align-items-center gap-2 ms-auto">
+              <button
+                type="button"
+                onClick={toggle}
+                className="btn-theme-toggle"
+                title={dark ? 'Passer au mode clair' : 'Passer au mode sombre'}
+                aria-label="Basculer le thème"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>
+                  {dark ? 'light_mode' : 'dark_mode'}
+                </span>
+              </button>
+
+              <button className="menu-toggle" onClick={() => setMenuOpen(o => !o)} aria-label="Menu">
+                <span className="material-symbols-outlined" style={{ fontSize: 26 }}>
+                  {menuOpen ? 'close' : 'menu'}
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* ── Mobile menu ── */}
@@ -284,7 +371,7 @@ export default function Navbar({ session, activeLink = '', transparent = false }
               {session ? (
                 <>
                   <Link to="/dashboard" className="btn-portal" style={{ display: 'block', textAlign: 'center' }}>Mon Portail</Link>
-                  <button onClick={handleLogout} className="btn-logout">Déconnexion</button>
+                  <button onClick={handleLogout} className="btn-logout btn-action">Déconnexion</button>
                 </>
               ) : (
                 <>

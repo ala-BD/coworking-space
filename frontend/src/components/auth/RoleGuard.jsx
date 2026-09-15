@@ -3,48 +3,33 @@ import { Navigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import { getHomePath, isAdminRole, isMemberRole, canBookSpaces, getPostLoginPath } from '../../utils/roles';
 
-function LoadingScreen() {
+// Extrait le rôle depuis la session JWT (user_metadata) sans appel DB
+function getRoleFromSession(session) {
   return (
-    <div className="flex h-screen items-center justify-center bg-[#F4F6F9]">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
-    </div>
+    session?.user?.user_metadata?.role ||
+    session?.user?.app_metadata?.role ||
+    null
   );
 }
 
 export function RoleGuard({ session, requireAdmin = false, requireMember = false, requireTrainer = false, requireBooker = false, children }) {
-  const [state, setState] = useState({ loading: true, role: null });
+  // Lecture synchrone depuis les métadonnées JWT — 0 appel DB, 0 délai
+  const role = getRoleFromSession(session) ?? 'member';
 
-  useEffect(() => {
-    if (!session?.user?.id) {
-      setState({ loading: false, role: null });
-      return;
-    }
-
-    supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
-      .then(({ data }) => setState({ loading: false, role: data?.role ?? 'member' }))
-      .catch(() => setState({ loading: false, role: 'member' }));
-  }, [session]);
-
-  if (state.loading) return <LoadingScreen />;
-
-  if (requireAdmin && !isAdminRole(state.role)) {
-    return <Navigate to={getHomePath(state.role)} replace />;
+  if (requireAdmin && !isAdminRole(role)) {
+    return <Navigate to={getHomePath(role)} replace />;
   }
 
-  if (requireMember && !isMemberRole(state.role)) {
-    return <Navigate to={getHomePath(state.role)} replace />;
+  if (requireMember && !isMemberRole(role)) {
+    return <Navigate to={getHomePath(role)} replace />;
   }
 
-  if (requireTrainer && state.role !== 'formateur') {
-    return <Navigate to={getHomePath(state.role)} replace />;
+  if (requireTrainer && role !== 'formateur') {
+    return <Navigate to={getHomePath(role)} replace />;
   }
 
-  if (requireBooker && !canBookSpaces(state.role)) {
-    return <Navigate to={getHomePath(state.role)} replace />;
+  if (requireBooker && !canBookSpaces(role)) {
+    return <Navigate to={getHomePath(role)} replace />;
   }
 
   return children;
@@ -52,26 +37,28 @@ export function RoleGuard({ session, requireAdmin = false, requireMember = false
 
 
 export function HomeRedirect({ session }) {
-  const [state, setState] = useState({ loading: true, path: '/dashboard' });
+  const [state, setState] = useState(() => {
+    // Lecture synchrone du rôle — évite le spinner
+    const role = getRoleFromSession(session);
+    if (!session?.user?.id || !role) {
+      return { loading: false, path: '/login' };
+    }
+    // Pour admin: besoin de vérifier l'onboarding (1 appel DB, mais seulement pour les admins)
+    if (role === 'admin') {
+      return { loading: true, path: getHomePath(role) };
+    }
+    return { loading: false, path: getHomePath(role) };
+  });
 
   useEffect(() => {
-    if (!session?.user?.id) {
-      setState({ loading: false, path: '/login' });
-      return;
-    }
+    const role = getRoleFromSession(session);
+    if (!session?.user?.id || role !== 'admin') return;
 
-    supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
-      .then(async ({ data }) => {
-        const path = await getPostLoginPath(supabase, session.user.id, data?.role);
-        setState({ loading: false, path });
-      })
-      .catch(() => setState({ loading: false, path: '/dashboard' }));
+    getPostLoginPath(supabase, session.user.id, role)
+      .then((path) => setState({ loading: false, path }))
+      .catch(() => setState({ loading: false, path: '/admin/dashboard' }));
   }, [session]);
 
-  if (state.loading) return <LoadingScreen />;
+  if (state.loading) return null; // Bref instant, uniquement pour les admins
   return <Navigate to={state.path} replace />;
 }

@@ -4,8 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 
 import { supabase } from './supabaseClient';
 
-const RoleGuard = lazy(() => import('./components/auth/RoleGuard').then((m) => ({ default: m.RoleGuard })));
-const HomeRedirect = lazy(() => import('./components/auth/RoleGuard').then((m) => ({ default: m.HomeRedirect })));
+import { RoleGuard, HomeRedirect } from './components/auth/RoleGuard';
 
 const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
@@ -53,6 +52,10 @@ const TenantBilling = lazy(() => import('./pages/TenantBilling'));
 const SuperAdminMonitoring = lazy(() => import('./pages/SuperAdminMonitoring'));
 const SuperAdminUsers = lazy(() => import('./pages/SuperAdminUsers'));
 const SuperAdminContacts = lazy(() => import('./pages/SuperAdminContacts'));
+const SuperAdminReservations = lazy(() => import('./pages/SuperAdminReservations'));
+const SuperAdminPayments = lazy(() => import('./pages/SuperAdminPayments'));
+const SuperAdminFormationsList = lazy(() => import('./pages/SuperAdminFormationsList'));
+const SuperAdminEspaces = lazy(() => import('./pages/SuperAdminEspaces'));
 const AdminEspaces = lazy(() => import('./pages/AdminEspaces'));
 const AdminCoworkingProfile = lazy(() => import('./pages/AdminCoworkingProfile'));
 const CoworkingDetail = lazy(() => import('./pages/CoworkingDetail'));
@@ -102,48 +105,61 @@ export default function App() {
 
     const hasAuthParams = window.location.search.includes('code=') || window.location.hash.includes('access_token=');
 
-    const checkUserStatusAndSetSession = async (s) => {
-      if (s?.user?.id) {
-        try {
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('statut_compte')
-            .eq('id', s.user.id)
-            .single();
+    // Vérifie le statut_compte EN ARRIÈRE-PLAN après l'affichage (ne bloque pas le rendu)
+    const checkStatusInBackground = async (s) => {
+      if (!s?.user?.id) return;
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('statut_compte')
+          .eq('id', s.user.id)
+          .single();
 
-          if (!error && profile && profile.statut_compte && profile.statut_compte !== 'actif') {
-            localStorage.setItem('pending_auth_status', profile.statut_compte);
-            await supabase.auth.signOut();
-            setSession(null);
-            return false;
-          }
-        } catch (_) {}
-      }
-      setSession(s);
-      return true;
+        if (!error && profile && profile.statut_compte && profile.statut_compte !== 'actif') {
+          localStorage.setItem('pending_auth_status', profile.statut_compte);
+          await supabase.auth.signOut();
+          setSession(null);
+        }
+      } catch (_) {}
     };
 
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      await checkUserStatusAndSetSession(s);
+    // Lecture synchrone : si la session vient du localStorage (déjà lue en useState),
+    // on évite getSession() et on affiche immédiatement
+    if (session) {
       setLoading(false);
-    });
+      // Vérification du statut en arrière-plan, sans bloquer l'affichage
+      checkStatusInBackground(session);
+    } else {
+      // Pas de session en cache → on attend la réponse Supabase (OAuth redirect, etc.)
+      supabase.auth.getSession().then(({ data: { session: s } }) => {
+        setSession(s);
+        setLoading(false);
+        if (s) checkStatusInBackground(s);
+      });
+    }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
-      await checkUserStatusAndSetSession(s);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      // SIGNED_IN = nouvelle connexion → check statut immédiat
+      // TOKEN_REFRESHED / INITIAL_SESSION = déjà géré ci-dessus, on met juste à jour la session
+      setSession(s);
       setLoading(false);
+      if (event === 'SIGNED_IN' && s) {
+        checkStatusInBackground(s);
+      }
     });
 
     let fallbackTimeout;
     if (hasAuthParams) {
       fallbackTimeout = setTimeout(() => {
         setLoading(false);
-      }, 5000);
+      }, 3000);
     }
 
     return () => {
       subscription.unsubscribe();
       if (fallbackTimeout) clearTimeout(fallbackTimeout);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -441,7 +457,7 @@ export default function App() {
 
               <BookerRoute>
 
-                <BookingStep1 />
+                <BookingStep1 session={session} />
 
               </BookerRoute>
 
@@ -457,7 +473,7 @@ export default function App() {
 
               <BookerRoute>
 
-                <BookingStep2 />
+                <BookingStep2 session={session} />
 
               </BookerRoute>
 
@@ -892,6 +908,22 @@ export default function App() {
             }
 
           />
+
+          <Route path="/super-admin/reservations" element={
+            <SuperAdminRoute><SuperAdminReservations session={session} /></SuperAdminRoute>
+          } />
+
+          <Route path="/super-admin/payments" element={
+            <SuperAdminRoute><SuperAdminPayments session={session} /></SuperAdminRoute>
+          } />
+
+          <Route path="/super-admin/formations" element={
+            <SuperAdminRoute><SuperAdminFormationsList session={session} /></SuperAdminRoute>
+          } />
+
+          <Route path="/super-admin/espaces" element={
+            <SuperAdminRoute><SuperAdminEspaces session={session} /></SuperAdminRoute>
+          } />
 
 
 

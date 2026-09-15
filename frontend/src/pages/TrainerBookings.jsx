@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { useSessionUser } from '../hooks/useSessionUser';
 import { bookingApi, paymentApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
 import Pagination from '../components/Pagination';
@@ -26,8 +27,11 @@ function formatCurrency(v) {
 }
 
 export default function TrainerBookings({ session }) {
+  const { userId, email, metadata } = useSessionUser(session);
   const navigate = useNavigate();
-  const [profile,    setProfile]    = useState(null);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'formateur', ...metadata } : null
+  );
   const [bookings,   setBookings]   = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading,    setLoading]    = useState(true);
@@ -37,16 +41,7 @@ export default function TrainerBookings({ session }) {
   const [error,      setError]      = useState('');
   const [success,    setSuccess]    = useState('');
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { navigate('/login'); return; }
-      supabase.from('profiles').select('*').eq('id', user.id).single()
-        .then(({ data }) => {
-          if (data?.role !== 'formateur') { navigate('/trainer-dashboard'); return; }
-          setProfile(data);
-        });
-    });
-  }, [navigate]);
+  // profile déjà initialisé depuis le JWT — aucun appel DB nécessaire
 
   const loadBookings = useCallback(async () => {
     setLoading(true);

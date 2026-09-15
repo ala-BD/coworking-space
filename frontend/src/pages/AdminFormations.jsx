@@ -39,38 +39,38 @@ function Modal({ open, onClose, title, subtitle, icon, children, footer, maxWidt
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
       <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-sm" onClick={onClose} />
       <div
-        className={`relative w-full ${maxWidth} mx-auto bg-white rounded-4xl shadow-[0_40px_120px_rgba(15,23,42,0.18)] flex flex-col max-h-[90vh] overflow-hidden`}
+        className={`relative w-full ${maxWidth} mx-auto bg-white rounded-3xl sm:rounded-4xl shadow-[0_40px_120px_rgba(15,23,42,0.18)] flex flex-col max-h-[92vh] overflow-hidden`}
         style={{ animation: 'popIn 0.22s cubic-bezier(.34,1.56,.64,1)' }}
       >
-        <div className="flex flex-col gap-4 p-7 border-b border-outline-variant/15 bg-slate-50 shrink-0">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-3 sm:gap-4 p-4 sm:p-7 border-b border-outline-variant/15 bg-slate-50 shrink-0">
+          <div className="flex items-start justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               {icon && (
-                <div className="w-12 h-12 rounded-3xl bg-secondary/10 flex items-center justify-center shrink-0 shadow-sm">
-                  <span className="material-symbols-outlined text-secondary" style={{ fontSize: 24 }}>{icon}</span>
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl sm:rounded-3xl bg-secondary/10 flex items-center justify-center shrink-0 shadow-sm">
+                  <span className="material-symbols-outlined text-secondary" style={{ fontSize: 22 }}>{icon}</span>
                 </div>
               )}
               <div className="min-w-0">
-                <h2 className="font-sora font-bold text-primary text-3xl leading-tight">{title}</h2>
-                {subtitle && <p className="text-sm text-on-surface-variant mt-2 max-w-2xl">{subtitle}</p>}
+                <h2 className="font-sora font-bold text-primary text-xl sm:text-3xl leading-tight">{title}</h2>
+                {subtitle && <p className="text-xs sm:text-sm text-on-surface-variant mt-1 sm:mt-2 max-w-2xl">{subtitle}</p>}
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-11 h-11 rounded-3xl hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant transition-colors"
+              className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl sm:rounded-3xl hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant transition-colors shrink-0"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-7 space-y-7">{children}</div>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-7 space-y-4 sm:space-y-7">{children}</div>
 
         {footer && (
-          <div className="p-6 border-t border-outline-variant/15 bg-surface-container-low rounded-b-[32px] shrink-0">{footer}</div>
+          <div className="p-4 sm:p-6 border-t border-outline-variant/15 bg-surface-container-low rounded-b-[24px] sm:rounded-b-[32px] shrink-0">{footer}</div>
         )}
       </div>
 

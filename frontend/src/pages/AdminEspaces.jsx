@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { tenantAdminApi } from '../services/api';
+import { useSessionUser } from '../hooks/useSessionUser';
 import PortalLayout from '../components/layout/PortalLayout';
 import Pagination from '../components/Pagination';
 
@@ -39,7 +40,10 @@ const EMPTY_FORM = { nom: '', type: 'open_space', capacite: 10, tarif_horaire: 1
 const inputCls = 'w-full px-3.5 py-2.5 rounded-xl border border-outline-variant/30 bg-white text-sm text-primary outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/15 transition-all placeholder:text-on-surface-variant/50';
 
 export default function AdminEspaces({ session }) {
-  const [profile, setProfile] = useState(null);
+  const { userId, email, metadata } = useSessionUser(session);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'admin', prenom: metadata.prenom || '', nom: metadata.nom || '', ...metadata } : null
+  );
   const [espaces, setEspaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -60,8 +64,6 @@ export default function AdminEspaces({ session }) {
   const loadData = async () => {
     try {
       setLoading(true);
-      const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-      setProfile(prof);
       const res = await tenantAdminApi.getEspaces();
       setEspaces(res.espaces || []);
     } catch (e) { showError(e.message); }
@@ -133,9 +135,16 @@ export default function AdminEspaces({ session }) {
   const getTypeInfo = (type) => ESPACE_TYPES.find(t => t.value === type) || ESPACE_TYPES[0];
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
-    </div>
+    <PortalLayout profile={profile} onLogout={() => supabase.auth.signOut()}>
+      <div className="p-6">
+        <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-6" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl p-5 shadow-sm animate-pulse h-48" />
+          ))}
+        </div>
+      </div>
+    </PortalLayout>
   );
 
   return (
@@ -156,14 +165,14 @@ export default function AdminEspaces({ session }) {
       <div className="max-w-5xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-8 flex-wrap">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
             <h1 className="font-sora font-bold text-primary text-2xl sm:text-3xl">Mes Espaces</h1>
             <p className="text-on-surface-variant text-sm mt-1">Gérez les espaces de votre coworking · {espaces.length} espace{espaces.length > 1 ? 's' : ''}</p>
           </div>
           <button
             onClick={() => { setShowForm(v => !v); setEditId(null); setForm({ ...EMPTY_FORM }); }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-secondary text-white rounded-2xl font-bold text-sm hover:bg-secondary/90 transition-all shadow-sm"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-secondary text-white rounded-2xl font-bold text-sm hover:bg-secondary/90 transition-all shadow-sm"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{showForm && !editId ? 'close' : 'add'}</span>
             {showForm && !editId ? 'Annuler' : 'Nouvel espace'}
@@ -172,7 +181,7 @@ export default function AdminEspaces({ session }) {
 
         {/* Formulaire Création / Édition */}
         {showForm && (
-          <div className="bg-white rounded-3xl border border-outline-variant/20 shadow-sm p-7 mb-8"
+          <div className="bg-white rounded-3xl border border-outline-variant/20 shadow-sm p-4 sm:p-7 mb-8"
             style={{ animation: 'slideDown .25s ease-out' }}>
             <style>{`@keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }`}</style>
 

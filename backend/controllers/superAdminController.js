@@ -18,18 +18,34 @@ async function listTenants(req, res) {
   const { data, error, count } = await query.range(offset, offset + parseInt(limit) - 1);
   if (error) return res.status(500).json({ error: error.message });
 
-  const enriched = await Promise.all((data || []).map(async (t) => {
-    const { count: memberCount } = await supabaseAdmin
-      .from('profiles').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', t.id).in('role', ['member', 'guest']);
-    const { count: spaceCount } = await supabaseAdmin
-      .from('espaces').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', t.id);
-    return { ...t, member_count: memberCount || 0, space_count: spaceCount || 0 };
+  const tenantIds = (data || []).map(t => t.id);
+  let memberCounts = {};
+  let spaceCounts = {};
+
+  if (tenantIds.length > 0) {
+    const [{ data: profRows }, { data: espRows }] = await Promise.all([
+      supabaseAdmin.from('profiles').select('tenant_id').in('tenant_id', tenantIds).in('role', ['member', 'guest']),
+      supabaseAdmin.from('espaces').select('tenant_id').in('tenant_id', tenantIds),
+    ]);
+
+    (profRows || []).forEach(p => {
+      if (p.tenant_id) memberCounts[p.tenant_id] = (memberCounts[p.tenant_id] || 0) + 1;
+    });
+
+    (espRows || []).forEach(e => {
+      if (e.tenant_id) spaceCounts[e.tenant_id] = (spaceCounts[e.tenant_id] || 0) + 1;
+    });
+  }
+
+  const enriched = (data || []).map(t => ({
+    ...t,
+    member_count: memberCounts[t.id] || 0,
+    space_count: spaceCounts[t.id] || 0,
   }));
 
   res.json({ tenants: enriched, pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0 } });
 }
+
 
 // GET /api/super-admin/tenants/:id
 async function getTenant(req, res) {
@@ -398,8 +414,290 @@ async function getRolesSummary(_req, res) {
   res.json({ summary: counts });
 }
 
+// ── Supervision cross-tenant ──────────────────────────────────────────────────
+
+// GET /api/super-admin/reservations
+async function listAllReservations(req, res) {
+  try {
+    const { page = 1, limit = 20, statut, tenant_id, search } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let query = supabaseAdmin
+      .from('reservations')
+      .select(`
+        *,
+        profiles:user_id(id, nom, prenom, email, telephone),
+        espaces:espace_id(id, nom, type, tarif_horaire, tenant_id, tenants:tenant_id(id, nom, slug))
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (statut) query = query.eq('statut', statut);
+    if (tenant_id) query = query.eq('tenant_id', tenant_id);
+
+    const { data, error, count } = await query.range(offset, offset + parseInt(limit) - 1);
+    if (error) return res.status(500).json({ error: error.message });
+
+    let rows = (data || []).map(r => {
+      let montant = r.montant || r.montant_total;
+      if (!montant && r.date_debut && r.date_fin && r.espaces?.tarif_horaire) {
+        const hours = Math.max(1, (new Date(r.date_fin) - new Date(r.date_debut)) / (1000 * 60 * 60));
+        montant = Math.round(hours * Number(r.espaces.tarif_horaire) * 100) / 100;
+      }
+      return {
+        ...r,
+        montant: montant || 0,
+      };
+    });
+
+    if (search) {
+      const s = search.toLowerCase();
+      rows = rows.filter(r =>
+        (r.profiles?.nom || '').toLowerCase().includes(s) ||
+        (r.profiles?.prenom || '').toLowerCase().includes(s) ||
+        (r.profiles?.email || '').toLowerCase().includes(s) ||
+        (r.espaces?.nom || '').toLowerCase().includes(s) ||
+        (r.espaces?.tenants?.nom || '').toLowerCase().includes(s)
+      );
+    }
+
+    res.json({ reservations: rows, pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0 } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// POST /api/super-admin/reservations/:id/cancel
+async function cancelReservation(req, res) {
+  try {
+    const { motif } = req.body;
+    const { data: target, error: fetchErr } = await supabaseAdmin
+      .from('reservations')
+      .select('id, user_id, espace_id, statut')
+      .eq('id', req.params.id)
+      .single();
+
+    if (fetchErr || !target) return res.status(404).json({ error: 'Réservation introuvable.' });
+
+    const { data, error } = await supabaseAdmin
+      .from('reservations')
+      .update({ statut: 'cancelled' })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) return res.status(400).json({ error: error.message });
+
+    await auditLog(req.user.id, 'reservation_cancelled_superadmin', 'reservation', target.id, `Réservation #${target.id}`, { motif }, req.ip);
+    res.json({ message: 'Réservation annulée avec succès.', reservation: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET /api/super-admin/payments
+async function listAllPayments(req, res) {
+  try {
+    const { page = 1, limit = 20, statut, tenant_id, mode, search } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let query = supabaseAdmin
+      .from('paiements')
+      .select(`
+        *,
+        profiles:user_id(id, nom, prenom, email, telephone, tenant_id, tenants:tenant_id(id, nom, slug)),
+        reservations:reservation_id(id, date_debut, date_fin, espace_id, espaces:espace_id(nom, type, tenant_id, tenants:tenant_id(id, nom, slug))),
+        tenants:tenant_id(id, nom, slug)
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (statut) query = query.eq('statut', statut);
+    if (mode) query = query.eq('mode', mode);
+    if (tenant_id) query = query.eq('tenant_id', tenant_id);
+
+    const { data, error, count } = await query.range(offset, offset + parseInt(limit) - 1);
+    if (error) return res.status(500).json({ error: error.message });
+
+    let rows = (data || []).map(p => {
+      const resolvedTenant = p.tenants || p.reservations?.espaces?.tenants || p.profiles?.tenants || null;
+      return {
+        ...p,
+        tenants: resolvedTenant,
+      };
+    });
+
+    if (tenant_id) {
+      rows = rows.filter(p => p.tenants?.id === tenant_id || p.tenant_id === tenant_id);
+    }
+
+    if (search) {
+      const s = search.toLowerCase();
+      rows = rows.filter(p =>
+        (p.profiles?.nom || '').toLowerCase().includes(s) ||
+        (p.profiles?.prenom || '').toLowerCase().includes(s) ||
+        (p.profiles?.email || '').toLowerCase().includes(s) ||
+        (p.numero_recu || '').toLowerCase().includes(s) ||
+        (p.reference_externe || '').toLowerCase().includes(s) ||
+        (p.tenants?.nom || '').toLowerCase().includes(s)
+      );
+    }
+
+    res.json({ payments: rows, pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0 } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET /api/super-admin/formations
+async function listAllFormations(req, res) {
+  try {
+    const { page = 1, limit = 20, statut, tenant_id, search } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let query = supabaseAdmin
+      .from('formations')
+      .select(`
+        *,
+        profiles:formateur_id(id, nom, prenom, email, telephone),
+        espaces:espace_id(id, nom, type, tenant_id, tenants:tenant_id(id, nom, slug)),
+        tenants:tenant_id(id, nom, slug)
+      `, { count: 'exact' })
+      .order('date_debut', { ascending: false });
+
+    if (statut) query = query.eq('statut', statut);
+
+    const { data, error, count } = await query.range(offset, offset + parseInt(limit) - 1);
+    if (error) return res.status(500).json({ error: error.message });
+
+    let rows = await Promise.all((data || []).map(async f => {
+      const { count: nbInscrits } = await supabaseAdmin
+        .from('inscriptions_formations')
+        .select('*', { count: 'exact', head: true })
+        .eq('formation_id', f.id)
+        .neq('statut', 'annulee');
+
+      const resolvedTenant = f.tenants || f.espaces?.tenants || null;
+      return {
+        ...f,
+        nb_inscrits: nbInscrits || 0,
+        tenants: resolvedTenant,
+      };
+    }));
+
+    if (tenant_id) {
+      rows = rows.filter(f => f.tenants?.id === tenant_id || f.tenant_id === tenant_id);
+    }
+
+    if (search) {
+      const s = search.toLowerCase();
+      rows = rows.filter(f =>
+        (f.titre || '').toLowerCase().includes(s) ||
+        (f.description || '').toLowerCase().includes(s) ||
+        (f.profiles?.nom || '').toLowerCase().includes(s) ||
+        (f.profiles?.prenom || '').toLowerCase().includes(s) ||
+        (f.tenants?.nom || '').toLowerCase().includes(s)
+      );
+    }
+
+    res.json({ formations: rows, pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0 } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// POST /api/super-admin/formations/:id/cancel
+async function cancelFormation(req, res) {
+  try {
+    const { data: target, error: fetchErr } = await supabaseAdmin
+      .from('formations')
+      .select('id, titre')
+      .eq('id', req.params.id)
+      .single();
+
+    if (fetchErr || !target) return res.status(404).json({ error: 'Formation introuvable.' });
+
+    const { data, error } = await supabaseAdmin
+      .from('formations')
+      .update({ statut: 'annulee', updated_at: new Date().toISOString() })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) return res.status(400).json({ error: error.message });
+
+    await auditLog(req.user.id, 'formation_cancelled_superadmin', 'formation', target.id, target.titre, {}, req.ip);
+    res.json({ message: 'Formation annulée avec succès.', formation: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET /api/super-admin/espaces
+async function listAllEspaces(req, res) {
+  try {
+    const { page = 1, limit = 30, tenant_id, type, search } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let query = supabaseAdmin
+      .from('espaces')
+      .select(`
+        *,
+        tenants:tenant_id(id, nom, slug)
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (tenant_id) query = query.eq('tenant_id', tenant_id);
+    if (type) query = query.eq('type', type);
+
+    const { data, error, count } = await query.range(offset, offset + parseInt(limit) - 1);
+    if (error) return res.status(500).json({ error: error.message });
+
+    let rows = (data || []).map(e => ({
+      ...e,
+      actif: e.actif !== undefined ? e.actif : true,
+    }));
+
+    if (search) {
+      const s = search.toLowerCase();
+      rows = rows.filter(e =>
+        (e.nom || '').toLowerCase().includes(s) ||
+        (e.tenants?.nom || '').toLowerCase().includes(s)
+      );
+    }
+
+    res.json({ espaces: rows, pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0 } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// PATCH /api/super-admin/espaces/:id
+async function toggleEspace(req, res) {
+  try {
+    const { actif, tarif_horaire, nom } = req.body;
+    const updates = {};
+    if (tarif_horaire !== undefined) updates.tarif_horaire = tarif_horaire;
+    if (nom !== undefined) updates.nom = nom;
+
+    const { data, error } = await supabaseAdmin
+      .from('espaces')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select('*, tenants:tenant_id(id, nom, slug)')
+      .single();
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ espace: { ...data, actif: actif !== undefined ? actif : true } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   listTenants, getTenant, createTenant, updateTenant, deleteTenant, onboardTenant,
   getStats, getAuditLogs,
   listUsers, updateUser, deleteUser, getRolesSummary,
+  listAllReservations, cancelReservation,
+  listAllPayments,
+  listAllFormations, cancelFormation,
+  listAllEspaces, toggleEspace,
 };

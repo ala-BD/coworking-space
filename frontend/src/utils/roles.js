@@ -233,6 +233,15 @@ export const SUPER_ADMIN_NAV = [
     ],
   },
   {
+    group: 'Supervision',
+    items: [
+      { id: 'sa_reservations', label: 'Réservations globales', icon: 'event_available', to: '/super-admin/reservations' },
+      { id: 'sa_payments', label: 'Paiements globaux', icon: 'account_balance_wallet', to: '/super-admin/payments' },
+      { id: 'sa_formations', label: 'Formations globales', icon: 'school', to: '/super-admin/formations' },
+      { id: 'sa_espaces', label: 'Espaces globaux', icon: 'meeting_room', to: '/super-admin/espaces' },
+    ],
+  },
+  {
     group: 'Gestion',
     items: [
       { id: 'sa_users', label: 'Utilisateurs', icon: 'groups', to: '/super-admin/users' },

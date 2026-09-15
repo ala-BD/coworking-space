@@ -16,4 +16,6 @@ export const memberApi = {
   getPendingAccounts: () => apiFetch('/api/admin/pending-accounts'),
   approveAccount: (id, action) =>
     apiFetch(`/api/admin/approve-account/${id}`, { method: 'PATCH', body: JSON.stringify({ action }) }),
+  testNotification: (payload) =>
+    apiFetch('/api/members/me/test-notification', { method: 'POST', body: JSON.stringify(payload || {}) }),
 };

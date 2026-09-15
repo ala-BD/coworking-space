@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
 const templates = require('../templates/emailTemplates');
+const { sendWhatsApp, generateWhatsAppMessage } = require('./whatsappService');
 
 // ── Configuration SMTP ─────────────────────────────────────────────────────
 function createTransporter() {
@@ -51,32 +52,34 @@ function getCoworkingConfig() {
   return {
     appName:          'DeskyWork',
     coworkingName:    process.env.COWORKING_NAME  || 'DeskyWork',
-    coworkingEmail:   process.env.COWORKING_EMAIL || 'contact@33space.tn',
-    coworkingTel:     process.env.COWORKING_TEL   || '+216 XX XXX XXX',
+    coworkingEmail:   process.env.COWORKING_EMAIL || 'contact@deskywork.tn',
+    coworkingTel:     process.env.COWORKING_TEL   || '+216 52 882 880 / +216 52 882 930',
     coworkingAdresse: process.env.COWORKING_ADRESSE || 'Tunis, Tunisie',
     frontendUrl:      process.env.FRONTEND_URL    || 'http://localhost:5173',
   };
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// FONCTION PRINCIPALE — Envoyer une notification
+// FONCTION PRINCIPALE — Envoyer une notification (Email, WhatsApp ou les deux)
 // ══════════════════════════════════════════════════════════════════════════
 
 /**
- * Envoie une notification par email et l'enregistre dans la base de données.
+ * Envoie une notification par email et/ou WhatsApp et l'enregistre dans la base de données.
  * 
  * @param {Object} supabase - Client Supabase (service_role)
  * @param {Object} options - Options de notification
- * @param {string} options.type - Type de notification (voir liste ci-dessous)
+ * @param {string} options.type - Type de notification
  * @param {string} options.email - Email du destinataire
- * @param {string} options.userId - ID utilisateur (pour enregistrer dans la table notifications)
+ * @param {string} options.userId - ID utilisateur
+ * @param {string} [options.phone] - Numéro de téléphone WhatsApp (optionnel)
+ * @param {string} [options.channel] - 'email' | 'whatsapp' | 'both' (optionnel, prend préférence sinon)
  * @param {Object} options.data - Données nécessaires pour générer le template
- * @param {string} [options.subject] - Sujet personnalisé (optionnel, généré auto sinon)
+ * @param {string} [options.subject] - Sujet personnalisé (optionnel)
  * 
- * @returns {Promise<Object>} - { success: boolean, messageId: string, error: string }
+ * @returns {Promise<Object>} - { success: boolean, results: Object, dbRecorded: boolean }
  */
 async function sendNotification(supabase, options) {
-  const { type, email, userId, data, subject } = options;
+  const { type, email, userId, data = {}, subject, phone: optPhone, channel: optChannel, canal: altCanal } = options;
   
   if (!email || !userId || !type) {
     return { success: false, error: 'email, userId et type sont requis' };
@@ -84,7 +87,30 @@ async function sendNotification(supabase, options) {
 
   const config = getCoworkingConfig();
 
-  // 1. Générer le sujet + HTML (indépendant du SMTP)
+  // 1. Déterminer le canal de notification préféré de l'utilisateur
+  let targetChannel = optChannel || altCanal || null;
+  let targetPhone = optPhone || data.membre?.telephone || data.formateur?.telephone || null;
+
+  try {
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('telephone, canal_notification, notifications')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (userProfile) {
+      if (!optChannel) {
+        targetChannel = userProfile.canal_notification || userProfile.notifications?.canal || 'email';
+      }
+      if (!targetPhone) {
+        targetPhone = userProfile.telephone;
+      }
+    }
+  } catch (err) {
+    console.warn('⚠️ Impossible de récupérer les préférences utilisateur:', err.message);
+  }
+
+  // 2. Générer le sujet + HTML (Email) et le message texte (WhatsApp)
   let html = null;
   let autoSubject = type;
   try {
@@ -92,58 +118,96 @@ async function sendNotification(supabase, options) {
     html = gen.html;
     autoSubject = gen.autoSubject;
   } catch (genErr) {
-    console.error(`❌ Erreur génération template (${type}) :`, genErr.message);
+    console.error(`❌ Erreur génération template email (${type}) :`, genErr.message);
   }
 
   const message = subject || autoSubject || type;
+  const whatsappBody = generateWhatsAppMessage(type, data, config);
 
-  // 2. Toujours enregistrer la notification en base (traçabilité + portail membre)
+  // 3. Déterminer les canaux d'envoi réels
+  const shouldSendEmail = targetChannel === 'email' || targetChannel === 'both' || targetChannel === 'Email';
+  const shouldSendWhatsApp = (targetChannel === 'whatsapp' || targetChannel === 'both' || targetChannel === 'WhatsApp') && targetPhone;
+
+  let canalRecorded = 'Email';
+  if (shouldSendEmail && shouldSendWhatsApp) {
+    canalRecorded = 'Email';
+  } else if (shouldSendWhatsApp) {
+    canalRecorded = 'SMS';
+  }
+
+  // 4. Enregistrer la notification dans la base de données
   try {
     const { error: dbError } = await supabase
       .from('notifications')
       .insert({
         user_id: userId,
         type: type,
-        canal: 'Email',
+        canal: canalRecorded,
         message: message,
       });
 
     if (dbError) {
-      console.error('❌ Erreur enregistrement notification dans DB:', dbError.message);
+      console.warn('⚠️ Enregistrement notification avec canal par défaut (Email):', dbError.message);
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        type: type,
+        canal: 'Email',
+        message: message,
+      });
     }
   } catch (dbErr) {
     console.error('❌ Erreur enregistrement notification dans DB:', dbErr.message);
   }
 
-  // 3. Envoyer l'email (échec non bloquant — la notification est déjà en base)
-  if (!html) {
-    console.warn(`⚠️ Template introuvable pour le type : ${type} — notification enregistrée en base.`);
-    return { success: false, error: `Template introuvable : ${type}`, dbRecorded: true };
-  }
-
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn('⚠️ SMTP non configuré, email non envoyé — notification enregistrée en base.');
-    return { success: false, error: 'SMTP non configuré', dbRecorded: true };
-  }
-
-  const transporter = createTransporter();
-  const attachments = getMailAttachments();
-  const mailOptions = {
-    from: process.env.EMAIL_FROM || `"${config.coworkingName}" <${config.coworkingEmail}>`,
-    to: email,
-    subject: subject || autoSubject,
-    html: html,
-    attachments: attachments.length > 0 ? attachments : undefined,
+  const results = {
+    email: null,
+    whatsapp: null,
   };
 
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✉️  Notification envoyée à ${email} — Type: ${type} — MessageId: ${info.messageId}`);
-    return { success: true, messageId: info.messageId, dbRecorded: true };
-  } catch (err) {
-    console.error(`❌ Erreur envoi email (${type}) à ${email}:`, err.message);
-    return { success: false, error: err.message, dbRecorded: true };
+  // 5. Envoi EMAIL si requis
+  if (shouldSendEmail && html) {
+    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      const transporter = createTransporter();
+      const attachments = getMailAttachments();
+      const mailOptions = {
+        from: process.env.EMAIL_FROM || `"${config.coworkingName}" <${config.coworkingEmail}>`,
+        to: email,
+        subject: subject || autoSubject,
+        html: html,
+        attachments: attachments.length > 0 ? attachments : undefined,
+      };
+
+      try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`✉️  Email envoyé à ${email} — Type: ${type} — ID: ${info.messageId}`);
+        results.email = { success: true, messageId: info.messageId };
+      } catch (err) {
+        console.error(`❌ Erreur envoi email (${type}) à ${email}:`, err.message);
+        results.email = { success: false, error: err.message };
+      }
+    } else {
+      console.warn('⚠️ SMTP non configuré, email ignoré.');
+      results.email = { success: false, error: 'SMTP non configuré' };
+    }
   }
+
+  // 6. Envoi WHATSAPP si requis
+  if (shouldSendWhatsApp && targetPhone) {
+    try {
+      const waRes = await sendWhatsApp(targetPhone, whatsappBody);
+      results.whatsapp = waRes;
+    } catch (err) {
+      console.error(`❌ Erreur envoi WhatsApp (${type}) à ${targetPhone}:`, err.message);
+      results.whatsapp = { success: false, error: err.message };
+    }
+  }
+
+  return {
+    success: true,
+    canal: canalRecorded,
+    results,
+    dbRecorded: true,
+  };
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -163,6 +227,32 @@ function generateEmailFromType(type, data, config) {
   let autoSubject = '';
 
   switch (type) {
+    case 'test_notification':
+      html = templates.wrapEmail(`
+        ${templates.buildHeader(config)}
+        <tr>
+          <td style="padding: 36px 36px 28px;">
+            <h2 style="margin: 0 0 16px; font-size: 20px; font-weight: 700; color: #100f0d;">
+              ✨ Test de Notification Réussi !
+            </h2>
+            <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #374151;">
+              Bonjour <strong>${data.nom || data.prenom || 'Membre'}</strong>,
+            </p>
+            <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #374151;">
+              Vos canaux de communication sur la plateforme <strong>${config.coworkingName}</strong> sont bien configurés et actifs.
+            </p>
+            <div style="background: #fff4ec; border-left: 4px solid #f95d00; padding: 14px 18px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; font-size: 13px; color: #100f0d; font-weight: 600;">
+                📞 Contact & Assistance : ${config.coworkingTel}
+              </p>
+            </div>
+          </td>
+        </tr>
+        ${templates.buildFooter(config)}
+      `, `Test de notification — ${config.coworkingName}`);
+      autoSubject = `✨ Test de Notification — ${config.coworkingName}`;
+      break;
+
     // ────────────────────────────────────────────────────────────────────
     // 1. Nouveau membre
     // ────────────────────────────────────────────────────────────────────

@@ -26,4 +26,13 @@ router.get('/super-admin/users', authenticate, requireSuperAdmin, ctrl.listUsers
 router.patch('/super-admin/users/:id', authenticate, requireSuperAdmin, ctrl.updateUser);
 router.delete('/super-admin/users/:id', authenticate, requireSuperAdmin, ctrl.deleteUser);
 
+// Supervision cross-tenant
+router.get('/super-admin/reservations', authenticate, requireSuperAdmin, ctrl.listAllReservations);
+router.post('/super-admin/reservations/:id/cancel', authenticate, requireSuperAdmin, ctrl.cancelReservation);
+router.get('/super-admin/payments', authenticate, requireSuperAdmin, ctrl.listAllPayments);
+router.get('/super-admin/formations', authenticate, requireSuperAdmin, ctrl.listAllFormations);
+router.post('/super-admin/formations/:id/cancel', authenticate, requireSuperAdmin, ctrl.cancelFormation);
+router.get('/super-admin/espaces', authenticate, requireSuperAdmin, ctrl.listAllEspaces);
+router.patch('/super-admin/espaces/:id', authenticate, requireSuperAdmin, ctrl.toggleEspace);
+
 module.exports = router;

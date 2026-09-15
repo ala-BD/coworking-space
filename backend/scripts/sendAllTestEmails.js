@@ -48,7 +48,7 @@ const config = {
   appName:          'DeskyWork',
   coworkingName:    process.env.COWORKING_NAME  || 'DeskyWork Hub',
   coworkingEmail:   process.env.COWORKING_EMAIL || 'contact@deskywork.tn',
-  coworkingTel:     process.env.COWORKING_TEL   || '+216 71 000 000',
+  coworkingTel:     process.env.COWORKING_TEL   || '+216 52 882 880 / +216 52 882 930',
   coworkingAdresse: process.env.COWORKING_ADRESSE || 'Les Berges du Lac 2, Tunis',
   frontendUrl:      process.env.FRONTEND_URL    || 'http://localhost:5173',
 };

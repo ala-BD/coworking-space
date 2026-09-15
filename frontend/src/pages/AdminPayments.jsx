@@ -48,8 +48,13 @@ function computePaymentStats(payments) {
   return { stats, totalInvoices, recoveryRate };
 }
 
+import { useSessionUser } from '../hooks/useSessionUser';
+
 export default function AdminPayments({ session }) {
-  const [profile, setProfile] = useState(null);
+  const { userId, email, metadata } = useSessionUser(session);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'admin', ...metadata } : null
+  );
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -86,40 +91,27 @@ export default function AdminPayments({ session }) {
   const safePage = Math.min(currentPage, totalPages);
   const paginatedPayments = filteredPayments.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
 
-  // États supprimés : pas de modification permise pour l'admin (lecture seule)
-
   useEffect(() => {
     fetchProfileAndPayments();
   }, []);
 
   const fetchProfileAndPayments = async () => {
     try {
-      setLoading(true);
-      // Récupérer le profil
-      const { data: prof, error: profErr } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
+      if (!payments.length) setLoading(true);
+      const [profRes, data] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', session.user.id).single().catch(() => null),
+        paymentApi.getAll().catch(() => ({ payments: [] })),
+      ]);
 
-      if (profErr) throw profErr;
-      setProfile(prof);
-
-      // Si pas admin/staff, rediriger ou afficher erreur
-      if (!['super_admin', 'admin', 'staff'].includes(prof.role)) {
-        throw new Error("Accès non autorisé.");
-      }
-
-      // Récupérer les paiements via l'API (qui gère la sécurité et les jointures)
-      const data = await paymentApi.getAll();
-      setPayments(data.payments || []);
-
+      if (profRes?.data) setProfile(profRes.data);
+      if (data?.payments) setPayments(data.payments);
     } catch (err) {
       setErrorMsg(err.message || "Erreur de chargement");
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -162,52 +154,52 @@ export default function AdminPayments({ session }) {
 
   return (
     <PortalLayout profile={profile} onLogout={handleLogout}>
-      <div className="mb-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-sora text-headline-md font-bold text-primary mb-xs">Gestion des Paiements</h1>
-          <p className="text-body-md text-on-surface-variant">Consultez et téléchargez les reçus des transactions.</p>
+          <h1 className="font-sora text-2xl sm:text-3xl font-bold text-primary mb-1">Gestion des Paiements</h1>
+          <p className="text-sm text-on-surface-variant">Consultez et téléchargez les reçus des transactions.</p>
         </div>
         <button
           onClick={handleExportExcel}
           disabled={payments.length === 0}
-          className="flex items-center gap-xs px-4 py-2 bg-secondary text-on-secondary rounded-lg font-semibold hover:bg-secondary/90 transition-colors disabled:opacity-50"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-secondary text-on-secondary rounded-xl font-semibold text-sm hover:bg-secondary/90 transition-colors disabled:opacity-50"
         >
-          <span className="material-symbols-outlined text-[20px]">download</span>
+          <span className="material-symbols-outlined text-[18px]">download</span>
           Exporter Excel
         </button>
       </div>
 
       {/* Cartes de statistiques (KPIs) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-md mb-lg">
-        <div className="bg-surface-container-lowest p-md rounded-3xl border border-outline-variant/30 shadow-sm flex items-center gap-md">
-          <div className="w-12 h-12 rounded-full bg-[#D1FAE5] text-[#065F46] flex items-center justify-center">
-            <span className="material-symbols-outlined filled text-[24px]">account_balance_wallet</span>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+        <div className="bg-surface-container-lowest p-4 rounded-2xl sm:rounded-3xl border border-outline-variant/30 shadow-sm flex items-center gap-3 sm:gap-4">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#D1FAE5] text-[#065F46] flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined filled text-[22px] sm:text-[24px]">account_balance_wallet</span>
           </div>
           <div>
-            <p className="text-label-sm text-on-surface-variant font-semibold uppercase tracking-wider mb-1">Recettes Encaissées</p>
-            <p className="text-headline-sm font-bold text-primary">{stats.totalRevenue.toLocaleString()} DT</p>
+            <p className="text-[10px] sm:text-xs text-on-surface-variant font-semibold uppercase tracking-wider mb-0.5">Recettes Encaissées</p>
+            <p className="text-lg sm:text-2xl font-bold text-primary">{stats.totalRevenue.toLocaleString()} DT</p>
           </div>
         </div>
 
-        <div className="bg-surface-container-lowest p-md rounded-3xl border border-outline-variant/30 shadow-sm flex items-center gap-md">
-          <div className="w-12 h-12 rounded-full bg-[#FEF3C7] text-[#92400E] flex items-center justify-center">
-            <span className="material-symbols-outlined filled text-[24px]">pending_actions</span>
+        <div className="bg-surface-container-lowest p-4 rounded-2xl sm:rounded-3xl border border-outline-variant/30 shadow-sm flex items-center gap-3 sm:gap-4">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#FEF3C7] text-[#92400E] flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined filled text-[22px] sm:text-[24px]">pending_actions</span>
           </div>
           <div>
-            <p className="text-label-sm text-on-surface-variant font-semibold uppercase tracking-wider mb-1">Paiements en Attente</p>
-            <p className="text-headline-sm font-bold text-primary">{stats.pendingAmount.toLocaleString()} DT</p>
+            <p className="text-[10px] sm:text-xs text-on-surface-variant font-semibold uppercase tracking-wider mb-0.5">Paiements en Attente</p>
+            <p className="text-lg sm:text-2xl font-bold text-primary">{stats.pendingAmount.toLocaleString()} DT</p>
           </div>
         </div>
 
-        <div className="bg-surface-container-lowest p-md rounded-3xl border border-outline-variant/30 shadow-sm flex items-center gap-md">
-          <div className="w-12 h-12 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center">
-            <span className="material-symbols-outlined filled text-[24px]">monitoring</span>
+        <div className="bg-surface-container-lowest p-4 rounded-2xl sm:rounded-3xl border border-outline-variant/30 shadow-sm flex items-center gap-3 sm:gap-4 sm:col-span-1 col-span-1">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined filled text-[22px] sm:text-[24px]">monitoring</span>
           </div>
           <div>
-            <p className="text-label-sm text-on-surface-variant font-semibold uppercase tracking-wider mb-1">Taux de Recouvrement</p>
+            <p className="text-[10px] sm:text-xs text-on-surface-variant font-semibold uppercase tracking-wider mb-0.5">Taux de Recouvrement</p>
             <div className="flex items-end gap-2">
-              <p className="text-headline-sm font-bold text-primary">{recoveryRate}%</p>
-              <p className="text-label-sm text-on-surface-variant mb-1">({stats.paidCount}/{totalInvoices})</p>
+              <p className="text-lg sm:text-2xl font-bold text-primary">{recoveryRate}%</p>
+              <p className="text-[11px] text-on-surface-variant mb-0.5">({stats.paidCount}/{totalInvoices})</p>
             </div>
           </div>
         </div>
@@ -288,8 +280,8 @@ export default function AdminPayments({ session }) {
 
       {/* Tableau des paiements */}
       <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="table-responsive-wrapper">
+          <table className="w-full min-w-[650px] text-left border-collapse">
             <thead>
               <tr className="bg-surface-container-low border-b border-outline-variant/30 text-label-sm uppercase text-on-surface-variant tracking-wider">
                 <th className="px-md py-sm font-semibold">Membre</th>

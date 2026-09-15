@@ -3,23 +3,27 @@ import { Link } from 'react-router-dom';
 import { guestApi } from '../services/api';
 import { API_URL } from '../services/api';
 import Navbar from '../components/layout/Navbar';
+import { useTheme } from '../context/ThemeContext';
 
-/* ─── Charte DeskyWork ——— */
-const EC = {
-  navy: '#100f0d',
-  navyMid: '#1c1b18',
-  cobalt: '#f95d00',
-  cobaltLight: '#dae2ff',
-  cobaltDim: '#b1c5ff',
-  onNavy: '#798bac',
-  white: '#ffffff',
-  bg: '#fbf9fb',
-  bgLow: '#f5f3f6',
-  text: '#1b1b1e',
-  muted: '#44474d',
-  outline: '#c5c6ce',
-  success: '#2fbe8f',
-};
+/* ─── Charte DeskyWork dynamique ─── */
+function getThemeColors(dark) {
+  return {
+    navy: dark ? '#fbffff' : '#100f0d',
+    navyMid: dark ? '#282623' : '#1c1b18',
+    cobalt: '#f95d00',
+    cobaltLight: dark ? 'rgba(249,93,0,0.18)' : '#ffedd8',
+    cobaltDim: '#ffb599',
+    onNavy: dark ? '#cfcac3' : '#798bac',
+    white: dark ? '#1b1a18' : '#ffffff',
+    cardBg: dark ? '#1b1a18' : '#ffffff',
+    bg: dark ? '#100f0d' : '#fbf9fb',
+    bgLow: dark ? '#151412' : '#f5f3f6',
+    text: dark ? '#fbffff' : '#1b1b1e',
+    muted: dark ? '#a3a09b' : '#44474d',
+    outline: dark ? 'rgba(255,255,255,0.1)' : '#cfcac3',
+    success: '#2fbe8f',
+  };
+}
 
 /* ─── Animated counter hook ─── */
 function useCountUp(target, duration = 1800) {
@@ -44,11 +48,12 @@ function useCountUp(target, duration = 1800) {
 }
 
 /* ─── KPI Counter ─── */
-function KpiCounter({ value, suffix, label }) {
+function KpiCounter({ value, suffix, label, dark }) {
   const [count, ref] = useCountUp(value);
+  const EC = getThemeColors(dark);
   return (
     <div ref={ref} className="text-center px-2">
-      <div style={{ fontSize: 'clamp(2rem,4vw,2.8rem)', fontWeight: 800, color: EC.cobaltLight, fontFamily: 'Sora,sans-serif', lineHeight: 1 }}>
+      <div style={{ fontSize: 'clamp(2rem,4vw,2.8rem)', fontWeight: 800, color: dark ? '#ffb599' : '#dae2ff', fontFamily: 'Sora,sans-serif', lineHeight: 1 }}>
         {count}{suffix}
       </div>
       <div style={{ color: EC.onNavy, fontSize: '.875rem', marginTop: 6 }}>{label}</div>
@@ -57,20 +62,23 @@ function KpiCounter({ value, suffix, label }) {
 }
 
 /* ─── Feature Card ─── */
-function FeatureCard({ icon, title, desc }) {
+function FeatureCard({ icon, title, desc, dark }) {
   const [hov, setHov] = useState(false);
+  const EC = getThemeColors(dark);
   return (
     <div className="col-md-6 col-lg-4">
       <div
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
         style={{
-          backgroundColor: EC.white,
+          backgroundColor: EC.cardBg,
           borderRadius: 20,
           padding: '2rem',
           height: '100%',
           border: `1.5px solid ${hov ? EC.cobalt : EC.outline}`,
-          boxShadow: hov ? '0 12px 32px rgba(0,84,203,.14)' : '0 2px 8px rgba(0,13,35,.05)',
+          boxShadow: hov
+            ? (dark ? '0 12px 32px rgba(0,0,0,.6)' : '0 12px 32px rgba(249,93,0,.14)')
+            : (dark ? '0 2px 10px rgba(0,0,0,.3)' : '0 2px 8px rgba(0,13,35,.05)'),
           transition: 'all .3s ease',
           transform: hov ? 'translateY(-6px)' : 'none',
         }}
@@ -81,7 +89,7 @@ function FeatureCard({ icon, title, desc }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           marginBottom: '1.25rem', transition: 'background .3s',
         }}>
-          <span className="material-symbols-outlined" style={{ color: hov ? EC.white : EC.navyMid, fontSize: 26 }}>{icon}</span>
+          <span className="material-symbols-outlined" style={{ color: hov ? '#ffffff' : (dark ? '#ff8a3d' : '#1c1b18'), fontSize: 26 }}>{icon}</span>
         </div>
         <h5 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 700, color: EC.navy, marginBottom: '.5rem' }}>{title}</h5>
         <p style={{ color: EC.muted, fontSize: '.9rem', lineHeight: 1.75, margin: 0 }}>{desc}</p>
@@ -91,20 +99,25 @@ function FeatureCard({ icon, title, desc }) {
 }
 
 /* ─── Pricing Card ─── */
-function PricingCard({ badge, title, price, period, desc, features, highlighted, cta, ctaTo }) {
+function PricingCard({ badge, title, price, period, desc, features, highlighted, cta, ctaTo, dark }) {
   const [hov, setHov] = useState(false);
+  const EC = getThemeColors(dark);
   return (
     <div className="col-md-4">
       <div
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
         style={{
-          backgroundColor: highlighted ? EC.navy : EC.white,
+          backgroundColor: highlighted ? (dark ? '#221408' : '#100f0d') : EC.cardBg,
           borderRadius: 24,
           padding: '2rem',
           height: '100%',
-          border: highlighted ? 'none' : `1.5px solid ${hov ? EC.cobalt : EC.outline}`,
-          boxShadow: hov ? '0 16px 48px rgba(0,13,35,.2)' : highlighted ? '0 8px 32px rgba(0,13,35,.18)' : '0 2px 8px rgba(0,13,35,.04)',
+          border: highlighted ? `1.5px solid ${dark ? 'rgba(249,93,0,0.4)' : 'transparent'}` : `1.5px solid ${hov ? EC.cobalt : EC.outline}`,
+          boxShadow: hov
+            ? '0 16px 48px rgba(249,93,0,.2)'
+            : highlighted
+              ? (dark ? '0 8px 32px rgba(249,93,0,.25)' : '0 8px 32px rgba(0,13,35,.18)')
+              : (dark ? '0 2px 10px rgba(0,0,0,.3)' : '0 2px 8px rgba(0,13,35,.04)'),
           transition: 'all .3s ease',
           transform: hov ? 'translateY(-4px)' : 'none',
           position: 'relative', overflow: 'hidden',
@@ -113,7 +126,7 @@ function PricingCard({ badge, title, price, period, desc, features, highlighted,
         {highlighted && (
           <div style={{
             position: 'absolute', top: 0, right: 0, width: 160, height: 160,
-            background: `radial-gradient(circle,${EC.cobalt}44 0%,transparent 70%)`,
+            background: `radial-gradient(circle, ${EC.cobalt}44 0%, transparent 70%)`,
             borderRadius: '50%', transform: 'translate(30%,-30%)', pointerEvents: 'none'
           }} />
         )}
@@ -121,29 +134,29 @@ function PricingCard({ badge, title, price, period, desc, features, highlighted,
           <span style={{
             display: 'inline-block', marginBottom: '1rem',
             backgroundColor: highlighted ? EC.cobalt : EC.cobaltLight,
-            color: highlighted ? EC.white : EC.navyMid,
+            color: highlighted ? '#ffffff' : (dark ? '#ff8a3d' : '#100f0d'),
             fontSize: '.7rem', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase',
             padding: '5px 14px', borderRadius: 100,
           }}>{badge}</span>
         )}
-        <h4 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 700, color: highlighted ? EC.white : EC.navy, marginBottom: '.4rem' }}>{title}</h4>
-        <p style={{ color: highlighted ? EC.onNavy : EC.muted, fontSize: '.875rem', marginBottom: '1.5rem' }}>{desc}</p>
+        <h4 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 700, color: highlighted ? '#fbffff' : EC.navy, marginBottom: '.4rem' }}>{title}</h4>
+        <p style={{ color: highlighted ? '#cfcac3' : EC.muted, fontSize: '.875rem', marginBottom: '1.5rem' }}>{desc}</p>
         <div style={{ marginBottom: '1.5rem' }}>
-          <span style={{ fontSize: '2.6rem', fontWeight: 800, fontFamily: 'Sora,sans-serif', color: highlighted ? EC.white : EC.navy }}>{price}</span>
-          {period && <span style={{ color: highlighted ? EC.onNavy : EC.muted, fontSize: '.875rem', marginLeft: 4 }}>{period}</span>}
+          <span style={{ fontSize: '2.6rem', fontWeight: 800, fontFamily: 'Sora,sans-serif', color: highlighted ? '#fbffff' : EC.navy }}>{price}</span>
+          {period && <span style={{ color: highlighted ? '#cfcac3' : EC.muted, fontSize: '.875rem', marginLeft: 4 }}>{period}</span>}
         </div>
         <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.75rem 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {features.map((f, i) => (
             <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <span className="material-symbols-outlined" style={{ color: highlighted ? EC.cobaltDim : EC.cobalt, fontSize: 18, marginTop: 2, flexShrink: 0 }}>check_circle</span>
-              <span style={{ color: highlighted ? EC.onNavy : EC.muted, fontSize: '.875rem' }}>{f}</span>
+              <span style={{ color: highlighted ? '#cfcac3' : (dark ? '#e6e4df' : EC.muted), fontSize: '.875rem' }}>{f}</span>
             </li>
           ))}
         </ul>
         <Link to={ctaTo} style={{
           display: 'block', textAlign: 'center', textDecoration: 'none', fontWeight: 700, fontSize: '.9rem',
           backgroundColor: highlighted ? EC.cobalt : 'transparent',
-          color: highlighted ? EC.white : EC.cobalt,
+          color: highlighted ? '#ffffff' : EC.cobalt,
           border: highlighted ? 'none' : `2px solid ${EC.cobalt}`,
           borderRadius: 12, padding: '12px 0',
           transition: 'all .25s',
@@ -156,19 +169,20 @@ function PricingCard({ badge, title, price, period, desc, features, highlighted,
 }
 
 /* ─── Testimonial Card ─── */
-function TestiCard({ quote, name, role, initial }) {
+function TestiCard({ quote, name, role, initial, dark }) {
+  const EC = getThemeColors(dark);
   return (
     <div className="col-md-4">
       <div style={{
-        backgroundColor: EC.white, borderRadius: 20, padding: '2rem', height: '100%',
-        border: `1.5px solid ${EC.outline}`, boxShadow: '0 4px 16px rgba(0,13,35,.06)',
+        backgroundColor: EC.cardBg, borderRadius: 20, padding: '2rem', height: '100%',
+        border: `1.5px solid ${EC.outline}`, boxShadow: dark ? '0 4px 16px rgba(0,0,0,.4)' : '0 4px 16px rgba(0,13,35,.06)',
       }}>
         <div style={{ color: EC.cobalt, fontSize: '2.5rem', fontFamily: 'Georgia,serif', lineHeight: 1, marginBottom: '1rem' }}>"</div>
         <p style={{ color: EC.muted, fontStyle: 'italic', lineHeight: 1.8, fontSize: '.95rem', marginBottom: '1.5rem' }}>{quote}</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
             width: 44, height: 44, borderRadius: '50%',
-            backgroundColor: EC.cobaltLight, color: EC.cobalt,
+            backgroundColor: EC.cobaltLight, color: dark ? '#ff8a3d' : EC.cobalt,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontWeight: 800, fontSize: '1rem', flexShrink: 0,
           }}>{initial}</div>
@@ -183,7 +197,7 @@ function TestiCard({ quote, name, role, initial }) {
 }
 
 /* ══════════════════════════════
-   COMPOSANT PRINCIPAL
+   HERO SLIDES DATA
 ══════════════════════════════ */
 const HERO_SLIDES = [
   { src: '/images/coworking/space-1.jpg',   title: 'Open Space',         tag: 'Travail collaboratif' },
@@ -194,7 +208,7 @@ const HERO_SLIDES = [
 ];
 
 /* ─── Modale Promos ─── */
-function PromoModal({ tenant, onClose }) {
+function PromoModal({ tenant, onClose, dark }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -242,7 +256,7 @@ function PromoModal({ tenant, onClose }) {
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'rgba(16,15,13,.72)', backdropFilter: 'blur(6px)',
+        background: 'rgba(16,15,13,.76)', backdropFilter: 'blur(8px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '1rem',
       }}
@@ -250,9 +264,12 @@ function PromoModal({ tenant, onClose }) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#fff', borderRadius: 24, width: '100%', maxWidth: 560,
+          background: dark ? '#1b1a18' : '#ffffff',
+          color: dark ? '#fbffff' : '#100f0d',
+          borderRadius: 24, width: '100%', maxWidth: 560,
           maxHeight: '90vh', overflowY: 'auto',
-          boxShadow: '0 32px 80px rgba(0,0,0,.28)',
+          border: dark ? '1px solid rgba(255,255,255,0.1)' : 'none',
+          boxShadow: '0 32px 80px rgba(0,0,0,.45)',
         }}
       >
         {/* Header */}
@@ -268,7 +285,7 @@ function PromoModal({ tenant, onClose }) {
                 Promotions actives
               </h3>
             </div>
-            <p style={{ margin: '4px 0 0', color: 'rgba(255,255,255,.85)', fontSize: '.85rem' }}>
+            <p style={{ margin: '4px 0 0', color: 'rgba(255,255,255,.9)', fontSize: '.85rem' }}>
               {tenant.nom}
             </p>
           </div>
@@ -290,12 +307,12 @@ function PromoModal({ tenant, onClose }) {
         {/* Body */}
         <div style={{ padding: '1.75rem' }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '3rem 0', color: '#798bac' }}>
+            <div style={{ textAlign: 'center', padding: '3rem 0', color: dark ? '#cfcac3' : '#798bac' }}>
               <span className="material-symbols-outlined" style={{ fontSize: 40, display: 'block', marginBottom: 12, opacity: .5 }}>hourglass_empty</span>
               Chargement des promotions…
             </div>
           ) : (!data?.promo_codes?.length && !data?.tarifs_limites?.length) ? (
-            <div style={{ textAlign: 'center', padding: '3rem 0', color: '#798bac' }}>
+            <div style={{ textAlign: 'center', padding: '3rem 0', color: dark ? '#cfcac3' : '#798bac' }}>
               <span className="material-symbols-outlined" style={{ fontSize: 40, display: 'block', marginBottom: 12, opacity: .4 }}>sentiment_neutral</span>
               Aucune promotion active pour le moment.
             </div>
@@ -305,7 +322,7 @@ function PromoModal({ tenant, onClose }) {
               {/* Codes promo */}
               {data?.promo_codes?.length > 0 && (
                 <div>
-                  <h5 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 700, color: '#100f0d', fontSize: '.95rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h5 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 700, color: dark ? '#fbffff' : '#100f0d', fontSize: '.95rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span className="material-symbols-outlined" style={{ color: '#f95d00', fontSize: 20 }}>confirmation_number</span>
                     Codes promotionnels
                   </h5>
@@ -315,9 +332,9 @@ function PromoModal({ tenant, onClose }) {
                       const urgent = days !== null && days <= 7;
                       return (
                         <div key={p.id} style={{
-                          border: `1.5px solid ${urgent ? '#f95d00' : '#e5e7eb'}`,
+                          border: `1.5px solid ${urgent ? '#f95d00' : (dark ? 'rgba(255,255,255,0.1)' : '#e5e7eb')}`,
                           borderRadius: 14, padding: '1rem 1.25rem',
-                          background: urgent ? '#fff8f5' : '#fafafa',
+                          background: urgent ? (dark ? '#2b1505' : '#fff8f5') : (dark ? '#242220' : '#fafafa'),
                           display: 'flex', alignItems: 'center', gap: 14,
                         }}>
                           <div style={{
@@ -330,13 +347,13 @@ function PromoModal({ tenant, onClose }) {
                             {p.code}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, color: '#100f0d', fontSize: '.95rem' }}>
+                            <div style={{ fontWeight: 700, color: dark ? '#fbffff' : '#100f0d', fontSize: '.95rem' }}>
                               {p.type_reduction === 'percent'
                                 ? `−${p.valeur}% de réduction`
                                 : `−${p.valeur} DT de réduction`}
                             </div>
                             {p.date_fin && (
-                              <div style={{ fontSize: '.78rem', color: urgent ? '#f95d00' : '#6b7280', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <div style={{ fontSize: '.78rem', color: urgent ? '#f95d00' : (dark ? '#cfcac3' : '#6b7280'), marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
                                 {urgent
                                   ? `Expire dans ${days} jour${days !== 1 ? 's' : ''} · ${fmtDate(p.date_fin)}`
@@ -344,7 +361,7 @@ function PromoModal({ tenant, onClose }) {
                               </div>
                             )}
                             {p.utilisations_max && (
-                              <div style={{ fontSize: '.78rem', color: '#6b7280', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <div style={{ fontSize: '.78rem', color: dark ? '#cfcac3' : '#6b7280', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>group</span>
                                 {p.utilisations_count} / {p.utilisations_max} utilisations
                               </div>
@@ -360,7 +377,7 @@ function PromoModal({ tenant, onClose }) {
               {/* Tarifs à durée limitée */}
               {data?.tarifs_limites?.length > 0 && (
                 <div>
-                  <h5 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 700, color: '#100f0d', fontSize: '.95rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h5 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 700, color: dark ? '#fbffff' : '#100f0d', fontSize: '.95rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span className="material-symbols-outlined" style={{ color: '#f95d00', fontSize: 20 }}>sell</span>
                     Tarifs promotionnels limités
                   </h5>
@@ -370,25 +387,25 @@ function PromoModal({ tenant, onClose }) {
                       const urgent = days !== null && days <= 7;
                       return (
                         <div key={t.id} style={{
-                          border: `1.5px solid ${urgent ? '#f95d00' : '#e5e7eb'}`,
+                          border: `1.5px solid ${urgent ? '#f95d00' : (dark ? 'rgba(255,255,255,0.1)' : '#e5e7eb')}`,
                           borderRadius: 14, padding: '1rem 1.25rem',
-                          background: urgent ? '#fff8f5' : '#fafafa',
+                          background: urgent ? (dark ? '#2b1505' : '#fff8f5') : (dark ? '#242220' : '#fafafa'),
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
                         }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, color: '#100f0d', fontSize: '.95rem' }}>
+                            <div style={{ fontWeight: 700, color: dark ? '#fbffff' : '#100f0d', fontSize: '.95rem' }}>
                               {ABONNEMENT_LABELS[t.type_abonnement] || t.type_abonnement}
                               {t.type_espace && (
-                                <span style={{ fontWeight: 500, color: '#6b7280', fontSize: '.85rem' }}>
+                                <span style={{ fontWeight: 500, color: dark ? '#cfcac3' : '#6b7280', fontSize: '.85rem' }}>
                                   {' '}· {ESPACE_LABELS[t.type_espace] || t.type_espace}
                                 </span>
                               )}
                             </div>
-                            <div style={{ fontSize: '.78rem', color: '#6b7280', marginTop: 2, textTransform: 'capitalize' }}>
+                            <div style={{ fontSize: '.78rem', color: dark ? '#cfcac3' : '#6b7280', marginTop: 2, textTransform: 'capitalize' }}>
                               Plan {t.plan_tarifaire}
                             </div>
                             {t.date_fin && (
-                              <div style={{ fontSize: '.78rem', color: urgent ? '#f95d00' : '#6b7280', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <div style={{ fontSize: '.78rem', color: urgent ? '#f95d00' : (dark ? '#cfcac3' : '#6b7280'), marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span>
                                 {urgent
                                   ? `Expire dans ${days} jour${days !== 1 ? 's' : ''} · ${fmtDate(t.date_fin)}`
@@ -403,7 +420,7 @@ function PromoModal({ tenant, onClose }) {
                             <div style={{ color: '#fff', fontFamily: 'Sora,sans-serif', fontWeight: 800, fontSize: '1.1rem', lineHeight: 1 }}>
                               {t.prix} DT
                             </div>
-                            <div style={{ color: 'rgba(255,255,255,.8)', fontSize: '.7rem', marginTop: 2 }}>TTC {t.tva_pct}%</div>
+                            <div style={{ color: 'rgba(255,255,255,.85)', fontSize: '.7rem', marginTop: 2 }}>TTC {t.tva_pct}%</div>
                           </div>
                         </div>
                       );
@@ -417,7 +434,7 @@ function PromoModal({ tenant, onClose }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '1rem 1.75rem 1.75rem', borderTop: '1px solid #f3f4f6' }}>
+        <div style={{ padding: '1rem 1.75rem 1.75rem', borderTop: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #f3f4f6' }}>
           <Link
             to={`/book-guest?tenantId=${tenant.id}`}
             onClick={onClose}
@@ -441,7 +458,13 @@ function PromoModal({ tenant, onClose }) {
   );
 }
 
+/* ══════════════════════════════
+   COMPOSANT PRINCIPAL
+══════════════════════════════ */
 export default function Landing({ session }) {
+  const { dark } = useTheme();
+  const EC = getThemeColors(dark);
+
   const [contactForm, setContactForm] = useState({ nom: '', email: '', sujet: '', message: '' });
   const [contactStatus, setContactStatus] = useState({ type: '', text: '' });
   const [contactLoading, setContactLoading] = useState(false);
@@ -479,6 +502,7 @@ export default function Landing({ session }) {
       setContactLoading(false);
     }
   };
+
   const [tenants, setTenants] = useState([]);
   const [slide, setSlide] = useState(0);
   const [hovering, setHovering] = useState(false);
@@ -553,13 +577,16 @@ export default function Landing({ session }) {
 
   return (
     <>
-      {/* ── Styles globaux ── */}
+      {/* ── Styles globaux de la page ── */}
       <style>{`
         html { scroll-behavior:smooth; scroll-padding-top:80px; }
-        body { font-family:'Inter',sans-serif; background-color:#fbffff; color:#100f0d; }
+        body {
+          font-family:'Inter',sans-serif;
+          background-color: ${EC.bg};
+          color: ${EC.navy};
+          transition: background-color .3s ease, color .3s ease;
+        }
         .sora { font-family:'Sora',sans-serif !important; }
-
-        /* NAV — styles gérés dans Navbar.jsx */
 
         /* HERO — Background plein écran + slideshow */
         .hero-wrap {
@@ -607,15 +634,40 @@ export default function Landing({ session }) {
         @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(47,190,143,.45)} 50%{box-shadow:0 0 0 8px rgba(47,190,143,0)} }
 
         /* TRUST */
-        .trust-bar { background:#ffedd8; border-top:1px solid rgba(249,93,0,.12); border-bottom:1px solid rgba(249,93,0,.12); }
-        .trust-name { font-family:'Sora',sans-serif; font-weight:700; font-size:1.05rem; color:#100f0d; opacity:.5; transition:opacity .2s; cursor:default; }
+        .trust-bar {
+          background: ${dark ? '#1a1612' : '#ffedd8'};
+          border-top: 1px solid ${dark ? 'rgba(249,93,0,.2)' : 'rgba(249,93,0,.12)'};
+          border-bottom: 1px solid ${dark ? 'rgba(249,93,0,.2)' : 'rgba(249,93,0,.12)'};
+          transition: background .3s ease;
+        }
+        .trust-name {
+          font-family:'Sora',sans-serif;
+          font-weight:700;
+          font-size:1.05rem;
+          color: ${dark ? '#ffdcd0' : '#100f0d'};
+          opacity:.6;
+          transition:opacity .2s;
+          cursor:default;
+          text-decoration:none;
+        }
         .trust-name:hover { opacity:1; }
 
         /* KPI */
         .kpi-strip { background:#100f0d; }
 
         /* SECTION BADGE */
-        .sec-badge { display:inline-block; background:#ffedd8; color:#100f0d; font-size:.7rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:6px 18px; border-radius:100px; margin-bottom:1rem; }
+        .sec-badge {
+          display:inline-block;
+          background: ${dark ? 'rgba(249,93,0,.2)' : '#ffedd8'};
+          color: ${dark ? '#ffb599' : '#100f0d'};
+          font-size:.7rem;
+          font-weight:700;
+          letter-spacing:.1em;
+          text-transform:uppercase;
+          padding:6px 18px;
+          border-radius:100px;
+          margin-bottom:1rem;
+        }
         .sec-badge.inv { background:rgba(249,93,0,.15); color:#f95d00; }
 
         /* SPACES */
@@ -630,18 +682,58 @@ export default function Landing({ session }) {
         .cta-grid { position:absolute; inset:0; background-image:radial-gradient(circle at 2px 2px,rgba(251,255,255,.05) 1px,transparent 0); background-size:40px 40px; }
 
         /* CONTACT */
-        .ec-input { width:100%; border:1.5px solid #cfcac3; border-radius:12px; padding:13px 16px; font-size:.9rem; font-family:'Inter',sans-serif; background:#fbffff; color:#100f0d; transition:border-color .2s,box-shadow .2s; }
-        .ec-input:focus { outline:none; border-color:#f95d00; box-shadow:0 0 0 4px rgba(249,93,0,.15); }
-        .ec-input::placeholder { color:#8e8a83; }
+        .ec-input {
+          width:100%;
+          border: 1.5px solid ${dark ? 'rgba(255,255,255,0.15)' : '#cfcac3'};
+          border-radius:12px;
+          padding:13px 16px;
+          font-size:.9rem;
+          font-family:'Inter',sans-serif;
+          background: ${dark ? '#100f0d' : '#ffffff'};
+          color: ${dark ? '#fbffff' : '#100f0d'};
+          transition:border-color .2s,box-shadow .2s,background .3s;
+        }
+        .ec-input:focus {
+          outline:none;
+          border-color:#f95d00;
+          box-shadow:0 0 0 4px rgba(249,93,0,.15);
+        }
+        .ec-input::placeholder { color: ${dark ? '#8e8a83' : '#8e8a83'}; }
 
         /* FOOTER */
-        .ec-footer { background:#100f0d; }
+        .ec-footer { background:#0d1117; }
         .ec-footer a { color:#ffffff !important; text-decoration:none; font-size:.875rem; transition:color .2s; }
         .ec-footer a:hover { color:#f95d00 !important; }
         .ec-footer p { color:#ffffff !important; }
         .ec-footer h6 { color:#ffffff !important; }
         .soc-btn { width:38px; height:38px; border-radius:50%; background:rgba(251,255,255,.08); display:inline-flex; align-items:center; justify-content:center; color:#a3a09b; text-decoration:none; transition:all .2s; margin-right:8px; }
         .soc-btn:hover { background:#f95d00; color:#fbffff; }
+
+        /* BACK TO TOP */
+        .back-to-top {
+          position:fixed;
+          bottom:24px;
+          right:24px;
+          z-index:90;
+          width:46px;
+          height:46px;
+          border-radius:50%;
+          background: ${dark ? '#2e2c29' : '#ffffff'};
+          color: ${dark ? '#fbffff' : '#100f0d'};
+          border: 1.5px solid ${dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)'};
+          box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          cursor:pointer;
+          transition:all .25s ease;
+        }
+        .back-to-top:hover {
+          background:#f95d00;
+          color:#ffffff;
+          border-color:#f95d00;
+          transform:translateY(-3px);
+        }
 
         /* ANIMATIONS */
         @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
@@ -763,7 +855,7 @@ export default function Landing({ session }) {
           <div className="row g-4 justify-content-center">
             {[{ value: 200, suffix: '+', label: 'Membres actifs' }, { value: 12, suffix: '', label: 'Espaces disponibles' }, { value: 98, suffix: '%', label: 'Taux de satisfaction' }, { value: 3, suffix: '+', label: "Années d'expérience" }].map((k, i) => (
               <div key={i} className="col-6 col-md-3">
-                <KpiCounter {...k} />
+                <KpiCounter {...k} dark={dark} />
               </div>
             ))}
           </div>
@@ -771,7 +863,7 @@ export default function Landing({ session }) {
       </section>
 
       {/* ══ AVANTAGES ══ */}
-      <section id="avantages" className="py-5" style={{ backgroundColor: EC.bgLow }}>
+      <section id="avantages" className="py-5" style={{ backgroundColor: EC.bgLow, transition: 'background .3s ease' }}>
         <div className="container py-4">
           <div className="row mb-5">
             <div className="col-lg-7">
@@ -786,26 +878,26 @@ export default function Landing({ session }) {
             </div>
           </div>
           <div className="row g-4">
-            {features.map((f, i) => <FeatureCard key={i} {...f} />)}
+            {features.map((f, i) => <FeatureCard key={i} {...f} dark={dark} />)}
           </div>
         </div>
       </section>
 
       {/* ══ ESPACES ══ */}
-      <section id="espaces" className="py-5" style={{ backgroundColor: EC.navy }}>
+      <section id="espaces" className="py-5" style={{ backgroundColor: '#100f0d' }}>
         <div className="container py-4">
           <div className="text-center mb-5">
             <span className="sec-badge inv">Nos espaces</span>
             <h2 className="sora fw-bold text-white mb-3" style={{ fontSize: 'clamp(1.8rem,3vw,2.4rem)' }}>
               Espaces de Coworking
             </h2>
-            <p style={{ color: EC.onNavy, maxWidth: 560, margin: '0 auto', lineHeight: 1.8 }}>
+            <p style={{ color: '#cfcac3', maxWidth: 560, margin: '0 auto', lineHeight: 1.8 }}>
               Découvrez nos espaces de coworking disponibles et réservez votre place dès maintenant.
             </p>
           </div>
           {tenants.length === 0 ? (
             <div className="text-center py-5">
-              <p style={{ color: EC.onNavy, fontSize: '1rem' }}>Aucun espace disponible pour le moment.</p>
+              <p style={{ color: '#cfcac3', fontSize: '1rem' }}>Aucun espace disponible pour le moment.</p>
             </div>
           ) : (
             <div className="row g-4">
@@ -860,10 +952,10 @@ export default function Landing({ session }) {
                         {tenant.ville || tenant.pays || 'Tunisie'}
                       </span>
                       <h3 className="sora fw-bold text-white mb-2">{tenant.nom}</h3>
-                      <p className="mb-1" style={{ color: EC.onNavy, fontSize: '.9rem', maxWidth: 460 }}>
+                      <p className="mb-1" style={{ color: '#e6ded7', fontSize: '.9rem', maxWidth: 460 }}>
                         {tenant.description || 'Espace de coworking premium pour professionnels ambitieux.'}
                       </p>
-                      <div className="d-flex align-items-center gap-3 mb-3" style={{ color: EC.onNavy, fontSize: '.8rem' }}>
+                      <div className="d-flex align-items-center gap-3 mb-3" style={{ color: '#cfcac3', fontSize: '.8rem' }}>
                         {tenant.adresse && (
                           <span className="d-inline-flex align-items-center gap-1">
                             <span className="material-symbols-outlined" style={{ fontSize: 15 }}>location_on</span>
@@ -925,7 +1017,7 @@ export default function Landing({ session }) {
       </section>
 
       {/* ══ TARIFS ══ */}
-      <section id="tarifs" className="py-5" style={{ backgroundColor: EC.bgLow }}>
+      <section id="tarifs" className="py-5" style={{ backgroundColor: EC.bgLow, transition: 'background .3s ease' }}>
         <div className="container py-4">
           <div className="text-center mb-5">
             <span className="sec-badge">Tarifs Transparents</span>
@@ -937,13 +1029,13 @@ export default function Landing({ session }) {
             </p>
           </div>
           <div className="row g-4 align-items-stretch">
-            {plans.map((p, i) => <PricingCard key={i} {...p} />)}
+            {plans.map((p, i) => <PricingCard key={i} {...p} dark={dark} />)}
           </div>
         </div>
       </section>
 
       {/* ══ TÉMOIGNAGES ══ */}
-      <section id="temoignages" className="py-5" style={{ backgroundColor: EC.bg }}>
+      <section id="temoignages" className="py-5" style={{ backgroundColor: EC.bg, transition: 'background .3s ease' }}>
         <div className="container py-4">
           <div className="text-center mb-5">
             <span className="sec-badge">Témoignages</span>
@@ -952,7 +1044,7 @@ export default function Landing({ session }) {
             </h2>
           </div>
           <div className="row g-4">
-            {testimonials.map((t, i) => <TestiCard key={i} {...t} />)}
+            {testimonials.map((t, i) => <TestiCard key={i} {...t} dark={dark} />)}
           </div>
         </div>
       </section>
@@ -965,22 +1057,22 @@ export default function Landing({ session }) {
           <h2 className="sora fw-bold text-white mb-4" style={{ fontSize: 'clamp(2rem,4vw,3rem)', maxWidth: 620, margin: '0 auto 1rem' }}>
             Prêt à faire votre meilleur travail ?
           </h2>
-          <p className="mb-5" style={{ color: EC.onNavy, maxWidth: 500, margin: '0 auto 2.5rem', lineHeight: 1.8 }}>
+          <p className="mb-5" style={{ color: '#cfcac3', maxWidth: 500, margin: '0 auto 2.5rem', lineHeight: 1.8 }}>
             Vivez la différence DeskyWork avec un pass journalier ou un abonnement complet.
             Rejoignez +200 professionnels qui ont choisi l'excellence.
           </p>
           <div className="d-flex flex-column flex-sm-row justify-content-center gap-3">
             <Link to={session ? '/dashboard' : '/register'} className="btn d-inline-flex align-items-center gap-2"
               style={{ backgroundColor: EC.cobalt, color: 'white', borderRadius: 12, padding: '15px 36px', fontWeight: 700, border: 'none', fontSize: '1rem', transition: 'all .25s' }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,84,203,.4)'; }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(249,93,0,.4)'; }}
               onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>event_available</span>
               Réserver un Pass Jour
             </Link>
             <Link to="/register" className="btn d-inline-flex align-items-center gap-2"
-              style={{ backgroundColor: '#ffffff', color: EC.navy, border: 'none', borderRadius: 12, padding: '15px 36px', fontWeight: 700, fontSize: '1rem', transition: 'all .25s', boxShadow: '0 8px 24px rgba(0,0,0,.25)' }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.backgroundColor = '#fff3ec'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.backgroundColor = '#ffffff'; }}>
+              style={{ backgroundColor: dark ? '#282623' : '#ffffff', color: dark ? '#fbffff' : '#100f0d', border: dark ? '1px solid rgba(255,255,255,0.2)' : 'none', borderRadius: 12, padding: '15px 36px', fontWeight: 700, fontSize: '1rem', transition: 'all .25s', boxShadow: '0 8px 24px rgba(0,0,0,.25)' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.backgroundColor = dark ? '#383430' : '#fff3ec'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.backgroundColor = dark ? '#282623' : '#ffffff'; }}>
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>person_add</span>
               Devenir Membre
             </Link>
@@ -989,7 +1081,7 @@ export default function Landing({ session }) {
       </section>
 
       {/* ══ CONTACT ══ */}
-      <section id="contact" className="py-5" style={{ backgroundColor: EC.bg }}>
+      <section id="contact" className="py-5" style={{ backgroundColor: EC.bg, transition: 'background .3s ease' }}>
         <div className="container py-4">
           <div className="row g-5 align-items-start">
             <div className="col-lg-5">
@@ -1006,7 +1098,7 @@ export default function Landing({ session }) {
                 ].map(({ icon, label, val }) => (
                   <div key={icon} className="d-flex gap-3 align-items-start">
                     <div style={{ width: 46, height: 46, borderRadius: 13, background: EC.cobaltLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span className="material-symbols-outlined" style={{ color: EC.cobalt, fontSize: 22 }}>{icon}</span>
+                      <span className="material-symbols-outlined" style={{ color: dark ? '#ff8a3d' : EC.cobalt, fontSize: 22 }}>{icon}</span>
                     </div>
                     <div>
                       <div style={{ fontSize: '.72rem', fontWeight: 700, color: EC.muted, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 3 }}>{label}</div>
@@ -1025,7 +1117,7 @@ export default function Landing({ session }) {
             </div>
 
             <div className="col-lg-7">
-              <div style={{ backgroundColor: EC.white, borderRadius: 24, padding: '2.5rem', boxShadow: '0 8px 32px rgba(0,13,35,.08)', border: `1.5px solid ${EC.outline}` }}>
+              <div style={{ backgroundColor: EC.cardBg, borderRadius: 24, padding: '2.5rem', boxShadow: dark ? '0 8px 32px rgba(0,0,0,.4)' : '0 8px 32px rgba(0,13,35,.08)', border: `1.5px solid ${EC.outline}` }}>
                 <h4 className="sora fw-bold mb-4" style={{ color: EC.navy }}>Envoyez-nous un message</h4>
                 <form onSubmit={handleContactSubmit}>
                   <div className="row g-3">
@@ -1054,7 +1146,7 @@ export default function Landing({ session }) {
                     <div className="col-12">
                       <button type="submit" disabled={contactLoading} className="btn w-100 d-flex align-items-center justify-content-center gap-2"
                         style={{ backgroundColor: EC.cobalt, color: 'white', borderRadius: 12, padding: '14px', fontWeight: 700, border: 'none', fontSize: '1rem', transition: 'all .25s' }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,84,203,.3)'; }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(249,93,0,.3)'; }}
                         onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 20 }}>send</span>
                         {contactLoading ? 'Envoi en cours...' : 'Envoyer le message'}
@@ -1163,7 +1255,7 @@ export default function Landing({ session }) {
 
       {/* ══ MODALE PROMOS ══ */}
       {promoTenant && (
-        <PromoModal tenant={promoTenant} onClose={() => setPromoTenant(null)} />
+        <PromoModal tenant={promoTenant} onClose={() => setPromoTenant(null)} dark={dark} />
       )}
     </>
   );

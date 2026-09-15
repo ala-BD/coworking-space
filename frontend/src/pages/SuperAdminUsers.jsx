@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { superAdminApi } from '../services/superAdminApi';
+import { useSessionUser } from '../hooks/useSessionUser';
 import PortalLayout from '../components/layout/PortalLayout';
 
 const ROLES = [
@@ -118,7 +119,10 @@ function EditUserModal({ user, onClose, onSave, loading }) {
 
 export default function SuperAdminUsers({ session }) {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
+  const { userId, email, metadata } = useSessionUser(session);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'super_admin', ...metadata } : null
+  );
   const [users, setUsers] = useState([]);
   const [summary, setSummary] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -135,37 +139,28 @@ export default function SuperAdminUsers({ session }) {
   const showError = (msg) => { setToastErr(msg); setTimeout(() => setToastErr(''), 4000); };
 
   useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return navigate('/login');
-      const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      setProfile(prof);
-      if (prof?.role !== 'super_admin') return navigate('/super-admin/dashboard');
-    })();
-  }, [navigate]);
+    if (!userId) { navigate('/login'); return; }
+    if (profile?.role && profile.role !== 'super_admin') { navigate('/super-admin/dashboard'); return; }
+  }, [userId, navigate]);
 
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async () => {
     try {
       const params = { page, limit: PAGE_SIZE };
       if (filters.role) params.role = filters.role;
       if (filters.statut) params.statut = filters.statut;
       if (filters.search) params.search = filters.search;
-      const res = await superAdminApi.getUsers(params);
-      setUsers(res.users || []);
-      setTotal(res.pagination?.total || 0);
+      const [res, sumRes] = await Promise.all([
+        superAdminApi.getUsers(params),
+        superAdminApi.getRolesSummary().catch(() => ({ summary: [] })),
+      ]);
+      setUsers(res?.users || []);
+      setTotal(res?.pagination?.total || 0);
+      if (sumRes?.summary) setSummary(sumRes.summary);
     } catch (e) { showError(e.message); }
-    setLoading(false);
+    finally { setLoading(false); }
   }, [page, filters]);
 
-  const loadSummary = async () => {
-    try {
-      const res = await superAdminApi.getRolesSummary();
-      setSummary(res.summary || []);
-    } catch {}
-  };
-
-  useEffect(() => { if (profile) { loadUsers(); loadSummary(); } }, [profile, loadUsers]);
+  useEffect(() => { if (profile) loadData(); }, [profile, loadData]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -184,20 +179,18 @@ export default function SuperAdminUsers({ session }) {
       await superAdminApi.updateUser(editUser.id, form);
       showToast('Utilisateur mis à jour avec succès.');
       setEditUser(null);
-      loadUsers();
-      loadSummary();
+      loadData();
     } catch (e) { showError(e.message); }
     setActionLoading(false);
   };
 
   const handleDelete = async (user) => {
-    if (!confirm(`Supprimer définitivement \"${user.prenom} ${user.nom}\" (${user.email}) ? Cette action est irréversible.`)) return;
+    if (!confirm(`Supprimer définitivement "${user.prenom} ${user.nom}" (${user.email}) ? Cette action est irréversible.`)) return;
     setActionLoading(true);
     try {
       await superAdminApi.deleteUser(user.id);
-      showToast(`Utilisateur \"${user.prenom} ${user.nom}\" supprimé.`);
-      loadUsers();
-      loadSummary();
+      showToast(`Utilisateur "${user.prenom} ${user.nom}" supprimé.`);
+      loadData();
     } catch (e) { showError(e.message); }
     setActionLoading(false);
   };
@@ -206,11 +199,8 @@ export default function SuperAdminUsers({ session }) {
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  if (!profile) return (
-    <div className="flex h-screen items-center justify-center" style={{ background: '#f4f6f9' }}>
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
-    </div>
-  );
+  if (!profile) return null;
+
 
   return (
     <PortalLayout profile={profile} onLogout={handleLogout}>
@@ -241,29 +231,29 @@ export default function SuperAdminUsers({ session }) {
       )}
 
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-2xl bg-secondary/10 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-2xl bg-secondary/10 flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-secondary" style={{ fontSize: 22 }}>group</span>
           </div>
-          <h1 className="font-sora text-2xl font-bold text-primary">Gestion des Utilisateurs</h1>
+          <h1 className="font-sora text-xl sm:text-2xl font-bold text-primary">Gestion des Utilisateurs</h1>
         </div>
-        <p className="text-on-surface-variant text-sm ml-13">Gérez tous les utilisateurs de la plateforme VCLOW</p>
+        <p className="text-on-surface-variant text-sm">Gérez tous les utilisateurs de la plateforme VCLOW</p>
       </div>
 
       {/* Résumé par rôle */}
       {summary.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3 mb-6 sm:mb-8">
           {summary.map(({ role, count }) => {
             const cfg = ROLE_COLORS[role] || { bg: '#f0f0f0', text: '#666', label: role };
             return (
               <button
                 key={role}
                 onClick={() => { handleFilter('role', filters.role === role ? '' : role); }}
-                className={`rounded-2xl p-4 text-left transition-all hover:-translate-y-0.5 cursor-pointer border-2 ${filters.role === role ? 'border-secondary shadow-md' : 'border-transparent'}`}
+                className={`rounded-2xl p-3 sm:p-4 text-left transition-all hover:-translate-y-0.5 cursor-pointer border-2 ${filters.role === role ? 'border-secondary shadow-md' : 'border-transparent'}`}
                 style={{ background: cfg.bg }}
               >
-                <p className="font-sora font-bold text-xl" style={{ color: cfg.text }}>{count}</p>
+                <p className="font-sora font-bold text-lg sm:text-xl" style={{ color: cfg.text }}>{count}</p>
                 <p className="text-xs font-semibold mt-0.5" style={{ color: cfg.text }}>{cfg.label}</p>
               </button>
             );
@@ -272,8 +262,8 @@ export default function SuperAdminUsers({ session }) {
       )}
 
       {/* Filtres */}
-      <div className="bg-surface-container-lowest rounded-3xl p-5 mb-6 shadow-sm flex flex-wrap gap-4 items-center">
-        <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1 min-w-60">
+      <div className="bg-surface-container-lowest rounded-3xl p-4 sm:p-5 mb-6 shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 items-stretch sm:items-center">
+        <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1 min-w-[200px]">
           <div className="relative flex-1">
             <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant" style={{ fontSize: 18 }}>search</span>
             <input
@@ -288,34 +278,46 @@ export default function SuperAdminUsers({ session }) {
           </button>
         </form>
 
-        <select value={filters.role} onChange={e => handleFilter('role', e.target.value)}
-          className="px-3.5 py-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-low text-sm outline-none focus:border-secondary">
-          {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-        </select>
+        <div className="flex items-center gap-2 flex-wrap">
+          <select value={filters.role} onChange={e => handleFilter('role', e.target.value)}
+            className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-low text-sm outline-none focus:border-secondary">
+            {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+          </select>
 
-        <select value={filters.statut} onChange={e => handleFilter('statut', e.target.value)}
-          className="px-3.5 py-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-low text-sm outline-none focus:border-secondary">
-          {STATUTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </select>
+          <select value={filters.statut} onChange={e => handleFilter('statut', e.target.value)}
+            className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-low text-sm outline-none focus:border-secondary">
+            {STATUTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
 
-        {(filters.role || filters.statut || filters.search) && (
-          <button onClick={() => { setFilters({ role: '', statut: '', search: '' }); setSearchInput(''); setPage(1); }}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm text-on-surface-variant border border-outline-variant/30 rounded-xl hover:bg-surface-container transition-colors">
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
-            Réinitialiser
-          </button>
-        )}
+          {(filters.role || filters.statut || filters.search) && (
+            <button onClick={() => { setFilters({ role: '', statut: '', search: '' }); setSearchInput(''); setPage(1); }}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-on-surface-variant border border-outline-variant/30 rounded-xl hover:bg-surface-container transition-colors">
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+              Réinitialiser
+            </button>
+          )}
+        </div>
 
-        <span className="ml-auto text-sm text-on-surface-variant font-medium shrink-0">
+        <span className="sm:ml-auto text-xs sm:text-sm text-on-surface-variant font-medium shrink-0">
           {total.toLocaleString('fr-FR')} utilisateur{total > 1 ? 's' : ''}
         </span>
       </div>
 
       {/* Tableau */}
       <div className="bg-surface-container-lowest rounded-3xl shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-secondary" />
+        {loading && users.length === 0 ? (
+          <div className="p-6 space-y-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 animate-pulse">
+                <div className="w-9 h-9 rounded-2xl bg-gray-200" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3.5 w-32 bg-gray-200 rounded" />
+                  <div className="h-3 w-48 bg-gray-100 rounded" />
+                </div>
+                <div className="h-5 w-20 bg-gray-200 rounded-full" />
+                <div className="h-5 w-20 bg-gray-200 rounded-full" />
+              </div>
+            ))}
           </div>
         ) : users.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -324,10 +326,11 @@ export default function SuperAdminUsers({ session }) {
             <p className="text-sm text-on-surface-variant mt-1">Modifiez vos filtres pour afficher des résultats.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="table-responsive-wrapper">
+            <table className="w-full text-sm min-w-[680px]">
               <thead>
                 <tr className="border-b border-outline-variant/15">
+
                   <th className="text-left px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Utilisateur</th>
                   <th className="text-left px-4 py-3.5 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Rôle</th>
                   <th className="text-left px-4 py-3.5 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Coworking</th>

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { superAdminApi } from '../services/superAdminApi';
 import { supabase } from '../supabaseClient';
+import { useSessionUser } from '../hooks/useSessionUser';
 import PortalLayout from '../components/layout/PortalLayout';
 
 const PLAN_LABELS = { free: 'Free', starter: 'Starter', pro: 'Pro', enterprise: 'Enterprise' };
@@ -15,7 +16,10 @@ const STATUT_STYLES = {
 
 export default function TenantManagement({ session }) {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
+  const { userId, email, metadata } = useSessionUser(session);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'super_admin', ...metadata } : null
+  );
   const [tenants, setTenants] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,28 +36,21 @@ export default function TenantManagement({ session }) {
       const params = { page, limit: 10 };
       if (filterStatut) params.statut = filterStatut;
       if (search) params.search = search;
-      const data = await superAdminApi.getTenants(params);
-      setTenants(data.tenants || []);
-      setPagination(data.pagination || { total: 0 });
-      const s = await superAdminApi.getStats();
-      setStats(s);
+      const [data, s] = await Promise.all([
+        superAdminApi.getTenants(params),
+        superAdminApi.getStats().catch(() => null),
+      ]);
+      setTenants(data?.tenants || []);
+      setPagination(data?.pagination || { total: 0 });
+      if (s) setStats(s);
     } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   }, [page, filterStatut, search]);
 
   useEffect(() => {
-    async function init() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return navigate('/login');
-        const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        setProfile(prof);
-        if (prof?.role !== 'super_admin') return navigate('/admin/dashboard');
-        await load();
-      } catch (e) { console.error(e); }
-      setLoading(false);
-    }
-    init();
-  }, [navigate]);
+    if (!userId) { navigate('/login'); return; }
+    if (profile?.role && profile.role !== 'super_admin') { navigate('/admin/dashboard'); }
+  }, [userId, profile, navigate]);
 
   useEffect(() => { if (profile) load(); }, [load, profile]);
 
@@ -87,9 +84,10 @@ export default function TenantManagement({ session }) {
     } catch (e) { alert(e.message); }
   };
 
-  if (loading || !profile) {
-    return <div className="flex h-screen items-center justify-center" style={{ background: '#f4f6f9' }}><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" /></div>;
+  if (!profile) {
+    return null;
   }
+
 
   const miniStats = [
     { label: 'Total', value: pagination.total, icon: 'domain', color: '#f95d00' },
@@ -101,19 +99,19 @@ export default function TenantManagement({ session }) {
     <PortalLayout profile={profile} onLogout={handleLogout}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="font-sora text-2xl font-bold text-primary">Gestion des Coworkings</h1>
+          <h1 className="font-sora text-xl sm:text-2xl font-bold text-primary">Gestion des Coworkings</h1>
           <p className="text-on-surface-variant text-sm mt-1">Validez les inscriptions et gérez les coworkings de la plateforme.</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         {miniStats.map((s, i) => (
-          <div key={i} className="bg-surface-container-lowest rounded-xl p-4 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
+          <div key={i} className="bg-surface-container-lowest rounded-2xl p-4 shadow-[0px_2px_4px_rgba(16,35,63,0.04)] border border-outline-variant/10">
             <div className="flex items-center gap-2 mb-2">
               <span className="material-symbols-outlined" style={{ fontSize: 18, color: s.color }}>{s.icon}</span>
               <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">{s.label}</span>
             </div>
-            <p className="font-sora text-2xl font-bold text-primary">{s.value}</p>
+            <p className="font-sora text-xl sm:text-2xl font-bold text-primary">{s.value}</p>
           </div>
         ))}
       </div>
@@ -132,8 +130,9 @@ export default function TenantManagement({ session }) {
       </div>
 
       <div className="bg-surface-container-lowest rounded-3xl shadow-[0px_8px_16px_rgba(16,35,63,0.08)] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="table-responsive-wrapper">
+          <table className="w-full text-sm min-w-[650px]">
+
             <thead>
               <tr className="bg-primary-container text-white">
                 <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Coworking</th>

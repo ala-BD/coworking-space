@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { useSessionUser } from '../hooks/useSessionUser';
 import { memberPortalApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
 
@@ -121,15 +122,38 @@ function NotificationItem({ notification, onClick }) {
             {message}
           </p>
         )}
-        <span style={{ fontSize: 11, color: '#9ca3af' }}>{getRelativeTime(created_at)}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 11, color: '#9ca3af' }}>{getRelativeTime(created_at)}</span>
+          {notification.canal && (
+            <span style={{
+              fontSize: 10,
+              fontWeight: 700,
+              padding: '2px 8px',
+              borderRadius: 9999,
+              background: notification.canal.includes('WhatsApp') ? 'rgba(37,211,102,0.12)' : 'rgba(249,93,0,0.08)',
+              color: notification.canal.includes('WhatsApp') ? '#15803d' : '#f95d00',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 11 }}>
+                {notification.canal.includes('WhatsApp') ? 'chat' : 'mail'}
+              </span>
+              {notification.canal}
+            </span>
+          )}
+        </div>
       </div>
     </button>
   );
 }
 
-export default function MemberNotifications() {
+export default function MemberNotifications({ session }) {
+  const { userId, email, metadata } = useSessionUser(session);
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'member', ...metadata } : null
+  );
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -138,20 +162,7 @@ export default function MemberNotifications() {
   const [loadingMore, setLoadingMore] = useState(false);
   const totalRef = useRef(0);
 
-  // Load profile from profiles table (not members)
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      setProfile(data);
-    };
-    fetchProfile();
-  }, [navigate]);
+  // profile déjà initialisé depuis le JWT — aucun appel DB nécessaire
 
   const fetchNotifications = useCallback(async (pageNum, append = false) => {
     try {

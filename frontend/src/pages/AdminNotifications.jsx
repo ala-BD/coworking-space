@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { useSessionUser } from '../hooks/useSessionUser';
 import { memberPortalApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
 
@@ -153,8 +154,11 @@ function NotificationItem({ notification, onClick, dark }) {
 }
 
 export default function AdminNotifications({ session }) {
+  const { userId, email, metadata } = useSessionUser(session);
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'admin', ...metadata } : null
+  );
   const [dark, setDark] = useState(() => {
     try { return localStorage.getItem('theme') === 'dark'; } catch { return false; }
   });
@@ -166,20 +170,7 @@ export default function AdminNotifications({ session }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const totalRef = useRef(0);
 
-  // Load profile from profiles table
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      setProfile(data);
-    };
-    fetchProfile();
-  }, [navigate]);
+  // profile déjà initialisé depuis le JWT — aucun appel DB nécessaire
 
   const fetchNotifications = useCallback(async (pageNum, append = false) => {
     try {

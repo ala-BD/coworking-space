@@ -419,15 +419,15 @@ async function updatePayment(req, res) {
         if (isEmailConfigured()) {
           const pdfBuffer = await generateReceiptPDF(data, {
             coworkingName: process.env.COWORKING_NAME || 'DeskyWork',
-            coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
-            coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
+            coworkingEmail: process.env.COWORKING_EMAIL || 'contact@deskywork.tn',
+            coworkingTel: process.env.COWORKING_TEL || '+216 52 882 880 / +216 52 882 930',
             coworkingAdresse: process.env.COWORKING_ADRESSE || 'Tunis, Tunisie',
           });
 
           await sendReceiptEmail(data, pdfBuffer, {
             coworkingName: process.env.COWORKING_NAME || 'DeskyWork',
-            coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
-            coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
+            coworkingEmail: process.env.COWORKING_EMAIL || 'contact@deskywork.tn',
+            coworkingTel: process.env.COWORKING_TEL || '+216 52 882 880 / +216 52 882 930',
           });
         }
       } catch (emailErr) {
@@ -467,8 +467,8 @@ async function getPaymentReceipt(req, res) {
 
     const pdfBuffer = await generateReceiptPDF(payment, {
       coworkingName: process.env.COWORKING_NAME || 'DeskyWork',
-      coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
-      coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
+      coworkingEmail: process.env.COWORKING_EMAIL || 'contact@deskywork.tn',
+      coworkingTel: process.env.COWORKING_TEL || '+216 52 882 880 / +216 52 882 930',
       coworkingAdresse: process.env.COWORKING_ADRESSE || 'Tunis, Tunisie',
     });
 

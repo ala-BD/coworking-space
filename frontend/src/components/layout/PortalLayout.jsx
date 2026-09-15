@@ -113,15 +113,71 @@ function getNotificationTarget(type, role) {
   return getHomePath(role);
 }
 
+const routeChunkPreloaders = {
+  '/super-admin/dashboard': () => import('../../pages/SuperAdminDashboard'),
+  '/super-admin/tenants': () => import('../../pages/TenantManagement'),
+  '/super-admin/billing': () => import('../../pages/TenantBilling'),
+  '/super-admin/users': () => import('../../pages/SuperAdminUsers'),
+  '/super-admin/monitoring': () => import('../../pages/SuperAdminMonitoring'),
+  '/super-admin/contacts': () => import('../../pages/SuperAdminContacts'),
+  '/admin/dashboard': () => import('../../pages/AdminDashboard'),
+  '/admin/reservations': () => import('../../pages/AdminReservations'),
+  '/admin/payments': () => import('../../pages/AdminPayments'),
+  '/admin/pricing': () => import('../../pages/AdminPricing'),
+  '/admin/espaces': () => import('../../pages/AdminEspaces'),
+  '/admin/formations': () => import('../../pages/AdminFormations'),
+  '/admin/formateurs': () => import('../../pages/AdminFormateurs'),
+  '/admin/messages': () => import('../../pages/AdminMessages'),
+  '/admin/agenda': () => import('../../pages/AdminAgenda'),
+  '/admin/notifications': () => import('../../pages/AdminNotifications'),
+  '/admin/multi-sites': () => import('../../pages/AdminMultiSites'),
+  '/admin/profile-coworking': () => import('../../pages/AdminCoworkingProfile'),
+  '/dashboard': () => import('../../pages/Dashboard'),
+  '/dashboard/bookings': () => import('../../pages/MemberBookings'),
+  '/dashboard/formations': () => import('../../pages/MemberFormations'),
+  '/dashboard/abonnement': () => import('../../pages/MemberSubscription'),
+  '/dashboard/messages': () => import('../../pages/MemberMessages'),
+  '/dashboard/notifications': () => import('../../pages/MemberNotifications'),
+  '/dashboard/documents': () => import('../../pages/MemberDocuments'),
+  '/dashboard/rgpd': () => import('../../pages/MemberRGPD'),
+  '/member/payments': () => import('../../pages/MemberPayments'),
+  '/trainer-dashboard': () => import('../../pages/TrainerDashboard'),
+  '/trainer/planning': () => import('../../pages/TrainerPlanning'),
+  '/trainer/formations': () => import('../../pages/TrainerFormations'),
+  '/trainer/bookings': () => import('../../pages/TrainerBookings'),
+};
+
+const prefetchedRoutes = new Set();
+function prefetchRoute(to) {
+  if (!to || prefetchedRoutes.has(to)) return;
+  const loader = routeChunkPreloaders[to];
+  if (loader) {
+    prefetchedRoutes.add(to);
+    loader().catch(() => { });
+  }
+}
+
 /* === NavLink Sidebar === */
 function NavLink({ item, isActive, onClick, dark }) {
   const itemColor = isActive ? '#f95d00' : (dark ? '#fbffff' : '#100f0d');
   const translatedLabel = item.label;
 
+  const handleMouseEnter = (e) => {
+    prefetchRoute(item.to);
+    if (!isActive) {
+      e.currentTarget.style.background = dark ? 'rgba(249,93,0,0.10)' : 'rgba(249,93,0,0.06)';
+      e.currentTarget.style.color = '#f95d00';
+      const span = e.currentTarget.querySelector('span');
+      if (span) span.style.color = '#f95d00';
+    }
+  };
+
   return (
     <Link
       to={item.to}
       onClick={onClick}
+      onMouseEnter={handleMouseEnter}
+      onFocus={() => prefetchRoute(item.to)}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -136,14 +192,6 @@ function NavLink({ item, isActive, onClick, dark }) {
           ? (dark ? 'rgba(249,93,0,0.18)' : 'rgba(249,93,0,0.10)')
           : 'transparent',
         color: itemColor,
-      }}
-      onMouseEnter={e => {
-        if (!isActive) {
-          e.currentTarget.style.background = dark ? 'rgba(249,93,0,0.10)' : 'rgba(249,93,0,0.06)';
-          e.currentTarget.style.color = '#f95d00';
-          const span = e.currentTarget.querySelector('span');
-          if (span) span.style.color = '#f95d00';
-        }
       }}
       onMouseLeave={e => {
         if (!isActive) {
@@ -174,6 +222,7 @@ function NavLink({ item, isActive, onClick, dark }) {
   );
 }
 
+
 export default function PortalLayout({ children, profile, onLogout }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -185,6 +234,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
   const handleLogout = onLogout || defaultLogout;
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [tenantLogo, setTenantLogo] = useState(null);
@@ -193,7 +243,13 @@ export default function PortalLayout({ children, profile, onLogout }) {
   const notifRef = useRef(null);
   const { dark, toggle } = useTheme();
 
+  // Fermer le menu mobile lors d'un changement d'URL
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
   const initials = `${profile?.prenom?.[0] || ''}${profile?.nom?.[0] || ''}`.toUpperCase() || 'U';
+
 
   // Chargement du logo tenant fallback
   useEffect(() => {
@@ -323,7 +379,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
       await memberPortalApi.markNotificationRead(id);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, lu: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (_) {}
+    } catch (_) { }
   };
 
   const markAllAsRead = async () => {
@@ -331,7 +387,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
       await memberPortalApi.markAllNotificationsRead();
       setNotifications(prev => prev.map(n => ({ ...n, lu: true })));
       setUnreadCount(0);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   // Ouvrir/fermer le panneau — sans marquer comme lu automatiquement
@@ -391,10 +447,32 @@ export default function PortalLayout({ children, profile, onLogout }) {
         boxShadow: '0 2px 12px rgba(16,15,13,0.05)',
         transition: 'background 0.3s ease',
       }}>
-        {/* Left: Brand Logo */}
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <BrandLogo to={homePath} height={44} />
+        {/* Left: Hamburger menu (mobile) + Brand Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(v => !v)}
+            className="flex lg:hidden items-center justify-center"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 12,
+              border: 'none',
+              cursor: 'pointer',
+              background: mobileMenuOpen
+                ? (dark ? 'rgba(249,93,0,0.25)' : 'rgba(249,93,0,0.15)')
+                : (dark ? 'rgba(255,255,255,0.08)' : 'rgba(16,15,13,0.06)'),
+              color: mobileMenuOpen ? '#f95d00' : (dark ? '#fbffff' : '#100f0d'),
+            }}
+            aria-label="Menu de navigation"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
+              {mobileMenuOpen ? 'close' : 'menu'}
+            </span>
+          </button>
+          <BrandLogo to={homePath} height={38} />
         </div>
+
 
         {/* Search supprimé */}
 
@@ -717,23 +795,62 @@ export default function PortalLayout({ children, profile, onLogout }) {
 
       <div className="portal-shell" style={{ display: 'flex', paddingTop: 68 }}>
 
-        {/* Sidebar */}
-        <aside className="portal-sidebar" style={{
-          display: 'flex',
-          flexDirection: 'column',
-          flexShrink: 0,
-          width: 240,
-          minHeight: 'calc(100vh - 68px)',
-          position: 'sticky',
-          top: 68,
-          alignSelf: 'flex-start',
-          background: dark ? 'rgba(17,16,14,0.97)' : 'rgba(255,255,255,0.92)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          borderRight: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(16,15,13,0.08)',
-          padding: '24px 12px',
-          transition: 'background 0.3s ease',
-        }}>
+        {/* Mobile Overlay Backdrop */}
+        {mobileMenuOpen && (
+          <div
+            onClick={() => setMobileMenuOpen(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 90,
+              background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+            }}
+            className="lg:hidden"
+          />
+        )}
+
+        {/* Sidebar (Desktop + Mobile Drawer) */}
+        <aside
+          className={`portal-sidebar ${mobileMenuOpen ? 'portal-sidebar-open' : 'portal-sidebar-desktop'}`}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            flexShrink: 0,
+            width: 250,
+            maxWidth: '85vw',
+            minHeight: mobileMenuOpen ? '100vh' : 'calc(100vh - 68px)',
+            position: mobileMenuOpen ? 'fixed' : 'sticky',
+            top: mobileMenuOpen ? 0 : 68,
+            left: 0,
+            bottom: mobileMenuOpen ? 0 : 'auto',
+            height: mobileMenuOpen ? '100vh' : 'auto',
+            zIndex: mobileMenuOpen ? 100 : 20,
+            alignSelf: 'flex-start',
+            background: dark ? '#131210' : '#ffffff',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            borderRight: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(16,15,13,0.08)',
+            padding: mobileMenuOpen ? '20px 14px' : '24px 12px',
+            overflowY: 'auto',
+            boxShadow: mobileMenuOpen ? '4px 0 30px rgba(0,0,0,0.35)' : 'none',
+            transition: 'background 0.3s ease, transform 0.25s ease',
+          }}
+        >
+          {mobileMenuOpen && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, padding: '0 4px 12px', borderBottom: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(16,15,13,0.08)' }}>
+              <BrandLogo to={homePath} height={32} />
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                style={{
+                  width: 32, height: 32, borderRadius: 10, border: 'none',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(16,15,13,0.06)',
+                  color: dark ? '#fbffff' : '#100f0d',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+              </button>
+            </div>
+          )}
+
           {/* Label section */}
           <p style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.18em', padding: '0 12px', marginBottom: 12, color: dark ? 'rgba(251,255,255,0.5)' : '#44474d' }}>
             {portalLabel}
@@ -752,7 +869,13 @@ export default function PortalLayout({ children, profile, onLogout }) {
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {(section.items || []).map((item) => (
-                    <NavLink key={item.id} item={item} isActive={isNavActive(item.to)} dark={dark} />
+                    <NavLink
+                      key={item.id}
+                      item={item}
+                      isActive={isNavActive(item.to)}
+                      onClick={() => setMobileMenuOpen(false)}
+                      dark={dark}
+                    />
                   ))}
                 </div>
               </div>
@@ -766,7 +889,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
             borderTop: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(16,15,13,0.08)',
           }}>
             <button
-              onClick={handleLogout}
+              onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -801,6 +924,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
             </button>
           </div>
         </aside>
+
 
         {/* Main content */}
         <main className="portal-main" style={{

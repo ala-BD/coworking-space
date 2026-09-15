@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { formationApi, bookingApi } from '../services/api';
+import { useSessionUser } from '../hooks/useSessionUser';
 import PortalLayout from '../components/layout/PortalLayout';
 import Pagination from '../components/Pagination';
 
@@ -35,7 +36,7 @@ function Modal({ open, onClose, title, subtitle, icon, children, footer, maxWidt
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4">
       <div
         className="absolute inset-0 bg-slate-950/35 backdrop-blur-[2px]"
         onClick={onClose}
@@ -43,33 +44,33 @@ function Modal({ open, onClose, title, subtitle, icon, children, footer, maxWidt
       />
 
       <div
-        className={`relative w-full ${maxWidth} mx-auto bg-white rounded-3xl shadow-[0_24px_80px_rgba(15,23,42,0.18)] border border-slate-200/80 flex flex-col max-h-[85vh] overflow-hidden`}
+        className={`relative w-full ${maxWidth} mx-auto bg-white rounded-3xl shadow-[0_24px_80px_rgba(15,23,42,0.18)] border border-slate-200/80 flex flex-col max-h-[90vh] overflow-hidden`}
         style={{ animation: 'popIn 0.25s cubic-bezier(.34,1.56,.64,1)' }}
       >
-        <div className="flex items-start justify-between gap-4 p-5 border-b border-slate-200 bg-gradient-to-r from-white via-orange-50/30 to-white shrink-0">
+        <div className="flex items-start justify-between gap-3 sm:gap-4 p-4 sm:p-5 border-b border-slate-200 bg-gradient-to-r from-white via-orange-50/30 to-white shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             {icon && (
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-400 flex items-center justify-center shrink-0 shadow-sm shadow-orange-200">
-                <span className="material-symbols-outlined text-white" style={{ fontSize: 22 }}>{icon}</span>
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-400 flex items-center justify-center shrink-0 shadow-sm shadow-orange-200">
+                <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>{icon}</span>
               </div>
             )}
             <div className="min-w-0">
-              <h2 className="font-sora font-bold text-slate-900 text-2xl leading-tight">{title}</h2>
-              {subtitle && <p className="text-sm text-slate-500 mt-1 max-w-xl">{subtitle}</p>}
+              <h2 className="font-sora font-bold text-slate-900 text-xl sm:text-2xl leading-tight">{title}</h2>
+              {subtitle && <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xl">{subtitle}</p>}
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors flex-shrink-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors flex-shrink-0"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">{children}</div>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 sm:space-y-5">{children}</div>
 
         {footer && (
-          <div className="p-4 border-t border-slate-200 bg-slate-50 shrink-0">
+          <div className="p-3.5 sm:p-4 border-t border-slate-200 bg-slate-50 shrink-0">
             {footer}
           </div>
         )}

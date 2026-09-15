@@ -4,6 +4,7 @@ import { superAdminApi } from '../services/superAdminApi';
 import { formationApi } from '../services/api';
 import { exportFormationsToExcel } from '../utils/exportFormationsExcel';
 import { supabase } from '../supabaseClient';
+import { useSessionUser } from '../hooks/useSessionUser';
 import PortalLayout from '../components/layout/PortalLayout';
 import PeriodFilter from '../components/dashboard/PeriodFilter';
 import AIReportPanel from '../components/dashboard/AIReportPanel';
@@ -106,7 +107,12 @@ const ACTION_META = {
 
 export default function SuperAdminDashboard({ session }) {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
+  const { userId, email, metadata } = useSessionUser(session);
+
+  // Profil minimal construit synchroniquement depuis le JWT — aucun appel DB au démarrage
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'super_admin', ...metadata } : null
+  );
   const [period, setPeriod] = useState(DEFAULT_PERIOD);
   const [stats, setStats] = useState(null);
   const [allFormations, setAllFormations] = useState([]);
@@ -129,22 +135,24 @@ export default function SuperAdminDashboard({ session }) {
 
   const load = useCallback(async (p) => {
     const silent = !firstLoadRef.current;
-    if (!silent) setLoading(true);
+    if (!silent && !stats) setLoading(true);
     try {
-      const s = await superAdminApi.getStats({ period: p });
-      setStats(s);
-      const auditRes = await superAdminApi.getAuditLogs({ limit: 8, page: 1 });
-      setAuditLogs(auditRes.logs || []);
-      const fRes = await formationApi.getAll();
-      setAllFormations(fRes.formations || []);
-      const ptRes = await superAdminApi.getTenants({ statut: 'suspendu' });
-      setPendingTenants(ptRes.tenants || []);
-      const cwRes = await superAdminApi.getTenants({ statut: 'actif', limit: 50 });
-      setCoworkings(cwRes.tenants || []);
+      const [s, auditRes, fRes, ptRes, cwRes] = await Promise.all([
+        superAdminApi.getStats({ period: p }).catch(() => null),
+        superAdminApi.getAuditLogs({ limit: 8, page: 1 }).catch(() => ({ logs: [] })),
+        formationApi.getAll().catch(() => ({ formations: [] })),
+        superAdminApi.getTenants({ statut: 'suspendu' }).catch(() => ({ tenants: [] })),
+        superAdminApi.getTenants({ statut: 'actif', limit: 50 }).catch(() => ({ tenants: [] })),
+      ]);
+      if (s) setStats(s);
+      if (auditRes?.logs) setAuditLogs(auditRes.logs);
+      if (fRes?.formations) setAllFormations(fRes.formations);
+      if (ptRes?.tenants) setPendingTenants(ptRes.tenants);
+      if (cwRes?.tenants) setCoworkings(cwRes.tenants);
       firstLoadRef.current = false;
     } catch (e) { /* silencieux */ }
-    finally { if (!silent) setLoading(false); }
-  }, []);
+    finally { setLoading(false); }
+  }, [stats]);
 
   // ── Rapport intelligent (IA) selon la période active ─────────────────────
   const loadReport = useCallback(async (silent = false) => {
@@ -166,25 +174,17 @@ export default function SuperAdminDashboard({ session }) {
     if (next) loadReport(false);
   };
 
-  // Chargement initial : profil
+  // Chargement initial : si pas de userId → redirection login
   useEffect(() => {
-    async function bootstrap() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return navigate('/login');
-        const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        setProfile(prof);
-        if (prof?.role !== 'super_admin') return navigate('/admin/dashboard');
-      } catch (e) { /* silencieux */ }
-      setLoading(false);
-    }
-    bootstrap();
-  }, [navigate]);
+    if (!userId) { navigate('/login'); return; }
+    if (profile?.role && profile.role !== 'super_admin') { navigate('/admin/dashboard'); }
+  }, [userId, profile, navigate]);
 
   // Chargement des données : initial + à chaque changement de période
   useEffect(() => {
-    if (!profile) return;
-    load(period);
+    if (profile) {
+      load(period);
+    }
   }, [period, profile, load]);
 
   // Rapport IA : rechargé si ouvert lors d'un changement de période
@@ -199,7 +199,7 @@ export default function SuperAdminDashboard({ session }) {
       await superAdminApi.updateTenant(id, { statut: 'actif' });
       setPendingTenants(prev => prev.filter(t => t.id !== id));
       const s = await superAdminApi.getStats({ period: periodRef.current });
-      setStats(s);
+      if (s) setStats(s);
     } catch (e) {
       alert('Erreur approbation : ' + e.message);
     }
@@ -211,7 +211,7 @@ export default function SuperAdminDashboard({ session }) {
       await superAdminApi.deleteTenant(id);
       setPendingTenants(prev => prev.filter(t => t.id !== id));
       const s = await superAdminApi.getStats({ period: periodRef.current });
-      setStats(s);
+      if (s) setStats(s);
     } catch (e) {
       alert('Erreur rejet : ' + e.message);
     }
@@ -221,13 +221,10 @@ export default function SuperAdminDashboard({ session }) {
     exportFormationsToExcel(allFormations);
   };
 
-  if (loading || !profile) {
-    return (
-      <div className="flex h-screen items-center justify-center" style={{ background: '#f4f6f9' }}>
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
-      </div>
-    );
+  if (!profile) {
+    return null;
   }
+
 
   const safeStats = stats || {
     totalTenants: 0,
@@ -340,37 +337,40 @@ export default function SuperAdminDashboard({ session }) {
   return (
     <PortalLayout profile={profile} onLogout={handleLogout}>
       <style>{styles}</style>
-      <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto">
+      <div className="p-2 sm:p-6 lg:p-8 max-w-[1400px] mx-auto">
 
         {/* ── En-tête + filtre global ─────────────────────────────────────── */}
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[.16em] text-on-surface-variant mb-1">
               Vue globale de la plateforme · {windowLabel(period)}
             </p>
-            <h1 className="font-sora text-2xl font-bold text-primary">Tableau de bord Super Admin</h1>
+            <h1 className="font-sora text-xl sm:text-2xl font-bold text-primary">Tableau de bord Super Admin</h1>
           </div>
-          <PeriodFilter value={period} onChange={setPeriod} />
-          <button
-            onClick={toggleReport}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
-              showReport
-                ? 'text-white'
-                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
-            }`}
-            style={showReport ? { background: 'linear-gradient(135deg, #8b5cf6, #f95d00)', boxShadow: '0 4px 12px rgba(139,92,246,.3)' } : undefined}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 17 }}>
-              {reportLoading ? 'sync' : 'auto_awesome'}
-            </span>
-            Rapport IA
-            {report?.anomalies?.length > 0 && showReport && (
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#ba1a1a] text-[9px] font-bold text-white">
-                {report.anomalies.length}
+          <div className="flex items-center gap-2 flex-wrap">
+            <PeriodFilter value={period} onChange={setPeriod} />
+            <button
+              onClick={toggleReport}
+              className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition-colors ${
+                showReport
+                  ? 'text-white'
+                  : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
+              }`}
+              style={showReport ? { background: 'linear-gradient(135deg, #8b5cf6, #f95d00)', boxShadow: '0 4px 12px rgba(139,92,246,.3)' } : undefined}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 17 }}>
+                {reportLoading ? 'sync' : 'auto_awesome'}
               </span>
-            )}
-          </button>
+              Rapport IA
+              {report?.anomalies?.length > 0 && showReport && (
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#ba1a1a] text-[9px] font-bold text-white">
+                  {report.anomalies.length}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
+
 
         {/* ── Cartes KPI ───────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
@@ -641,8 +641,9 @@ export default function SuperAdminDashboard({ session }) {
                 <p className="text-sm text-on-surface-variant">Aucune formation créée sur la plateforme.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm border-collapse">
+              <div className="table-responsive-wrapper">
+                <table className="w-full text-left text-sm border-collapse min-w-[650px]">
+
                   <thead>
                     <tr className="border-b border-outline-variant/10 pb-2">
                       <th className="pb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Formation</th>
@@ -697,7 +698,73 @@ export default function SuperAdminDashboard({ session }) {
             )}
           </div>
         </div>
+
+        {/* ─── Accès rapide à la supervision cross-tenant ─── */}
+        <div className="bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/10 shadow-[0px_2px_4px_rgba(16,35,63,0.04)] bento-card mb-6">
+          <div className="flex items-center gap-2 mb-5">
+            <span className="material-symbols-outlined text-[#f95d00]" style={{ fontSize: 22 }}>shield</span>
+            <h2 className="font-sora text-lg font-semibold text-primary">Supervision globale</h2>
+            <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">Cross-tenant</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                label: 'Réservations globales',
+                icon: 'event_available',
+                desc: 'Supervisez toutes les réservations de tous les coworkings',
+                accent: '#f95d00',
+                bg: 'rgba(249,93,0,0.08)',
+                to: '/super-admin/reservations',
+              },
+              {
+                label: 'Paiements globaux',
+                icon: 'account_balance_wallet',
+                desc: 'Suivez tous les paiements membres cross-tenant',
+                accent: '#8b5cf6',
+                bg: 'rgba(139,92,246,0.08)',
+                to: '/super-admin/payments',
+              },
+              {
+                label: 'Formations globales',
+                icon: 'school',
+                desc: 'Gérez toutes les formations de la plateforme',
+                accent: '#0ea5e9',
+                bg: 'rgba(14,165,233,0.08)',
+                to: '/super-admin/formations',
+              },
+              {
+                label: 'Espaces globaux',
+                icon: 'meeting_room',
+                desc: 'Visualisez et activez/désactivez les espaces',
+                accent: '#2fbe8f',
+                bg: 'rgba(47,190,143,0.08)',
+                to: '/super-admin/espaces',
+              },
+            ].map((item) => (
+              <button
+                key={item.to}
+                onClick={() => navigate(item.to)}
+                className="group flex flex-col items-start gap-3 rounded-2xl border border-outline-variant/10 p-4 hover:border-outline-variant/30 hover:shadow-md transition-all duration-200 text-left w-full"
+                style={{ background: item.bg }}
+              >
+                <span className="flex items-center justify-center w-10 h-10 rounded-xl group-hover:scale-110 transition-transform"
+                  style={{ background: `${item.accent}20`, color: item.accent }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 22 }}>{item.icon}</span>
+                </span>
+                <div>
+                  <p className="font-sora font-semibold text-primary text-sm">{item.label}</p>
+                  <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">{item.desc}</p>
+                </div>
+                <span className="flex items-center gap-1 text-[11px] font-semibold mt-auto" style={{ color: item.accent }}>
+                  Accéder
+                  <span className="material-symbols-outlined group-hover:translate-x-0.5 transition-transform" style={{ fontSize: 14 }}>arrow_forward</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
+
     </PortalLayout>
   );
 }

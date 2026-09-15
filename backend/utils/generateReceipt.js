@@ -43,10 +43,10 @@ function generateReceiptPDF(payment, options = {}) {
   return new Promise((resolve, reject) => {
     try {
       const config = {
-        coworkingName:    options.coworkingName    || 'DeskyWork',
-        coworkingEmail:   options.coworkingEmail   || 'contact@deskywork.tn',
-        coworkingTel:     options.coworkingTel     || '+216 71 000 000',
-        coworkingAdresse: options.coworkingAdresse || 'Tunis, Tunisie',
+        coworkingName:    options.coworkingName    || process.env.COWORKING_NAME    || 'DeskyWork',
+        coworkingEmail:   options.coworkingEmail   || process.env.COWORKING_EMAIL   || 'contact@deskywork.tn',
+        coworkingTel:     options.coworkingTel     || process.env.COWORKING_TEL     || '+216 52 882 880 / +216 52 882 930',
+        coworkingAdresse: options.coworkingAdresse || process.env.COWORKING_ADRESSE || 'Tunis, Tunisie',
       };
 
       // ── Données membre ──────────────────────────────────────────────────────

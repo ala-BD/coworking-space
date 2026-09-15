@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { formationApi, bookingApi } from '../services/api';
+import { useSessionUser } from '../hooks/useSessionUser';
 import PortalLayout from '../components/layout/PortalLayout';
 import PeriodFilter from '../components/dashboard/PeriodFilter';
 import { DEFAULT_PERIOD, periodWindow, inWindow, windowLabel, trendBadge } from '../utils/dashboardPeriod';
@@ -36,7 +37,10 @@ const PAIEMENT_LABELS = {
 };
 
 export default function TrainerDashboard({ session }) {
-  const [profile, setProfile] = useState(null);
+  const { userId, email, metadata } = useSessionUser(session);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'formateur', prenom: metadata.prenom || '', nom: metadata.nom || '', ...metadata } : null
+  );
   const [formations, setFormations] = useState([]);
   const [reservations, setReservations] = useState([]);
   const [espaces, setEspaces] = useState([]);
@@ -118,26 +122,31 @@ export default function TrainerDashboard({ session }) {
   const loadUserData = async () => {
     try {
       setLoading(true);
-      const { data: prof, error: e } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-      if (e) throw e;
-      if (prof.role !== 'formateur') throw new Error('Accès réservé aux formateurs.');
-      setProfile(prof);
-      await refreshData(prof.id);
+      // profile déjà initialisé depuis le JWT — on charge directement les données
+      const id = profile?.id || userId;
+      if (!id) return;
+      await refreshData(id);
     } catch (e) { setError(e.message); setLoading(false); }
   };
 
   const refreshData = async (trainerId) => {
     try {
-      const id = trainerId || profile?.id;
-      const [fList, rList, eList] = await Promise.all([
-        formationApi.getAll({ formateur_id: id }),
-        bookingApi.getAll(),
+      const [fList, rList, eList, cwRes, remuRes] = await Promise.all([
+        formationApi.getAll({ formateur_id: id }).catch(() => ({ formations: [] })),
+        bookingApi.getAll().catch(() => ({ reservations: [] })),
         supabase.from('espaces').select('*').order('nom'),
+        formationApi.getMyCoworkings().catch(() => ({ coworkings: [] })),
+        supabase.from('remuneration_formateurs')
+          .select('*, formations(titre)')
+          .eq('formateur_id', id)
+          .order('created_at', { ascending: false }),
       ]);
       const fData = fList.formations || [];
       setFormations(fData);
       setReservations(rList.reservations || []);
-      setEspaces(eList.data || []);
+      setEspaces(eList?.data || []);
+      setCoworkings(cwRes?.coworkings || []);
+      setRemunerations(remuRes?.data || []);
 
       // Charger les inscriptions pour toutes les formations du formateur
       if (fData.length > 0) {
@@ -158,23 +167,6 @@ export default function TrainerDashboard({ session }) {
         setInscriptions({});
       }
 
-      try {
-        const cw = await formationApi.getMyCoworkings();
-        setCoworkings(cw.coworkings || []);
-      } catch {
-        setCoworkings([]);
-      }
-
-      try {
-        const { data: remu } = await supabase
-          .from('remuneration_formateurs')
-          .select('*, formations(titre)')
-          .eq('formateur_id', id)
-          .order('created_at', { ascending: false });
-        setRemunerations(remu || []);
-      } catch {
-        setRemunerations([]);
-      }
     } catch (e) { setError('Erreur chargement : ' + e.message); }
     finally { setLoading(false); }
   };
@@ -277,9 +269,43 @@ export default function TrainerDashboard({ session }) {
     .reduce((s, r) => s + parseFloat(r.montant || 0), 0);
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
-    </div>
+    <PortalLayout profile={profile} onLogout={() => supabase.auth.signOut()}>
+      <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto">
+        {/* Header skeleton */}
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="h-3 w-24 bg-gray-200 rounded animate-pulse mb-2" />
+            <div className="h-8 w-56 bg-gray-200 rounded animate-pulse mb-1" />
+            <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
+          </div>
+          <div className="h-9 w-40 bg-gray-200 rounded-xl animate-pulse" />
+        </div>
+        {/* KPI cards skeleton */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl p-5 shadow-sm animate-pulse">
+              <div className="h-3 w-20 bg-gray-200 rounded mb-3" />
+              <div className="h-7 w-14 bg-gray-200 rounded" />
+            </div>
+          ))}
+        </div>
+        {/* Content skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl p-5 shadow-sm animate-pulse h-48">
+              <div className="h-4 w-32 bg-gray-200 rounded mb-4" />
+              {[...Array(3)].map((_, j) => (
+                <div key={j} className="flex gap-3 py-2 border-b border-gray-100 last:border-0">
+                  <div className="h-4 w-1/3 bg-gray-100 rounded" />
+                  <div className="h-4 w-1/4 bg-gray-100 rounded" />
+                  <div className="h-4 w-1/5 bg-gray-100 rounded" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </PortalLayout>
   );
 
   return (

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ═══════════════════════════════════════════════
    DeskyWork — Design Tokens (Material 3)
@@ -170,10 +171,21 @@ html {
 /* Fix Tailwind v4: les tokens custom --spacing-sm/md/lg/xl (tokens Material 3)
    détournent les utilitaires max-w-sm/md/lg/xl → largeurs cassées (ex: modale à 24px).
    On restaure les tailles de conteneur standard. */
-.max-w-sm { max-width: 24rem; }
-.max-w-md { max-width: 28rem; }
-.max-w-lg { max-width: 32rem; }
-.max-w-xl { max-width: 36rem; }
+.max-w-sm {
+  max-width: 24rem;
+}
+
+.max-w-md {
+  max-width: 28rem;
+}
+
+.max-w-lg {
+  max-width: 32rem;
+}
+
+.max-w-xl {
+  max-width: 36rem;
+}
 
 body {
   background-color: var(--color-background);
@@ -374,9 +386,13 @@ a:hover.hover\:underline,
   background: linear-gradient(155deg, #fbf9fb 0%, #eef3ff 55%, #e4ecff 100%);
 }
 
+.dark .page-gradient {
+  background: linear-gradient(155deg, #100f0d 0%, #171512 55%, #1c1813 100%);
+}
+
 /* Panneau illustratif gauche (auth split-layout) */
 .auth-panel-left {
-  background: linear-gradient(145deg, #000d23 0%, #10233f 50%, #0040a0 100%);
+  background: linear-gradient(145deg, #100f0d 0%, #1e130b 50%, #2b1404 100%);
   position: relative;
   overflow: hidden;
 }
@@ -541,142 +557,159 @@ a:hover.hover\:underline,
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
-  a {
-  color: inherit;
-  text-decoration: none;
-}
 
-/* ═══════════════════════════════════════════════
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* ═══════════════════════════════════════════════
    Portal Layout Responsive Controls
    Ensures bottom nav and hamburger are strictly hidden on desktop
    ═══════════════════════════════════════════════ */
-.portal-mobile-only {
-  display: flex !important;
-}
-@media (min-width: 768px) {
   .portal-mobile-only {
-    display: none !important;
+    display: flex !important;
   }
-}
 
-.portal-desktop-sidebar {
-  display: flex !important;
-}
-@media (max-width: 767px) {
+  @media (min-width: 768px) {
+    .portal-mobile-only {
+      display: none !important;
+    }
+  }
+
   .portal-desktop-sidebar {
-    display: none !important;
+    display: flex !important;
   }
-}
 
-.portal-mobile-sidebar {
-  display: flex !important;
-}
-@media (min-width: 768px) {
+  @media (max-width: 767px) {
+    .portal-desktop-sidebar {
+      display: none !important;
+    }
+  }
+
   .portal-mobile-sidebar {
-    display: none !important;
+    display: flex !important;
   }
-}
 
-.portal-bottom-nav {
-  display: flex !important;
-}
-@media (min-width: 768px) {
+  @media (min-width: 768px) {
+    .portal-mobile-sidebar {
+      display: none !important;
+    }
+  }
+
   .portal-bottom-nav {
-    display: none !important;
+    display: flex !important;
   }
-}
 
-/* Shared responsive shell. Bootstrap grid utilities handle page sections;
+  @media (min-width: 768px) {
+    .portal-bottom-nav {
+      display: none !important;
+    }
+  }
+
+  /* Shared responsive shell. Bootstrap grid utilities handle page sections;
    these rules handle the fixed portal chrome used by every dashboard. */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-img,
-svg,
-video,
-canvas {
-  max-width: 100%;
-}
-
-@media (max-width: 767px) {
-  .portal-header {
-    height: 60px !important;
-    padding: 0 12px !important;
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
   }
 
-  .portal-shell {
-    padding-top: 60px !important;
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
-  .portal-sidebar {
-    display: none !important;
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
   }
 
-  .portal-main {
-    width: 100% !important;
-    min-width: 0 !important;
-    padding: 20px 12px 28px !important;
+  @media (max-width: 1023px) {
+    .portal-header {
+      height: 60px !important;
+      padding: 0 14px !important;
+    }
+
+    .portal-shell {
+      padding-top: 60px !important;
+    }
+
+    .portal-sidebar-desktop {
+      display: none !important;
+    }
+
+    .portal-main {
+      width: 100% !important;
+      min-width: 0 !important;
+      padding: 16px 12px 32px !important;
+    }
+
+    .portal-main>div {
+      max-width: 100% !important;
+    }
   }
 
-  .portal-main > div {
-    max-width: 100% !important;
-  }
-
-  .portal-main table {
-    min-width: 620px;
-  }
-}
-
-@media (max-width: 359px) {
-  .auth-social-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 767px) {
-  .auth-social-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .auth-mobile-header {
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 12px 16px !important;
-  }
-
-  .auth-mobile-header > a:last-child {
-    margin-left: auto;
-    white-space: nowrap;
-  }
-}
-
-@media (max-width: 359px) {
-  .auth-mobile-header > a:last-child {
+  /* Custom smooth horizontal scroll for tables on mobile */
+  .table-responsive-wrapper {
     width: 100%;
-    margin-left: 0;
-    text-align: right;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .auth-mobile-header + main {
-    padding-left: 12px !important;
-    padding-right: 12px !important;
+  @media (max-width: 640px) {
+    .table-responsive-wrapper table {
+      min-width: 580px;
+    }
   }
 
-  .auth-mobile-header + main .glass-card {
-    padding: 16px !important;
+
+  @media (max-width: 359px) {
+    .auth-social-grid {
+      grid-template-columns: 1fr;
+    }
   }
-}
-  transition: background-color 0.18s, color 0.18s;
+
+  @media (max-width: 767px) {
+    .auth-social-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .auth-mobile-header {
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 16px !important;
+    }
+
+    .auth-mobile-header>a:last-child {
+      margin-left: auto;
+      white-space: nowrap;
+    }
+  }
+
+  @media (max-width: 359px) {
+    .auth-mobile-header>a:last-child {
+      width: 100%;
+      margin-left: 0;
+      text-align: right;
+    }
+
+    .auth-mobile-header+main {
+      padding-left: 12px !important;
+      padding-right: 12px !important;
+    }
+
+    .auth-mobile-header+main .glass-card {
+      padding: 16px !important;
+    }
+  }
+
+  transition: background-color 0.18s,
+  color 0.18s;
   color: var(--color-on-surface-variant);
 }
 

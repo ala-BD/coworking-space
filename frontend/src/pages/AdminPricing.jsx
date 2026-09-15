@@ -183,7 +183,7 @@ export default function AdminPricing({ session }) {
         </div>
       )}
 
-      <div className="flex gap-sm mb-md">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-6 scrollbar-none">
         {[
           { id: 'tarifs', label: 'Tarifs abonnements' },
           { id: 'promo', label: 'Codes promo' },
@@ -193,10 +193,10 @@ export default function AdminPricing({ session }) {
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`px-md py-sm rounded-xl font-semibold text-label-sm transition-all ${
+            className={`px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-all ${
               tab === t.id
-                ? 'text-white border border-transparent'
-                : 'bg-white border border-outline-variant/20 hover:border-orange-400'
+                ? 'text-white border border-transparent shadow-sm'
+                : 'bg-white border border-outline-variant/20 text-on-surface-variant hover:border-secondary'
             }`}
             style={tab === t.id ? { backgroundColor: '#f95d00' } : {}}
           >
@@ -206,14 +206,14 @@ export default function AdminPricing({ session }) {
       </div>
 
       {tab === 'tarifs' && (
-        <div className="space-y-md">
-          <form onSubmit={handleCreateTarif} className="bg-white rounded-xl p-lg custom-shadow border border-outline-variant/10 grid sm:grid-cols-2 lg:grid-cols-6 gap-md items-end">
+        <div className="space-y-4">
+          <form onSubmit={handleCreateTarif} className="bg-white rounded-2xl p-4 sm:p-6 custom-shadow border border-outline-variant/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
             <div>
-              <label className="block text-label-sm mb-xs">Type</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Type</label>
               <select
                 value={newTarif.type_abonnement}
                 onChange={(e) => setNewTarif({ ...newTarif, type_abonnement: e.target.value })}
-                className="w-full border rounded-xl px-sm py-xs"
+                className="w-full border border-outline-variant/30 rounded-xl px-3 py-2 text-sm outline-none focus:border-secondary"
               >
                 {Object.entries(SUBSCRIPTION_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
@@ -221,11 +221,11 @@ export default function AdminPricing({ session }) {
               </select>
             </div>
             <div>
-              <label className="block text-label-sm mb-xs">Plan</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Plan</label>
               <select
                 value={newTarif.plan_tarifaire}
                 onChange={(e) => setNewTarif({ ...newTarif, plan_tarifaire: e.target.value })}
-                className="w-full border rounded-xl px-sm py-xs"
+                className="w-full border border-outline-variant/30 rounded-xl px-3 py-2 text-sm outline-none focus:border-secondary"
               >
                 {Object.entries(PLAN_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
@@ -233,11 +233,11 @@ export default function AdminPricing({ session }) {
               </select>
             </div>
             <div>
-              <label className="block text-label-sm mb-xs">Type d'espace</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Type d'espace</label>
               <select
                 value={newTarif.type_espace}
                 onChange={(e) => setNewTarif({ ...newTarif, type_espace: e.target.value })}
-                className="w-full border rounded-xl px-sm py-xs"
+                className="w-full border border-outline-variant/30 rounded-xl px-3 py-2 text-sm outline-none focus:border-secondary"
               >
                 <option value="">Tous les espaces</option>
                 {Object.entries(ESPACE_TYPE_LABELS).map(([k, v]) => (
@@ -246,7 +246,7 @@ export default function AdminPricing({ session }) {
               </select>
             </div>
             <div>
-              <label className="block text-label-sm mb-xs">Prix (DT)</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Prix (DT)</label>
               <input
                 type="number"
                 min="0"
@@ -254,37 +254,38 @@ export default function AdminPricing({ session }) {
                 required
                 value={newTarif.prix}
                 onChange={(e) => setNewTarif({ ...newTarif, prix: e.target.value })}
-                className="w-full border rounded-xl px-sm py-xs"
+                className="w-full border border-outline-variant/30 rounded-xl px-3 py-2 text-sm outline-none focus:border-secondary"
               />
             </div>
             <div>
-              <label className="block text-label-sm mb-xs">TVA %</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">TVA %</label>
               <input
                 type="number"
                 min="0"
                 value={newTarif.tva_pct}
                 onChange={(e) => setNewTarif({ ...newTarif, tva_pct: e.target.value })}
-                className="w-full border rounded-xl px-sm py-xs"
+                className="w-full border border-outline-variant/30 rounded-xl px-3 py-2 text-sm outline-none focus:border-secondary"
               />
             </div>
-            <button type="submit" className="bg-secondary text-white py-xs px-md rounded-xl font-semibold">
+            <button type="submit" className="w-full bg-secondary text-white py-2.5 px-4 rounded-xl font-bold text-sm hover:bg-secondary/90 transition-colors">
               Ajouter
             </button>
           </form>
 
-          <div className="bg-white rounded-xl custom-shadow border border-outline-variant/10 overflow-x-auto">
-            <table className="w-full text-left text-body-sm">
-              <thead className="bg-surface-container-low">
-                <tr>
-                  <th className="p-sm">Type</th>
-                  <th className="p-sm">Plan</th>
-                  <th className="p-sm">Type d'espace</th>
-                  <th className="p-sm">Prix</th>
-                  <th className="p-sm">TVA</th>
-                  <th className="p-sm">Statut</th>
-                  <th className="p-sm">Action</th>
-                </tr>
-              </thead>
+          <div className="bg-white rounded-2xl custom-shadow border border-outline-variant/10 overflow-hidden">
+            <div className="table-responsive-wrapper">
+              <table className="w-full min-w-[650px] text-left text-sm">
+                <thead className="bg-surface-container-low">
+                  <tr>
+                    <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">Type</th>
+                    <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">Plan</th>
+                    <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">Type d'espace</th>
+                    <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">Prix</th>
+                    <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">TVA</th>
+                    <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">Statut</th>
+                    <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase text-right">Action</th>
+                  </tr>
+                </thead>
               <tbody>
                 {pagedTarifs.map((t) => (
                   <tr key={t.id} className="border-t border-outline-variant/10">
@@ -315,42 +316,43 @@ export default function AdminPricing({ session }) {
                 ))}
               </tbody>
             </table>
-            <Pagination
-              currentPage={pageTarifs}
-              totalItems={tarifs.length}
-              itemsPerPage={ITEMS_PER_PAGE}
-              onPageChange={setPageTarifs}
-              label="tarifs"
-            />
           </div>
+          <Pagination
+            currentPage={pageTarifs}
+            totalItems={tarifs.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setPageTarifs}
+            label="tarifs"
+          />
         </div>
-      )}
+      </div>
+    )}
 
       {tab === 'promo' && (
-        <div className="space-y-md">
-          <form onSubmit={handleCreatePromo} className="bg-white rounded-xl p-lg custom-shadow border border-outline-variant/10 grid sm:grid-cols-2 lg:grid-cols-5 gap-md items-end">
+        <div className="space-y-4">
+          <form onSubmit={handleCreatePromo} className="bg-white rounded-2xl p-4 sm:p-6 custom-shadow border border-outline-variant/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
             <div>
-              <label className="block text-label-sm mb-xs">Code</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Code</label>
               <input
                 required
                 value={newPromo.code}
                 onChange={(e) => setNewPromo({ ...newPromo, code: e.target.value.toUpperCase() })}
-                className="w-full border rounded-xl px-sm py-xs uppercase"
+                className="w-full border border-outline-variant/30 rounded-xl px-3 py-2 text-sm uppercase outline-none focus:border-secondary"
               />
             </div>
             <div>
-              <label className="block text-label-sm mb-xs">Type</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Type</label>
               <select
                 value={newPromo.type_reduction}
                 onChange={(e) => setNewPromo({ ...newPromo, type_reduction: e.target.value })}
-                className="w-full border rounded-xl px-sm py-xs"
+                className="w-full border border-outline-variant/30 rounded-xl px-3 py-2 text-sm outline-none focus:border-secondary"
               >
                 <option value="percent">Pourcentage</option>
                 <option value="fixed">Montant fixe</option>
               </select>
             </div>
             <div>
-              <label className="block text-label-sm mb-xs">Valeur</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Valeur</label>
               <input
                 type="number"
                 min="0"
@@ -358,65 +360,67 @@ export default function AdminPricing({ session }) {
                 required
                 value={newPromo.valeur}
                 onChange={(e) => setNewPromo({ ...newPromo, valeur: e.target.value })}
-                className="w-full border rounded-xl px-sm py-xs"
+                className="w-full border border-outline-variant/30 rounded-xl px-3 py-2 text-sm outline-none focus:border-secondary"
               />
             </div>
             <div>
-              <label className="block text-label-sm mb-xs">Max utilisations</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Max utilisations</label>
               <input
                 type="number"
                 min="1"
                 value={newPromo.utilisations_max}
                 onChange={(e) => setNewPromo({ ...newPromo, utilisations_max: e.target.value })}
-                className="w-full border rounded-xl px-sm py-xs"
+                className="w-full border border-outline-variant/30 rounded-xl px-3 py-2 text-sm outline-none focus:border-secondary"
                 placeholder="Illimité"
               />
             </div>
-            <button type="submit" className="bg-secondary text-white py-xs px-md rounded-xl font-semibold">
+            <button type="submit" className="w-full bg-secondary text-white py-2.5 px-4 rounded-xl font-bold text-sm hover:bg-secondary/90 transition-colors">
               Créer
             </button>
           </form>
 
-          <div className="bg-white rounded-xl custom-shadow border border-outline-variant/10 overflow-x-auto">
-            <table className="w-full text-left text-body-sm">
-              <thead className="bg-surface-container-low">
-                <tr>
-                  <th className="p-sm">Code</th>
-                  <th className="p-sm">Réduction</th>
-                  <th className="p-sm">Utilisations</th>
-                  <th className="p-sm">Statut</th>
-                  <th className="p-sm">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedPromoCodes.map((p) => (
-                  <tr key={p.id} className="border-t border-outline-variant/10">
-                    <td className="p-sm font-mono font-semibold">{p.code}</td>
-                    <td className="p-sm">
-                      {p.type_reduction === 'percent' ? `${p.valeur}%` : `${p.valeur} DT`}
-                    </td>
-                    <td className="p-sm">
-                      {p.utilisations_count}
-                      {p.utilisations_max ? ` / ${p.utilisations_max}` : ''}
-                    </td>
-                    <td className="p-sm">
-                      <span className={`px-2 py-0.5 rounded-full text-label-sm ${p.actif ? 'bg-secondary-fixed' : 'bg-surface-container-high'}`}>
-                        {p.actif ? 'Actif' : 'Inactif'}
-                      </span>
-                    </td>
-                    <td className="p-sm">
-                      <button
-                        type="button"
-                        onClick={() => handleTogglePromo(p.id, p.actif)}
-                        className="text-secondary font-semibold text-label-sm hover:underline"
-                      >
-                        {p.actif ? 'Désactiver' : 'Activer'}
-                      </button>
-                    </td>
+          <div className="bg-white rounded-2xl custom-shadow border border-outline-variant/10 overflow-hidden">
+            <div className="table-responsive-wrapper">
+              <table className="w-full min-w-[650px] text-left text-sm">
+                <thead className="bg-surface-container-low">
+                  <tr>
+                    <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">Code</th>
+                    <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">Réduction</th>
+                    <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">Utilisations</th>
+                    <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">Statut</th>
+                    <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {pagedPromoCodes.map((p) => (
+                    <tr key={p.id} className="border-t border-outline-variant/10">
+                      <td className="p-3 font-mono font-semibold">{p.code}</td>
+                      <td className="p-3">
+                        {p.type_reduction === 'percent' ? `${p.valeur}%` : `${p.valeur} DT`}
+                      </td>
+                      <td className="p-3">
+                        {p.utilisations_count}
+                        {p.utilisations_max ? ` / ${p.utilisations_max}` : ''}
+                      </td>
+                      <td className="p-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${p.actif ? 'bg-secondary-fixed text-primary' : 'bg-surface-container-high text-on-surface-variant'}`}>
+                          {p.actif ? 'Actif' : 'Inactif'}
+                        </span>
+                      </td>
+                      <td className="p-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePromo(p.id, p.actif)}
+                          className="text-secondary font-semibold text-xs hover:underline"
+                        >
+                          {p.actif ? 'Désactiver' : 'Activer'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <Pagination
               currentPage={pagePromo}
               totalItems={promoCodes.length}
@@ -429,39 +433,41 @@ export default function AdminPricing({ session }) {
       )}
 
       {tab === 'occupation' && (
-        <div className="bg-white rounded-xl custom-shadow border border-outline-variant/10 overflow-x-auto">
-          <table className="w-full text-left text-body-sm">
-            <thead className="bg-surface-container-low">
-              <tr>
-                <th className="p-sm">Espace</th>
-                <th className="p-sm">Type</th>
-                <th className="p-sm">Capacité</th>
-                <th className="p-sm">Réservations</th>
-                <th className="p-sm">Taux occupation</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagedOccupation.map((row) => (
-                <tr key={row.espace_id} className="border-t border-outline-variant/10">
-                  <td className="p-sm font-semibold">{row.nom}</td>
-                  <td className="p-sm">{row.type.replace('_', ' ')}</td>
-                  <td className="p-sm">{row.capacite}</td>
-                  <td className="p-sm">{row.reservations_count}</td>
-                  <td className="p-sm">
-                    <div className="flex items-center gap-sm">
-                      <div className="flex-grow h-2 bg-surface-container-high rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-secondary rounded-full"
-                          style={{ width: `${Math.min(100, row.taux_occupation_pct)}%` }}
-                        />
-                      </div>
-                      <span className="font-semibold w-12">{row.taux_occupation_pct}%</span>
-                    </div>
-                  </td>
+        <div className="bg-white rounded-2xl custom-shadow border border-outline-variant/10 overflow-hidden">
+          <div className="table-responsive-wrapper">
+            <table className="w-full min-w-[650px] text-left text-sm">
+              <thead className="bg-surface-container-low">
+                <tr>
+                  <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">Espace</th>
+                  <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">Type</th>
+                  <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">Capacité</th>
+                  <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">Réservations</th>
+                  <th className="p-3 font-semibold text-xs text-on-surface-variant uppercase">Taux occupation</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {pagedOccupation.map((row) => (
+                  <tr key={row.espace_id} className="border-t border-outline-variant/10">
+                    <td className="p-3 font-semibold">{row.nom}</td>
+                    <td className="p-3 capitalize">{row.type.replace('_', ' ')}</td>
+                    <td className="p-3">{row.capacite}</td>
+                    <td className="p-3">{row.reservations_count}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-grow h-2 bg-surface-container-high rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-secondary rounded-full"
+                            style={{ width: `${Math.min(100, row.taux_occupation_pct)}%` }}
+                          />
+                        </div>
+                        <span className="font-semibold text-xs w-12">{row.taux_occupation_pct}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <Pagination
             currentPage={pageOccupation}
             totalItems={occupation.length}

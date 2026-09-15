@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { settingsApi, cancellationAdvancedApi } from '../services/api';
+import { useSessionUser } from '../hooks/useSessionUser';
 import PortalLayout from '../components/layout/PortalLayout';
 
 const SPACE_TYPES = [
@@ -42,7 +43,10 @@ function NumInput({ label, value, onChange, min = 0, max = 100, step = 1, suffix
 }
 
 export default function AdminCancellationPolicy({ session }) {
-  const [profile,     setProfile]     = useState(null);
+  const { userId, email, metadata } = useSessionUser(session);
+  const [profile,     setProfile]     = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'admin', prenom: metadata.prenom || '', nom: metadata.nom || '', ...metadata } : null
+  );
   const [loading,     setLoading]     = useState(true);
   const [saving,      setSaving]      = useState(false);
   const [savingSpace, setSavingSpace] = useState(null);
@@ -71,8 +75,6 @@ export default function AdminCancellationPolicy({ session }) {
   const loadData = async () => {
     try {
       setLoading(true);
-      const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-      setProfile(prof);
       const { policy } = await settingsApi.getCancellationPolicy();
       setForm({
         delai_heures: policy.delai_heures ?? 24, penalite_pct: policy.penalite_pct ?? 0,
@@ -125,9 +127,18 @@ export default function AdminCancellationPolicy({ session }) {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
-    </div>
+    <PortalLayout profile={profile} onLogout={() => supabase.auth.signOut()}>
+      <div className="p-6 max-w-3xl mx-auto">
+        <div className="h-8 w-64 bg-gray-200 rounded animate-pulse mb-6" />
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="bg-white rounded-2xl p-5 shadow-sm animate-pulse mb-4">
+            <div className="h-4 w-40 bg-gray-200 rounded mb-3" />
+            <div className="h-3 w-full bg-gray-100 rounded mb-2" />
+            <div className="h-3 w-3/4 bg-gray-100 rounded" />
+          </div>
+        ))}
+      </div>
+    </PortalLayout>
   );
 
   return (

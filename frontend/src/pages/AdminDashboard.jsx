@@ -7,6 +7,7 @@ import { getRoleLabel } from '../utils/roles';
 import { exportDashboardToExcel } from '../utils/exportDashboardExcel';
 import PeriodFilter from '../components/dashboard/PeriodFilter';
 import AIReportPanel from '../components/dashboard/AIReportPanel';
+import { useSessionUser } from '../hooks/useSessionUser';
 import {
   DEFAULT_PERIOD, periodWindow, windowLabel, trendBadge, CHART_COLORS, inWindow,
 } from '../utils/dashboardPeriod';
@@ -186,7 +187,10 @@ function DonutBySpace({ data, title, sub, totalFormatter }) {
 // ─── Composant principal ─────────────────────────────────────────────────────
 export default function AdminDashboard({ session }) {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
+  const { userId, email, metadata } = useSessionUser(session);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'admin', ...metadata } : null
+  );
   const [period, setPeriod] = useState(DEFAULT_PERIOD);
   const [kpis, setKpis] = useState(null);
   const [chart, setChart] = useState(null);
@@ -215,7 +219,7 @@ export default function AdminDashboard({ session }) {
 
   // ── Fetch KPIs (silent = pas de spinner) ──────────────────────────────────
   const fetchKpis = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent && !kpis) setLoading(true);
     setError('');
     try {
       const p = periodRef.current;
@@ -228,13 +232,13 @@ export default function AdminDashboard({ session }) {
       setChart(chartRes);
       setPendingAccounts(pendingRes.pending || []);
       setLastRefresh(new Date());
-      if (Array.isArray(chartRes.formations)) setFormations(chartRes.formations);
+      if (Array.isArray(chartRes?.formations)) setFormations(chartRes.formations);
     } catch (e) {
       if (!silent) setError(e.message);
     } finally {
-      if (!silent) setLoading(false);
+      setLoading(false);
     }
-  }, []);
+  }, [kpis]);
 
   // ── Rapport IA (généré selon la période active) ──────────────────────────
   const loadReport = useCallback(async (silent = false) => {
@@ -270,32 +274,36 @@ export default function AdminDashboard({ session }) {
 
   // ── Effet principal : chargement profil + auto-refresh ────────────────────
   useEffect(() => {
+    if (!session?.user?.id) return;
+
+    // Profil Supabase DB en arrière-plan
     supabase.from('profiles').select('*').eq('id', session.user.id).single()
       .then(async ({ data, error: e }) => {
-        if (e) { setError(e.message); return; }
-        setProfile(data);
-
-        if (data?.role === 'admin' && data?.tenant_id) {
-          const { data: tenant } = await supabase
-            .from('tenants')
-            .select('settings')
-            .eq('id', data.tenant_id)
-            .single();
-          if (tenant?.settings?.onboarding_completed !== true) {
-            navigate('/admin/onboarding', { replace: true });
+        if (!e && data) {
+          setProfile(data);
+          if (data?.role === 'admin' && data?.tenant_id) {
+            const { data: tenant } = await supabase
+              .from('tenants')
+              .select('settings')
+              .eq('id', data.tenant_id)
+              .single();
+            if (tenant?.settings?.onboarding_completed !== true) {
+              navigate('/admin/onboarding', { replace: true });
+            }
           }
         }
-      });
+      }).catch(() => {});
 
     fetchKpis(false);
 
-    // Mon Coworking (image + coordonnées)
-    tenantAdminApi.getTenant()
-      .then(res => { if (res.tenant) setCoworking(res.tenant); })
-      .catch(() => {});
-    guestApi.getAll()
-      .then(res => { if (res.guests) setGuests(res.guests); })
-      .catch(() => {});
+    // Données secondaires en parallèle (Mon Coworking + Invités)
+    Promise.all([
+      tenantAdminApi.getTenant().catch(() => ({})),
+      guestApi.getAll().catch(() => ({})),
+    ]).then(([tRes, gRes]) => {
+      if (tRes?.tenant) setCoworking(tRes.tenant);
+      if (gRes?.guests) setGuests(gRes.guests);
+    }).catch(() => {});
 
     kpiTimerRef.current = setInterval(() => fetchKpis(true), REFRESH_KPI_MS);
     sessionTimerRef.current = setInterval(fetchSessionsOnly, REFRESH_SESSIONS_MS);
@@ -305,6 +313,7 @@ export default function AdminDashboard({ session }) {
       clearInterval(sessionTimerRef.current);
     };
   }, [session, navigate, fetchKpis, fetchSessionsOnly]);
+
 
   // ── Changement de période : recharge silencieuse (pas de spinner) ─────────
   useEffect(() => {
@@ -427,37 +436,39 @@ export default function AdminDashboard({ session }) {
               )}
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <PeriodFilter value={period} onChange={setPeriod} />
-            <button
-              onClick={toggleReport}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
-                showReport
-                  ? 'text-white'
-                  : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
-              }`}
-              style={showReport ? { background: 'linear-gradient(135deg, #8b5cf6, #f95d00)', boxShadow: '0 4px 12px rgba(139,92,246,.3)' } : undefined}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 17 }}>
-                {reportLoading ? 'sync' : 'auto_awesome'}
-              </span>
-              Rapport IA
-              {report?.anomalies?.length > 0 && showReport && (
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#ba1a1a] text-[9px] font-bold text-white">
-                  {report.anomalies.length}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={toggleReport}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl font-semibold text-xs sm:text-sm transition-colors ${
+                  showReport
+                    ? 'text-white'
+                    : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
+                }`}
+                style={showReport ? { background: 'linear-gradient(135deg, #8b5cf6, #f95d00)', boxShadow: '0 4px 12px rgba(139,92,246,.3)' } : undefined}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 17 }}>
+                  {reportLoading ? 'sync' : 'auto_awesome'}
                 </span>
-              )}
-            </button>
-            <button
-              onClick={handleExport}
-              disabled={exporting || !kpis}
-              className="flex items-center gap-2 px-4 py-2 bg-secondary text-on-secondary rounded-xl font-semibold text-sm hover:bg-secondary/90 transition-colors disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                {exporting ? 'sync' : 'download'}
-              </span>
-              {exporting ? 'Export…' : 'Export Excel'}
-            </button>
+                Rapport IA
+                {report?.anomalies?.length > 0 && showReport && (
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#ba1a1a] text-[9px] font-bold text-white">
+                    {report.anomalies.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={exporting || !kpis}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 bg-secondary text-on-secondary rounded-xl font-semibold text-xs sm:text-sm hover:bg-secondary/90 transition-colors disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[17px]">
+                  {exporting ? 'sync' : 'download'}
+                </span>
+                {exporting ? 'Export…' : 'Export Excel'}
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -1091,8 +1102,8 @@ export default function AdminDashboard({ session }) {
             <p className="text-sm text-on-surface-variant">Aucune formation programmée dans cette période</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
+          <div className="table-responsive-wrapper">
+            <table className="w-full min-w-[650px] text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-outline-variant/10 pb-2">
                   <th className="pb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Formation</th>
@@ -1164,8 +1175,8 @@ export default function AdminDashboard({ session }) {
             <p className="text-sm text-on-surface-variant">Aucune réservation invité sur {label}.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
+          <div className="table-responsive-wrapper">
+            <table className="w-full min-w-[650px] text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-outline-variant/10">
                   <th className="pb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Invitée(e)</th>

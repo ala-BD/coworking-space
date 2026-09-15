@@ -1,4 +1,4 @@
-// services/api/superAdmin.js — Super Admin API (Tenants + Users + Audit)
+// services/api/superAdmin.js — Super Admin API (Tenants + Users + Audit + Supervision)
 import { apiFetch } from './_core';
 
 export const superAdminApi = {
@@ -49,4 +49,37 @@ export const superAdminApi = {
   },
   updateContact: (id, statut) =>
     apiFetch(`/api/super-admin/contacts/${id}`, { method: 'PATCH', body: JSON.stringify({ statut }) }),
+
+  // ── Supervision cross-tenant ──────────────────────────────────────────────
+
+  // Réservations de tous les coworkings
+  getAllReservations: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/api/super-admin/reservations?${qs}`);
+  },
+  cancelReservation: (id, motif = '') =>
+    apiFetch(`/api/super-admin/reservations/${id}/cancel`, { method: 'POST', body: JSON.stringify({ motif }) }),
+
+  // Paiements membres de tous les coworkings
+  getAllPayments: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/api/super-admin/payments?${qs}`);
+  },
+
+  // Formations de tous les coworkings
+  getAllFormations: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/api/super-admin/formations?${qs}`);
+  },
+  cancelFormation: (id) =>
+    apiFetch(`/api/super-admin/formations/${id}/cancel`, { method: 'POST' }),
+
+  // Espaces de tous les coworkings
+  getAllEspaces: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/api/super-admin/espaces?${qs}`);
+  },
+  toggleEspace: (id, actif) =>
+    apiFetch(`/api/super-admin/espaces/${id}`, { method: 'PATCH', body: JSON.stringify({ actif }) }),
 };
+

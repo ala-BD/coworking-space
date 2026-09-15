@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { bookingApi } from '../services/api';
+import { useSessionUser } from '../hooks/useSessionUser';
 import PortalLayout from '../components/layout/PortalLayout';
 import Pagination from '../components/Pagination';
 
@@ -26,7 +27,10 @@ const STATUT_CONFIG = {
 const ITEMS_PER_PAGE = 10;
 
 export default function AdminReservations({ session }) {
-  const [profile, setProfile] = useState(null);
+  const { userId, email, metadata } = useSessionUser(session);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'admin', prenom: metadata.prenom || '', nom: metadata.nom || '', ...metadata } : null
+  );
   const [bookings, setBookings] = useState([]);
   const [espaces, setEspaces] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,18 +59,6 @@ export default function AdminReservations({ session }) {
     try {
       setLoading(true);
       setError('');
-
-      const { data: prof, error: profErr } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-
-      if (profErr) throw profErr;
-      if (!['super_admin', 'admin', 'staff'].includes(prof.role)) {
-        throw new Error('Accès réservé aux administrateurs.');
-      }
-      setProfile(prof);
 
       const [bookingsData, espacesData] = await Promise.all([
         bookingApi.getAll(),
@@ -174,9 +166,34 @@ export default function AdminReservations({ session }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F4F6F9]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" />
-      </div>
+      <PortalLayout profile={profile} onLogout={handleLogout}>
+        {/* Header skeleton */}
+        <div className="mb-6">
+          <div className="h-3 w-24 bg-gray-200 rounded animate-pulse mb-2" />
+          <div className="h-8 w-64 bg-gray-200 rounded animate-pulse" />
+        </div>
+        {/* Stats skeleton */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl p-5 shadow-sm animate-pulse">
+              <div className="h-3 w-20 bg-gray-200 rounded mb-3" />
+              <div className="h-7 w-12 bg-gray-200 rounded" />
+            </div>
+          ))}
+        </div>
+        {/* Table skeleton */}
+        <div className="bg-white rounded-2xl shadow-sm p-5 animate-pulse">
+          <div className="h-4 w-40 bg-gray-200 rounded mb-4" />
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex gap-4 py-3 border-b border-gray-100 last:border-0">
+              <div className="h-4 w-1/4 bg-gray-100 rounded" />
+              <div className="h-4 w-1/4 bg-gray-100 rounded" />
+              <div className="h-4 w-1/6 bg-gray-100 rounded" />
+              <div className="h-4 w-1/6 bg-gray-100 rounded" />
+            </div>
+          ))}
+        </div>
+      </PortalLayout>
     );
   }
 
@@ -199,10 +216,10 @@ export default function AdminReservations({ session }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <Link
             to="/admin/agenda"
-            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-outline-variant/30 text-primary rounded-xl font-semibold text-sm hover:bg-surface-container transition-all shadow-sm"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-outline-variant/30 text-primary rounded-xl font-semibold text-xs sm:text-sm hover:bg-surface-container transition-all shadow-sm"
           >
             <span className="material-symbols-outlined text-secondary" style={{ fontSize: 18 }}>calendar_month</span>
             <span>Voir l'Agenda</span>
@@ -210,7 +227,7 @@ export default function AdminReservations({ session }) {
           <button
             onClick={loadData}
             title="Rafraîchir"
-            className="flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-outline-variant/30 text-on-surface-variant hover:text-secondary hover:border-secondary transition-all"
+            className="flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-outline-variant/30 text-on-surface-variant hover:text-secondary hover:border-secondary transition-all shrink-0"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>sync</span>
           </button>
@@ -225,7 +242,7 @@ export default function AdminReservations({ session }) {
       )}
 
       {/* Cartes de statistiques */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-outline-variant/15 shadow-sm">
           <div className="flex items-center justify-between text-on-surface-variant mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Total</span>
@@ -280,13 +297,13 @@ export default function AdminReservations({ session }) {
         </div>
 
         {/* Filtres statut & espace */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-on-surface-variant">Statut :</span>
+            <span className="text-xs font-semibold text-on-surface-variant whitespace-nowrap">Statut :</span>
             <select
               value={filterStatut}
               onChange={(e) => setFilterStatut(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-outline-variant/30 text-sm font-medium bg-white outline-none focus:border-secondary transition-all"
+              className="flex-1 sm:flex-none px-3 py-2 rounded-xl border border-outline-variant/30 text-sm font-medium bg-white outline-none focus:border-secondary transition-all"
             >
               <option value="all">Tous les statuts</option>
               <option value="pending">En attente</option>
@@ -296,11 +313,11 @@ export default function AdminReservations({ session }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-on-surface-variant">Espace :</span>
+            <span className="text-xs font-semibold text-on-surface-variant whitespace-nowrap">Espace :</span>
             <select
               value={filterEspace}
               onChange={(e) => setFilterEspace(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-outline-variant/30 text-sm font-medium bg-white outline-none focus:border-secondary transition-all"
+              className="flex-1 sm:flex-none px-3 py-2 rounded-xl border border-outline-variant/30 text-sm font-medium bg-white outline-none focus:border-secondary transition-all"
             >
               <option value="all">Tous les espaces</option>
               {espaces.map((es) => (
@@ -313,8 +330,8 @@ export default function AdminReservations({ session }) {
 
       {/* Tableau des réservations */}
       <div className="bg-white rounded-3xl border border-outline-variant/15 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="table-responsive-wrapper">
+          <table className="w-full min-w-[700px] text-left border-collapse">
             <thead>
               <tr className="bg-surface-container-low border-b border-outline-variant/10 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
                 <th className="py-3 px-3.5">Membre</th>

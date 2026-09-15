@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { useSessionUser } from '../hooks/useSessionUser';
 import { bookingApi } from '../services/api';
 import BrandLogo from '../components/layout/BrandLogo';
 import { getBookerNav } from '../utils/roles';
 
-export default function BookingStep2() {
+export default function BookingStep2({ session }) {
+  const { metadata } = useSessionUser(session);
   const [searchParams] = useSearchParams();
   const espaceId = searchParams.get('espaceId');
   const navigate = useNavigate();
-  const [nav, setNav] = useState(getBookerNav('member'));
+  // Initialisation synchrone depuis le JWT — 0 appel DB
+  const [nav, setNav] = useState(() => getBookerNav(metadata.role || 'member'));
 
   const [space, setSpace] = useState(null);
   const [date, setDate] = useState('');
@@ -20,13 +23,7 @@ export default function BookingStep2() {
   const [isAvailable, setIsAvailable] = useState(false);
   const [occupancy, setOccupancy] = useState(null);
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      supabase.from('profiles').select('role').eq('id', user.id).single()
-        .then(({ data }) => setNav(getBookerNav(data?.role)));
-    });
-  }, []);
+  // nav déjà initialisé depuis le JWT ci-dessus, plus d'appel DB nécessaire
 
   useEffect(() => {
     if (!espaceId) {

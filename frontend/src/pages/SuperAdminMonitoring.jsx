@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { superAdminApi } from '../services/superAdminApi';
 import { supabase } from '../supabaseClient';
+import { useSessionUser } from '../hooks/useSessionUser';
 import PortalLayout from '../components/layout/PortalLayout';
 import Pagination from '../components/Pagination';
 import { exportAuditLogsToExcel } from '../utils/exportAuditLogsExcel';
@@ -25,7 +26,10 @@ const ACTION_COLORS = {
 
 export default function SuperAdminMonitoring({ session }) {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
+  const { userId, email, metadata } = useSessionUser(session);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'super_admin', ...metadata } : null
+  );
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -43,19 +47,10 @@ export default function SuperAdminMonitoring({ session }) {
   }, [page]);
 
   useEffect(() => {
-    async function init() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return navigate('/login');
-        const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        setProfile(prof);
-        if (prof?.role !== 'super_admin') return navigate('/admin/dashboard');
-        await load();
-      } catch (e) { console.error(e); }
-      setLoading(false);
-    }
-    init();
-  }, [navigate]);
+    if (!userId) { navigate('/login'); return; }
+    if (profile?.role && profile.role !== 'super_admin') { navigate('/admin/dashboard'); return; }
+    setLoading(false);
+  }, [userId, navigate]);
 
   useEffect(() => { if (profile) load(); }, [load, profile]);
 
@@ -76,9 +71,10 @@ export default function SuperAdminMonitoring({ session }) {
     exportAuditLogsToExcel(visibleLogs);
   };
 
-  if (loading || !profile) {
-    return <div className="flex h-screen items-center justify-center" style={{ background: '#f4f6f9' }}><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary" /></div>;
+  if (!profile) {
+    return null;
   }
+
 
   const uptimeBars = [95, 88, 92, 85, 90, 97, 93, 99, 96, 100];
 
@@ -86,24 +82,25 @@ export default function SuperAdminMonitoring({ session }) {
     <PortalLayout profile={profile} onLogout={handleLogout}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="font-sora text-2xl font-bold text-primary">Santé du Système & Surveillance</h1>
+          <h1 className="font-sora text-xl sm:text-2xl font-bold text-primary">Santé du Système & Surveillance</h1>
           <p className="text-on-surface-variant text-sm mt-1">Analyse des performances d'infrastructure en temps réel et suivi d'audit.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           <button onClick={() => setRange((r) => (r === '24h' ? 'all' : '24h'))}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold border transition-colors ${
               range === '24h' ? 'bg-secondary text-white border-secondary' : 'border-outline-variant/30 hover:bg-surface-container-low'
             }`}>
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>calendar_today</span>
             {range === '24h' ? 'Toutes les dates' : 'Dernières 24h'}
           </button>
           <button onClick={exportCsv} disabled={visibleLogs.length === 0}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-outline-variant/30 hover:bg-surface-container-low disabled:opacity-40">
+            className="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold border border-outline-variant/30 hover:bg-surface-container-low disabled:opacity-40">
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
             Exporter en CSV
           </button>
         </div>
       </div>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
         <div className="lg:col-span-2 bg-surface-container-lowest rounded-3xl p-6 shadow-[0px_2px_4px_rgba(16,35,63,0.04)]">
@@ -199,8 +196,9 @@ export default function SuperAdminMonitoring({ session }) {
             </select>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="table-responsive-wrapper">
+          <table className="w-full text-sm min-w-[650px]">
+
             <thead>
               <tr className="bg-primary-container text-white">
                 <th className="px-5 py-3.5 text-left font-semibold uppercase tracking-wider text-xs">Horodatage</th>

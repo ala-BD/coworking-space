@@ -418,42 +418,43 @@ export default function AdminAgenda({ session }) {
 
   return (
     <PortalLayout profile={profile} onLogout={handleLogout}>
-      <header className="mb-lg flex flex-col lg:flex-row lg:items-end justify-between gap-md">
+      <header className="mb-6 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>
-          <h1 className="font-sora text-headline-lg text-primary">Agenda admin</h1>
-          <p className="text-on-surface-variant text-body-md mt-1">
+          <h1 className="font-sora text-2xl sm:text-3xl font-bold text-primary">Agenda admin</h1>
+          <p className="text-on-surface-variant text-sm mt-1">
             Calendrier interactif avec check-in/check-out en temps réel
           </p>
-
         </div>
-        <div className="flex flex-wrap gap-sm items-center">
+        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
           <select
             value={selectedEspace}
             onChange={(e) => setSelectedEspace(e.target.value)}
-            className="border rounded-xl px-sm py-xs text-body-sm"
+            className="flex-1 sm:flex-none border border-outline-variant/30 rounded-xl px-3 py-2 text-xs sm:text-sm bg-white outline-none focus:border-secondary"
           >
             <option value="">Tous les espaces</option>
             {espaces.map((es) => (
               <option key={es.id} value={es.id}>{es.nom}</option>
             ))}
           </select>
-          <div className="flex rounded-xl overflow-hidden border border-outline-variant/20">
+          <div className="flex rounded-xl overflow-hidden border border-outline-variant/20 bg-white">
             {['day', 'week'].map((mode) => (
               <button
                 key={mode}
                 type="button"
                 onClick={() => setViewMode(mode)}
-                className={`px-md py-xs text-label-sm font-semibold ${
-                  viewMode === mode ? 'bg-primary text-white' : 'bg-white'
+                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold transition-colors ${
+                  viewMode === mode ? 'bg-primary text-white' : 'bg-white text-on-surface-variant'
                 }`}
               >
                 {mode === 'day' ? 'Jour' : 'Semaine'}
               </button>
             ))}
           </div>
-          <button type="button" onClick={() => shiftPeriod(-1)} className="px-sm py-xs border rounded-xl">←</button>
-          <button type="button" onClick={() => setWeekStart(startOfWeek(new Date()))} className="px-sm py-xs border rounded-xl text-label-sm">Aujourd&apos;hui</button>
-          <button type="button" onClick={() => shiftPeriod(1)} className="px-sm py-xs border rounded-xl">→</button>
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={() => shiftPeriod(-1)} className="px-3 py-2 border border-outline-variant/30 rounded-xl bg-white text-xs sm:text-sm hover:bg-surface-container font-bold">←</button>
+            <button type="button" onClick={() => setWeekStart(startOfWeek(new Date()))} className="px-3 py-2 border border-outline-variant/30 rounded-xl bg-white text-xs sm:text-sm hover:bg-surface-container font-semibold">Aujourd'hui</button>
+            <button type="button" onClick={() => shiftPeriod(1)} className="px-3 py-2 border border-outline-variant/30 rounded-xl bg-white text-xs sm:text-sm hover:bg-surface-container font-bold">→</button>
+          </div>
         </div>
       </header>
 

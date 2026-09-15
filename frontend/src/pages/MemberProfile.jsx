@@ -95,7 +95,9 @@ export default function MemberProfile({ session }) {
     email_abonnements: true,
     email_formations: true,
   });
+  const [canalNotification, setCanalNotification] = useState('email');
   const [notifSaving, setNotifSaving] = useState(false);
+
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -104,6 +106,8 @@ export default function MemberProfile({ session }) {
 
   const photoInputRef = useRef(null);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const docFileRef = useRef(null);
+  const [uploadingDocFile, setUploadingDocFile] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -114,8 +118,7 @@ export default function MemberProfile({ session }) {
       setLoading(true);
       setError('');
 
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserEmail(user?.email || '');
+      setUserEmail(session?.user?.email || '');
 
       const [{ profile: prof }, qr, sub] = await Promise.all([
         memberApi.getMe(),
@@ -138,6 +141,8 @@ export default function MemberProfile({ session }) {
 
       if (qr) setQrData(qr);
       if (sub?.subscription) setSubscription(sub.subscription);
+
+      setCanalNotification(prof.canal_notification || prof.notifications?.canal || 'email');
 
       if (prof.notifications) {
         setNotifications({
@@ -234,6 +239,76 @@ export default function MemberProfile({ session }) {
     }
   };
 
+  const handleDocFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingDocFile(true);
+    setError('');
+    try {
+      let publicUrl = null;
+
+      // 1. Essayer upload via Backend
+      try {
+        const reader = new FileReader();
+        const base64Promise = new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = reject;
+        });
+        reader.readAsDataURL(file);
+        const base64Data = await base64Promise;
+
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+        const res = await fetch(`${API_URL}/api/upload`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            base64Data,
+            fileName: file.name,
+            fileType: file.type,
+            folder: 'documents',
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok && data.publicUrl) {
+          publicUrl = data.publicUrl;
+        }
+      } catch (_) {}
+
+      // 2. Fallback direct client Supabase
+      if (!publicUrl) {
+        const ext = file.name.split('.').pop();
+        const filePath = `doc_${profile.id || 'usr'}_${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, file, { upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+        publicUrl = urlData.publicUrl;
+      }
+
+      const defaultName = file.name.replace(/\.[^/.]+$/, '');
+      setDocForm((d) => ({
+        ...d,
+        nom: d.nom || defaultName,
+        url: publicUrl,
+      }));
+      setSuccess('Fichier téléversé ! Cliquez sur "Ajouter" pour enregistrer.');
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      setError('Erreur lors du téléversement : ' + err.message);
+      setTimeout(() => setError(''), 3500);
+    } finally {
+      setUploadingDocFile(false);
+      if (docFileRef.current) docFileRef.current.value = '';
+    }
+  };
+
   const handleAddDocument = async () => {
     if (!docForm.nom.trim() || !docForm.url.trim()) return;
     setDocUploading(true);
@@ -269,6 +344,23 @@ export default function MemberProfile({ session }) {
       setDeletingDocIdx(null);
     }
   };
+
+  const handleCanalChange = async (newCanal) => {
+    setCanalNotification(newCanal);
+    try {
+      await memberApi.updateMe({
+        canal_notification: newCanal,
+        notifications: { ...notifications, canal: newCanal },
+      });
+      setSuccess(`Canal de notification mis à jour : ${newCanal === 'both' ? 'Email + WhatsApp' : newCanal === 'whatsapp' ? 'WhatsApp' : 'Email'}`);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (e) {
+      setError(e.message);
+      setTimeout(() => setError(''), 3500);
+    }
+  };
+
+
 
   const handleNotificationChange = async (key) => {
     const updated = { ...notifications, [key]: !notifications[key] };
@@ -686,35 +778,67 @@ export default function MemberProfile({ session }) {
           )}
 
           {/* Add document form */}
-          <div
-            className="rounded-2xl border border-dashed border-outline-variant/25 p-4 mt-2"
-            style={{ background: 'rgba(0,84,203,0.02)' }}
-          >
-            <p className="text-xs font-semibold text-on-surface-variant mb-3 uppercase tracking-widest">Ajouter un document</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low/40 p-4 sm:p-5 mt-3 shadow-xs">
+            <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>note_add</span>
+                </span>
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary">Ajouter un document</h4>
+                  <p className="text-[11px] text-on-surface-variant">Téléversez un fichier ou renseignez un lien sécurisé</p>
+                </div>
+              </div>
+
+              {/* Bouton parcourir direct */}
+              <button
+                type="button"
+                onClick={() => docFileRef.current?.click()}
+                disabled={uploadingDocFile || docUploading}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-secondary/30 bg-secondary/5 hover:bg-secondary/10 text-secondary text-xs font-bold transition-all hover:scale-102 active:scale-98 disabled:opacity-50"
+              >
+                <span className={`material-symbols-outlined ${uploadingDocFile ? 'animate-spin' : ''}`} style={{ fontSize: 16 }}>
+                  {uploadingDocFile ? 'sync' : 'upload_file'}
+                </span>
+                <span>{uploadingDocFile ? 'Téléversement…' : 'Parcourir un fichier'}</span>
+              </button>
               <input
-                type="text"
-                placeholder="Nom du document"
-                value={docForm.nom}
-                onChange={(e) => setDocForm((d) => ({ ...d, nom: e.target.value }))}
-                className="rounded-xl border border-outline-variant/20 bg-white px-3 py-2 text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/15 transition-all"
+                ref={docFileRef}
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                className="hidden"
+                onChange={handleDocFileUpload}
               />
-              <input
-                type="url"
-                placeholder="URL du fichier"
-                value={docForm.url}
-                onChange={(e) => setDocForm((d) => ({ ...d, url: e.target.value }))}
-                className="rounded-xl border border-outline-variant/20 bg-white px-3 py-2 text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/15 transition-all"
-              />
-              <div className="flex gap-2">
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+              {/* Nom du document */}
+              <div className="sm:col-span-5 relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/50 pointer-events-none">
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>description</span>
+                </span>
+                <input
+                  type="text"
+                  placeholder="Nom du document *"
+                  value={docForm.nom}
+                  onChange={(e) => setDocForm((d) => ({ ...d, nom: e.target.value }))}
+                  className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/15 transition-all"
+                />
+              </div>
+
+              {/* Type de document */}
+              <div className="sm:col-span-3 relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/50 pointer-events-none">
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>category</span>
+                </span>
                 <select
                   value={docForm.type}
                   onChange={(e) => setDocForm((d) => ({ ...d, type: e.target.value }))}
-                  className="flex-1 rounded-xl border border-outline-variant/20 bg-white px-3 py-2 text-sm outline-none focus:border-secondary transition-all appearance-none cursor-pointer"
+                  className="w-full h-11 pl-10 pr-8 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/15 transition-all appearance-none cursor-pointer font-medium"
                   style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23667085' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6l3.5 3.5L11.5 6'/%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 10px center',
+                    backgroundPosition: 'right 12px center',
                   }}
                 >
                   <option value="cin">CIN</option>
@@ -723,16 +847,35 @@ export default function MemberProfile({ session }) {
                   <option value="facture">Facture</option>
                   <option value="autre">Autre</option>
                 </select>
+              </div>
+
+              {/* URL ou chemin */}
+              <div className="sm:col-span-4 relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/50 pointer-events-none">
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>link</span>
+                </span>
+                <input
+                  type="url"
+                  placeholder="URL du fichier (ou parcourir) *"
+                  value={docForm.url}
+                  onChange={(e) => setDocForm((d) => ({ ...d, url: e.target.value }))}
+                  className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/15 transition-all"
+                />
+              </div>
+
+              {/* Bouton d'action sur toute la largeur ou aligné */}
+              <div className="sm:col-span-12 flex justify-end mt-1">
                 <button
+                  type="button"
                   onClick={handleAddDocument}
                   disabled={docUploading || !docForm.nom.trim() || !docForm.url.trim()}
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-40 shrink-0"
+                  className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-xl text-xs font-bold text-white transition-all duration-200 hover:opacity-95 active:scale-98 disabled:opacity-40 shadow-sm"
                   style={{ background: '#f95d00' }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                    {docUploading ? 'progress_activity' : 'add'}
+                  <span className={`material-symbols-outlined ${docUploading ? 'animate-spin' : ''}`} style={{ fontSize: 18 }}>
+                    {docUploading ? 'sync' : 'add_circle'}
                   </span>
-                  Ajouter
+                  <span>{docUploading ? 'Enregistrement…' : 'Ajouter le document'}</span>
                 </button>
               </div>
             </div>
@@ -809,29 +952,120 @@ export default function MemberProfile({ session }) {
             )}
           </div>
 
-          {/* Notification preferences */}
+          {/* Notification preferences & Channels */}
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant mb-3">
-              Preferences de notification
-            </p>
-            <div className="flex flex-col gap-2.5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant">
+                Canal de notification
+              </p>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary/10 text-secondary">
+                {canalNotification === 'both' ? 'Email + WhatsApp' : canalNotification === 'whatsapp' ? 'WhatsApp' : 'Email'}
+              </span>
+            </div>
+
+            {/* 3 Channel Cards */}
+            <div className="grid grid-cols-3 gap-2 mb-4">
               {[
-                { key: 'email_reservations', label: 'Reservations', icon: 'event_seat' },
-                { key: 'email_abonnements', label: 'Abonnements', icon: 'card_membership' },
-                { key: 'email_formations', label: 'Formations', icon: 'school' },
+                {
+                  id: 'email',
+                  label: 'Email',
+                  icon: 'mail',
+                  desc: 'Boîte de réception',
+                  activeColor: '#f95d00',
+                  bg: 'rgba(249,93,0,0.08)',
+                },
+                {
+                  id: 'whatsapp',
+                  label: 'WhatsApp',
+                  icon: 'chat',
+                  desc: 'Messages instantanés',
+                  activeColor: '#25D366',
+                  bg: 'rgba(37,211,102,0.12)',
+                },
+                {
+                  id: 'both',
+                  label: 'Les deux',
+                  icon: 'bolt',
+                  desc: 'Email + WhatsApp',
+                  activeColor: '#8b5cf6',
+                  bg: 'rgba(139,92,246,0.10)',
+                },
+              ].map((c) => {
+                const isSelected = canalNotification === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => handleCanalChange(c.id)}
+                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all duration-200 ${
+                      isSelected
+                        ? 'border-2 shadow-sm font-semibold'
+                        : 'border-outline-variant/15 hover:bg-surface-container-low/60 opacity-80'
+                    }`}
+                    style={
+                      isSelected
+                        ? { borderColor: c.activeColor, background: c.bg, color: c.activeColor }
+                        : {}
+                    }
+                  >
+                    <span className="material-symbols-outlined mb-1" style={{ fontSize: 22, color: isSelected ? c.activeColor : '#64748b' }}>
+                      {c.icon}
+                    </span>
+                    <span className="text-xs font-bold leading-tight text-primary">{c.label}</span>
+                    <span className="text-[9px] text-on-surface-variant leading-tight mt-0.5">{c.desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* WhatsApp Phone Alert if WhatsApp or Both selected */}
+            {(canalNotification === 'whatsapp' || canalNotification === 'both') && (
+              <div className="p-3.5 rounded-2xl border border-emerald-200/60 bg-emerald-50/50 mb-4">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 18 }}>phone_iphone</span>
+                    <span className="text-xs font-bold text-emerald-900">Numéro WhatsApp</span>
+                  </div>
+                  {form.telephone ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white">Configuré</span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-white">À renseigner</span>
+                  )}
+                </div>
+                <p className="text-xs font-medium text-emerald-800">
+                  {form.telephone ? (
+                    <span>Vos notifications seront envoyées au <strong className="font-bold">{form.telephone}</strong></span>
+                  ) : (
+                    <span className="text-amber-800">Veuillez renseigner votre numéro de téléphone dans votre profil pour activer WhatsApp.</span>
+                  )}
+                </p>
+              </div>
+            )}
+
+
+
+            {/* Catégories de notifications */}
+            <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-2">
+              Types de notifications actives
+            </p>
+            <div className="flex flex-col gap-2">
+              {[
+                { key: 'email_reservations', label: 'Réservations & rappels J-1', icon: 'event_seat' },
+                { key: 'email_abonnements', label: 'Abonnements & échéances', icon: 'card_membership' },
+                { key: 'email_formations', label: 'Formations & inscriptions', icon: 'school' },
               ].map(({ key, label, icon }) => (
                 <label
                   key={key}
-                  className="flex items-center justify-between p-3 rounded-xl border border-outline-variant/10 cursor-pointer transition-all duration-200 hover:bg-secondary/3"
+                  className="flex items-center justify-between p-2.5 rounded-xl border border-outline-variant/10 cursor-pointer transition-all duration-200 hover:bg-secondary/3"
                 >
                   <div className="flex items-center gap-2.5">
                     <span
-                      className="flex items-center justify-center w-8 h-8 rounded-lg"
+                      className="flex items-center justify-center w-7 h-7 rounded-lg"
                       style={{ background: 'rgba(249,93,0,0.06)', color: '#f95d00' }}
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: 17 }}>{icon}</span>
+                      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>{icon}</span>
                     </span>
-                    <span className="text-sm font-medium text-on-surface">{label}</span>
+                    <span className="text-xs font-medium text-on-surface">{label}</span>
                   </div>
                   <div className="relative">
                     <input
@@ -842,7 +1076,7 @@ export default function MemberProfile({ session }) {
                       className="sr-only peer"
                     />
                     <div
-                      className="w-10 h-[22px] rounded-full peer-checked:bg-secondary bg-outline-variant/30 transition-all duration-200 cursor-pointer after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:w-[16px] after:h-[16px] after:rounded-full after:shadow-sm after:transition-all after:duration-200 peer-checked:after:translate-x-[18px]"
+                      className="w-9 h-[20px] rounded-full peer-checked:bg-secondary bg-outline-variant/30 transition-all duration-200 cursor-pointer after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:w-[16px] after:h-[16px] after:rounded-full after:shadow-sm after:transition-all after:duration-200 peer-checked:after:translate-x-[16px]"
                     />
                   </div>
                 </label>

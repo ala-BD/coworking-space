@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { useSessionUser } from '../hooks/useSessionUser';
 import PortalLayout from '../components/layout/PortalLayout';
 import { io } from 'socket.io-client';
 
@@ -101,9 +102,12 @@ function MessageBubble({ msg, isOwn, showSender }) {
   );
 }
 
-export default function MemberMessages() {
+export default function MemberMessages({ session }) {
+  const { userId, email, metadata } = useSessionUser(session);
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'member', ...metadata } : null
+  );
   const [team, setTeam] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [activeConv, setActiveConv] = useState(null);
@@ -122,15 +126,7 @@ export default function MemberMessages() {
   useEffect(() => { profileRef.current = profile; }, [profile]);
   useEffect(() => { activeConvRef.current = activeConv; }, [activeConv]);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
-      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      setProfile(data);
-    };
-    fetchProfile();
-  }, [navigate]);
+  // profile déjà initialisé depuis le JWT — aucun appel DB nécessaire
 
   const fetchConversations = useCallback(async () => {
     try {

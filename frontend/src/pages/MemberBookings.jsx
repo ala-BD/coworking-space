@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { useSessionUser } from '../hooks/useSessionUser';
 import { memberPortalApi, bookingApi, paymentApi } from '../services/api';
 import PortalLayout from '../components/layout/PortalLayout';
 import Pagination from '../components/Pagination';
@@ -52,9 +53,12 @@ function formatSpaceType(type) {
   return SPACE_TYPES_FR[type] || type.replace('_', ' ');
 }
 
-export default function MemberBookings() {
+export default function MemberBookings({ session }) {
+  const { userId, email, metadata } = useSessionUser(session);
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(() =>
+    userId ? { id: userId, email, role: metadata.role || 'member', ...metadata } : null
+  );
   const [bookings, setBookings] = useState([]);
   const [stats, setStats] = useState(null);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
@@ -67,13 +71,7 @@ export default function MemberBookings() {
   const [cancelInfoLoading, setCancelInfoLoading] = useState(false);
   const [payingId, setPayingId] = useState(null);
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data }) => setProfile(data));
-      }
-    });
-  }, []);
+  // profile déjà initialisé depuis le JWT — aucun appel DB nécessaire
 
   const loadData = useCallback(async (page = 1) => {
     setLoading(true);

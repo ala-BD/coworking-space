@@ -4,8 +4,8 @@ const { sendReceiptEmail, isEmailConfigured } = require('../utils/sendEmail');
 function getCoworkingConfig() {
   return {
     coworkingName: process.env.COWORKING_NAME || 'DeskyWork',
-    coworkingEmail: process.env.COWORKING_EMAIL || 'contact@33space.tn',
-    coworkingTel: process.env.COWORKING_TEL || '+216 XX XXX XXX',
+    coworkingEmail: process.env.COWORKING_EMAIL || 'contact@deskywork.tn',
+    coworkingTel: process.env.COWORKING_TEL || '+216 52 882 880 / +216 52 882 930',
     coworkingAdresse: process.env.COWORKING_ADRESSE || 'Tunis, Tunisie',
   };
 }
