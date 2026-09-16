@@ -151,7 +151,7 @@ function DonutBySpace({ data, title, sub, totalFormatter }) {
               <PieChart>
                 <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%"
                   innerRadius={48} outerRadius={70} paddingAngle={2} cornerRadius={4} stroke="none">
-                  {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+                  {data.map((d, i) => <Cell key={d.name ?? i} fill={d.color} />)}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
               </PieChart>
