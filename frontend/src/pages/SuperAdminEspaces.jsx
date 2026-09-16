@@ -149,7 +149,7 @@ export default function SuperAdminEspaces({ session }) {
         )}
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard label="Total espaces" value={total.toLocaleString('fr-FR')} icon="meeting_room" accent="#f95d00" />
           <StatCard label="Actifs (page)" value={kpiActifs.toLocaleString('fr-FR')} icon="check_circle" accent="#2fbe8f" />
           <StatCard label="Inactifs (page)" value={kpiInactifs.toLocaleString('fr-FR')} icon="block" accent="#ba1a1a" />

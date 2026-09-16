@@ -270,7 +270,7 @@ export default function TrainerDashboard({ session }) {
 
   if (loading) return (
     <PortalLayout profile={profile} onLogout={() => supabase.auth.signOut()}>
-      <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto">
+      <div>
         {/* Header skeleton */}
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -281,7 +281,7 @@ export default function TrainerDashboard({ session }) {
           <div className="h-9 w-40 bg-gray-200 rounded-xl animate-pulse" />
         </div>
         {/* KPI cards skeleton */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-white rounded-2xl p-5 shadow-sm animate-pulse">
               <div className="h-3 w-20 bg-gray-200 rounded mb-3" />
@@ -310,7 +310,7 @@ export default function TrainerDashboard({ session }) {
 
   return (
     <PortalLayout profile={profile} onLogout={() => supabase.auth.signOut()}>
-      <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto">
+      <div>
 
         {/* Header */}
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -347,7 +347,7 @@ export default function TrainerDashboard({ session }) {
         )}
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {[
             { label: 'Sessions du jour', value: todaySessions.length, icon: 'today', color: 'text-secondary bg-secondary/10' },
             { label: 'Prochaines formations', value: upcomingFormations, icon: 'upcoming', color: 'text-emerald-600 bg-emerald-50' },
@@ -1059,8 +1059,8 @@ export default function TrainerDashboard({ session }) {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {/* En-tête tableau */}
-                  <div className="grid grid-cols-12 gap-2 px-3 pb-2 border-b border-outline-variant/20">
+                  {/* En-tête tableau — masqué sur mobile */}
+                  <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-3 pb-2 border-b border-outline-variant/20">
                     <span className="col-span-5 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Participant</span>
                     <span className="col-span-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Inscription</span>
                     <span className="col-span-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Paiement</span>
@@ -1070,20 +1070,20 @@ export default function TrainerDashboard({ session }) {
                   {(inscriptions[selectedFormationParticipants.id] || []).map((insc) => (
                     <div
                       key={insc.id}
-                      className={`grid grid-cols-12 gap-2 items-center px-3 py-3 rounded-2xl border transition-colors ${
+                      className={`flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:items-center px-3 py-3 rounded-2xl border transition-colors ${
                         insc.statut === 'annulee'
                           ? 'border-red-100 bg-red-50/40 opacity-60'
                           : 'border-outline-variant/15 hover:bg-surface-container-low'
                       }`}
                     >
                       {/* Nom + email */}
-                      <div className="col-span-5 flex items-center gap-2 min-w-0">
+                      <div className="sm:col-span-5 flex items-center gap-2 min-w-0">
                         <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold text-xs text-white"
                           style={{ background: 'linear-gradient(135deg, #100f0d, #f95d00)' }}
                         >
                           {(insc.profiles?.prenom?.[0] || '').toUpperCase()}{(insc.profiles?.nom?.[0] || '').toUpperCase()}
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-primary truncate">
                             {insc.profiles?.prenom} {insc.profiles?.nom}
                           </p>
@@ -1091,22 +1091,26 @@ export default function TrainerDashboard({ session }) {
                         </div>
                       </div>
 
-                      {/* Statut inscription */}
-                      <div className="col-span-3">
+                      {/* Badges row */}
+                      <div className="sm:col-span-3 flex sm:block items-center gap-2 flex-wrap">
                         <span className={`text-[9px] font-bold px-2 py-1 rounded-full ${INSCRIT_STATUT_STYLES[insc.statut] || 'bg-slate-100 text-slate-700'}`}>
                           {INSCRIT_STATUT_LABELS[insc.statut] || insc.statut}
                         </span>
+                        {/* Show payment badge inline on mobile */}
+                        <span className={`sm:hidden text-[9px] font-bold px-2 py-1 rounded-full ${PAIEMENT_STYLES[insc.statut_paiement] || 'bg-slate-100 text-slate-700'}`}>
+                          {PAIEMENT_LABELS[insc.statut_paiement] || insc.statut_paiement}
+                        </span>
                       </div>
 
-                      {/* Statut paiement */}
-                      <div className="col-span-2">
+                      {/* Paiement — desktop only column */}
+                      <div className="hidden sm:block sm:col-span-2">
                         <span className={`text-[9px] font-bold px-2 py-1 rounded-full ${PAIEMENT_STYLES[insc.statut_paiement] || 'bg-slate-100 text-slate-700'}`}>
                           {PAIEMENT_LABELS[insc.statut_paiement] || insc.statut_paiement}
                         </span>
                       </div>
 
                       {/* Présence */}
-                      <div className="col-span-2 flex justify-center">
+                      <div className="sm:col-span-2 flex sm:justify-center">
                         {insc.present ? (
                           <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center">
                             <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 15, fontVariationSettings: "'FILL' 1" }}>check_circle</span>

@@ -597,7 +597,7 @@ export default function SuperAdminDashboard({ session }) {
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>arrow_forward</span>
               </button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
               {topCoworkings.slice(0, 5).map((t, rank) => (
                 <div key={`${t.id}-${rank}`}
                   className={`rounded-2xl border p-4 ${rank === 0 ? 'border-amber-200/70 bg-amber-50/40' : 'border-outline-variant/10'}`}>

@@ -108,7 +108,7 @@ function OtpInput({ onComplete, loading, error, autoCode }) {
   };
 
   return (
-    <div style={{ display: 'flex', gap: 10, justifyContent: 'center', margin: '8px 0' }}>
+    <div style={{ display: 'flex', gap: 8, justifyContent: 'center', margin: '8px 0', flexWrap: 'nowrap', maxWidth: '100%' }}>
       {digits.map((d, i) => (
         <input
           key={i}
@@ -123,10 +123,10 @@ function OtpInput({ onComplete, loading, error, autoCode }) {
           onPaste={handlePaste}
           disabled={loading}
           style={{
-            width: 52,
-            height: 64,
+            width: 'clamp(36px, 13vw, 52px)',
+            height: 'clamp(46px, 16vw, 64px)',
             textAlign: 'center',
-            fontSize: 28,
+            fontSize: 'clamp(20px, 6vw, 28px)',
             fontWeight: 800,
             borderRadius: 12,
             border: error
@@ -140,6 +140,8 @@ function OtpInput({ onComplete, loading, error, autoCode }) {
             transition: 'all 0.15s ease',
             cursor: loading ? 'not-allowed' : 'text',
             opacity: loading ? 0.6 : 1,
+            flex: '1 1 0',
+            minWidth: 0,
           }}
         />
       ))}

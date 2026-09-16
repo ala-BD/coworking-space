@@ -114,15 +114,15 @@ export default function BookingStep2({ session }) {
       
       {/* Top Header */}
       <nav style={{ position: 'fixed', top: 0, width: '100%', zIndex: 50, backgroundColor: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', maxWidth: '1240px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', maxWidth: '1240px', margin: '0 auto' }}>
           <BrandLogo to={nav.home} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#f95d00', backgroundColor: '#ffedd8', padding: '6px 14px', borderRadius: '99px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#f95d00', backgroundColor: '#ffedd8', padding: '5px 12px', borderRadius: '99px', whiteSpace: 'nowrap' }}>
               Étape 2 sur 3
             </span>
             <Link 
               to="/book/step1" 
-              style={{ padding: '6px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, border: '1px solid #c5c6ce', color: '#100f0d', textDecoration: 'none', backgroundColor: '#fff' }}
+              style={{ padding: '5px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, border: '1px solid #c5c6ce', color: '#100f0d', textDecoration: 'none', backgroundColor: '#fff', whiteSpace: 'nowrap' }}
             >
               Retour
             </Link>
@@ -131,10 +131,10 @@ export default function BookingStep2({ session }) {
       </nav>
 
       {/* Main Container */}
-      <main style={{ paddingTop: '110px', maxWidth: '600px', margin: '0 auto', paddingLeft: '20px', paddingRight: '20px' }}>
+      <main style={{ paddingTop: '88px', maxWidth: '600px', margin: '0 auto', paddingLeft: '16px', paddingRight: '16px' }}>
         
         {/* Card Form */}
-        <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 8px 30px rgba(0,0,0,0.05)', padding: '32px' }}>
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 8px 30px rgba(0,0,0,0.05)', padding: 'clamp(20px, 5vw, 32px)' }}>
           
           <div style={{ marginBottom: '24px' }}>
             <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '24px', fontWeight: 700, color: '#100f0d', marginBottom: '6px' }}>
@@ -179,7 +179,7 @@ export default function BookingStep2({ session }) {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
               <div>
                 <label htmlFor="start" style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#000d23', marginBottom: '8px' }}>
                   Heure de début

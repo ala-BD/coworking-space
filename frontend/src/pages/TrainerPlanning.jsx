@@ -167,7 +167,7 @@ export default function TrainerPlanning({ session }) {
         )}
 
         {/* ── KPIs ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {[
             { label: 'Sessions assignées', value: totalCourses, icon: 'event_note', color: 'text-secondary bg-secondary/10' },
             { label: 'Sessions terminées', value: doneCourses, icon: 'task_alt', color: 'text-emerald-600 bg-emerald-50' },

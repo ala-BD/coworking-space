@@ -439,16 +439,17 @@ export default function PortalLayout({ children, profile, onLogout }) {
       {/* === HEADER === */}
       <header className="portal-header" style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-        height: 68, padding: '0 24px',
+        height: 68, padding: '0 16px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         background: dark ? 'rgba(16,15,13,0.92)' : 'rgba(251,255,255,0.88)',
         backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
         borderBottom: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(16,15,13,0.08)',
         boxShadow: '0 2px 12px rgba(16,15,13,0.05)',
         transition: 'background 0.3s ease',
+        minWidth: 0,
       }}>
         {/* Left: Hamburger menu (mobile) + Brand Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
           <button
             type="button"
             onClick={() => setMobileMenuOpen(v => !v)}
@@ -476,8 +477,8 @@ export default function PortalLayout({ children, profile, onLogout }) {
 
         {/* Search supprimé */}
 
-        {/* Right: User profile + Language Switcher + Notification Bell + Dark toggle + Clickable Avatar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
+        {/* Right: User profile + Notification Bell + Dark toggle + Clickable Avatar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative', flexShrink: 0 }}>
 
           {/* Nom et rôle */}
           <div
@@ -544,9 +545,10 @@ export default function PortalLayout({ children, profile, onLogout }) {
             {notifOpen && (
               <div
                 style={{
-                  position: 'absolute',
-                  top: 52, right: 0,
-                  width: 360, maxWidth: '90vw',
+                  position: 'fixed',
+                  top: 68,
+                  right: 8,
+                  width: 'min(360px, calc(100vw - 16px))',
                   background: dark ? '#1b1a18' : '#ffffff',
                   color: dark ? '#fbffff' : '#100f0d',
                   borderRadius: 20,
@@ -705,9 +707,10 @@ export default function PortalLayout({ children, profile, onLogout }) {
             {dropdownOpen && (
               <div
                 style={{
-                  position: 'absolute',
-                  top: 52, right: 0,
-                  width: 260,
+                  position: 'fixed',
+                  top: 68,
+                  right: 8,
+                  width: 'min(260px, calc(100vw - 16px))',
                   background: dark ? '#1b1a18' : '#ffffff',
                   color: dark ? '#fbffff' : '#100f0d',
                   borderRadius: 20,
@@ -926,24 +929,26 @@ export default function PortalLayout({ children, profile, onLogout }) {
 
 
         {/* Main content */}
-        <main className="portal-main" style={{
+        <main className="portal-main px-3 sm:px-5 py-4 sm:py-6" style={{
           flex: 1, overflowX: 'hidden',
-          padding: '28px 24px', minHeight: 'calc(100vh - 68px)',
+          minHeight: 'calc(100vh - 68px)',
+          minWidth: 0,
         }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%' }}>
             {/* Breadcrumb — Fil d'ariane (Spec §13) */}
             <nav aria-label="Fil d'ariane" style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              fontSize: 12.5, fontWeight: 500,
+              fontSize: 12, fontWeight: 500,
               color: dark ? 'rgba(251,255,255,0.55)' : '#6b7280',
-              margin: '-10px 0 18px',
+              margin: '-4px 0 16px',
               flexWrap: 'wrap',
+              minWidth: 0,
             }}>
               <Link to={homePath} style={{ color: '#f95d00', textDecoration: 'none', fontWeight: 600 }}>
                 {portalLabel}
               </Link>
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>chevron_right</span>
-              <span style={{ color: dark ? '#fbffff' : '#100f0d', fontWeight: 700 }}>{pageTitle}</span>
+              <span style={{ color: dark ? '#fbffff' : '#100f0d', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 'calc(100vw - 120px)' }}>{pageTitle}</span>
             </nav>
             {children}
           </div>

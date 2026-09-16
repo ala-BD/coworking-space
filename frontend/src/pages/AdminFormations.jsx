@@ -363,7 +363,7 @@ export default function AdminFormations({ session }) {
   ═══════════════════════════════════════════════════════════════════════ */
   return (
     <PortalLayout profile={profile} onLogout={() => supabase.auth.signOut()}>
-      <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto">
+      <div>
 
         {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -393,7 +393,7 @@ export default function AdminFormations({ session }) {
         </div>
 
         {/* ── KPI Cards ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {[
             { label: 'Formations', value: formations.length, icon: 'event_note', color: 'text-secondary bg-secondary/10' },
             { label: 'Formateurs', value: formateurs.length, icon: 'person', color: 'text-violet-600 bg-violet-50' },
@@ -621,8 +621,8 @@ export default function AdminFormations({ session }) {
                   ))}
                 </div>
 
-                {/* Desktop Grid Cards */}
-                <div className="hidden sm:grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {/* Grid Cards (Mobile & Desktop) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {formateurs.slice((pageFormateurs - 1) * ITEMS_PER_PAGE, pageFormateurs * ITEMS_PER_PAGE).map((t) => (
                     <div key={t.id} className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group">
                       <div className="flex items-center gap-3 mb-4">

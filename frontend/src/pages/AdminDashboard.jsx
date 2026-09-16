@@ -420,17 +420,17 @@ export default function AdminDashboard({ session }) {
       {/* ── En-tête + filtre global ─────────────────────────────────────── */}
       <header className="mb-6 animate-fade-up">
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant mb-1">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant mb-1 truncate">
               {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
-            <h1 className="font-sora font-bold text-primary" style={{ fontSize: 26 }}>
+            <h1 className="font-sora font-bold text-primary" style={{ fontSize: 'clamp(20px, 4vw, 26px)' }}>
               {welcomeText}, {profile?.prenom || 'Admin'}
             </h1>
-            <p className="text-on-surface-variant text-sm mt-1">
-              Tableau de bord — {getRoleLabel(profile?.role)}
+            <p className="text-on-surface-variant text-sm mt-1 flex flex-wrap gap-1 items-center">
+              <span>Tableau de bord — {getRoleLabel(profile?.role)}</span>
               {lastRefresh && (
-                <span className="ml-2 text-xs text-on-surface-variant/60">
+                <span className="text-xs text-on-surface-variant/60">
                   · Mis à jour {lastRefresh.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </span>
               )}
@@ -494,7 +494,7 @@ export default function AdminDashboard({ session }) {
       )}
 
       {/* ── Grille KPIs — Ligne 1 (filtre global appliqué) ─────────────── */}
-      <div key={`k1-${period}`} className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-4 animate-fade-up">
+      <div key={`k1-${period}`} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-4 animate-fade-up">
         <StatCard
           label="CA — période"
           value={`${formatDT(ca.periode)} DT`}
@@ -533,7 +533,7 @@ export default function AdminDashboard({ session }) {
       </div>
 
       {/* ── Grille KPIs — Ligne 2 (Opérations) ─────────────────────────── */}
-      <div key={`k2-${period}`} className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6 animate-fade-up">
+      <div key={`k2-${period}`} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6 animate-fade-up">
         <StatCard
           label="Sessions en cours"
           value={sessions.length}
@@ -575,8 +575,9 @@ export default function AdminDashboard({ session }) {
               src={coworking.cover_url || coworking.logo_url || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=400&fit=crop'}
               alt={coworking.nom}
               className="w-full sm:w-64 h-32 object-cover rounded-2xl shrink-0"
+              style={{ maxWidth: '100%' }}
             />
-            <div className="flex-1 min-w-[220px]">
+            <div className="flex-1 min-w-0" style={{ minWidth: 160 }}>
               <div className="flex items-center gap-2 mb-1">
                 <span className="material-symbols-outlined text-secondary" style={{ fontSize: 20 }}>domain</span>
                 <h2 className="font-sora font-bold text-primary text-base">Mon Coworking</h2>
@@ -1034,16 +1035,16 @@ export default function AdminDashboard({ session }) {
               const isActing = approvingId === p.id;
               const dateInscrit = new Date(p.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
               return (
-                <div key={p.id} className="py-4 flex items-center justify-between gap-4 flex-wrap">
+                <div key={p.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 font-bold text-sm text-white"
-                      style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)' }}>
+                      style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)', minWidth: 40 }}>
                       {(p.prenom?.[0] || '').toUpperCase()}{(p.nom?.[0] || '').toUpperCase()}
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-primary text-sm">{p.prenom} {p.nom}</p>
                       <p className="text-xs text-on-surface-variant truncate">{p.email}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: rc.bg, color: rc.text }}>
                           {p.role === 'formateur' ? 'Formateur' : 'Membre'}
                           {p.specialite ? ` · ${p.specialite}` : ''}
@@ -1053,7 +1054,7 @@ export default function AdminDashboard({ session }) {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
                     <button
                       onClick={() => handleAccountAction(p.id, 'reject')}
                       disabled={isActing}

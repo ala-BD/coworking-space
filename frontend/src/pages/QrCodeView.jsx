@@ -249,7 +249,7 @@ export default function QrCodeView({ session }) {
               </div>
 
               {/* ── Subscription Info Grid ── */}
-              <div className="w-full grid grid-cols-2 gap-6 py-4 px-2 mb-6"
+              <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 py-4 px-2 mb-6"
                 style={{ borderTop: '1px solid rgba(181,199,235,0.1)', borderBottom: '1px solid rgba(181,199,235,0.1)' }}
               >
                 <div>

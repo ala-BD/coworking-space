@@ -631,7 +631,7 @@ export default function TrainerFormations({ session }) {
         )}
 
         {/* ── KPIs ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {[
             { label: 'Total formations', value: totalFormations, icon: 'event_note', color: 'text-secondary bg-secondary/10' },
             { label: 'Planifiées', value: planifiees, icon: 'upcoming', color: 'text-amber-600 bg-amber-50' },

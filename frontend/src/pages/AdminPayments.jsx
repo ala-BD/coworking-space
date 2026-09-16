@@ -283,43 +283,43 @@ export default function AdminPayments({ session }) {
         <div className="table-responsive-wrapper">
           <table className="w-full min-w-[650px] text-left border-collapse">
             <thead>
-              <tr className="bg-surface-container-low border-b border-outline-variant/30 text-label-sm uppercase text-on-surface-variant tracking-wider">
-                <th className="px-md py-sm font-semibold">Membre</th>
-                <th className="px-md py-sm font-semibold">Référence / Date</th>
-                <th className="px-md py-sm font-semibold">Montant</th>
-                <th className="px-md py-sm font-semibold">Mode</th>
-                <th className="px-md py-sm font-semibold">Statut</th>
-                <th className="px-md py-sm font-semibold text-right">Actions</th>
+              <tr className="bg-surface-container-low border-b border-outline-variant/30 text-xs font-bold uppercase text-on-surface-variant tracking-wider">
+                <th className="px-4 py-3 font-semibold">Membre</th>
+                <th className="px-4 py-3 font-semibold">Référence / Date</th>
+                <th className="px-4 py-3 font-semibold">Montant</th>
+                <th className="px-4 py-3 font-semibold">Mode</th>
+                <th className="px-4 py-3 font-semibold">Statut</th>
+                <th className="px-4 py-3 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="text-body-sm">
+            <tbody className="text-sm">
               {paginatedPayments.map((p) => {
                 const memberName = p.profiles ? `${p.profiles.prenom} ${p.profiles.nom}` : (p.user_id ? p.user_id.slice(0, 8) : '—');
                 const dateP = p.date_paiement ? new Date(p.date_paiement) : new Date(p.created_at);
 
                 return (
                   <tr key={p.id} className="border-b border-outline-variant/10 hover:bg-surface-container-low/50 transition-colors">
-                    <td className="px-md py-md font-semibold text-primary">
+                    <td className="px-4 py-3 font-semibold text-primary">
                       {memberName}
                     </td>
-                    <td className="px-md py-md text-on-surface-variant">
+                    <td className="px-4 py-3 text-on-surface-variant">
                       <div className="font-mono text-xs mb-0.5 text-primary">{p.numero_recu || '—'}</div>
                       <div className="text-[11px]">{dateP.toLocaleDateString()}</div>
                     </td>
-                    <td className="px-md py-md font-bold text-secondary">
+                    <td className="px-4 py-3 font-bold text-secondary">
                       {p.montant} DT
                     </td>
-                    <td className="px-md py-md">
+                    <td className="px-4 py-3">
                       <span className="bg-surface-container-high px-2 py-1 rounded-md text-xs font-medium">
                         {MODE_LABELS[p.mode] || p.mode}
                       </span>
                     </td>
-                    <td className="px-md py-md">
+                    <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${STATUT_STYLES[p.statut] || 'bg-gray-200 text-gray-800'}`}>
                         {STATUT_LABELS[p.statut] || p.statut}
                       </span>
                     </td>
-                    <td className="px-md py-md text-right">
+                    <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleDownload(p.id)}
                         className="p-1.5 text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded transition-colors"

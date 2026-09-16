@@ -272,7 +272,7 @@ export default function AdminFormateurs({ session }) {
         </div>
 
         {/* ── KPIs ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {[
             { label: 'Total formateurs', value: formateurs.length, icon: 'group', color: 'text-slate-800 bg-slate-100' },
             { label: 'Comptes actifs', value: actifs, icon: 'check_circle', color: 'text-emerald-700 bg-emerald-50' },
@@ -569,7 +569,7 @@ export default function AdminFormateurs({ session }) {
             Un email d'invitation sera envoyé au formateur avec ses informations de connexion.
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Prénom" required>
               <input className={inputCls} placeholder="Alice" required value={formateurForm.prenom}
                 onChange={e => setFormateurForm(p => ({ ...p, prenom: e.target.value }))} />
@@ -585,7 +585,7 @@ export default function AdminFormateurs({ session }) {
               onChange={e => setFormateurForm(p => ({ ...p, email: e.target.value }))} />
           </Field>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Téléphone">
               <input className={inputCls} placeholder="+216 XX XXX XXX" value={formateurForm.telephone}
                 onChange={e => setFormateurForm(p => ({ ...p, telephone: e.target.value }))} />
@@ -659,7 +659,7 @@ export default function AdminFormateurs({ session }) {
               </select>
             </Field>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Montant (DT)" required>
                 <input type="number" min={0} step="0.5" className={inputCls} placeholder="150.00" required
                   value={remuForm.montant} onChange={e => setRemuForm(p => ({ ...p, montant: e.target.value }))} />

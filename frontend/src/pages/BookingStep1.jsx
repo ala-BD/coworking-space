@@ -138,15 +138,15 @@ export default function BookingStep1({ session }) {
       
       {/* Top Header */}
       <nav style={{ position: 'fixed', top: 0, width: '100%', zIndex: 50, backgroundColor: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', maxWidth: '1240px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', maxWidth: '1240px', margin: '0 auto' }}>
           <BrandLogo to={nav.home} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#f95d00', backgroundColor: '#ffedd8', padding: '6px 14px', borderRadius: '99px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#f95d00', backgroundColor: '#ffedd8', padding: '5px 12px', borderRadius: '99px', whiteSpace: 'nowrap' }}>
               Étape 1 sur 3
             </span>
             <Link 
               to={nav.home} 
-              style={{ padding: '6px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, border: '1px solid #c5c6ce', color: '#100f0d', textDecoration: 'none', backgroundColor: '#fff' }}
+              style={{ padding: '5px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, border: '1px solid #c5c6ce', color: '#100f0d', textDecoration: 'none', backgroundColor: '#fff', whiteSpace: 'nowrap' }}
             >
               Annuler
             </Link>
@@ -155,11 +155,11 @@ export default function BookingStep1({ session }) {
       </nav>
 
       {/* Main Container */}
-      <main style={{ paddingTop: '110px', maxWidth: '1240px', margin: '0 auto', paddingLeft: '24px', paddingRight: '24px' }}>
+      <main style={{ paddingTop: '88px', maxWidth: '1240px', margin: '0 auto', paddingLeft: '16px', paddingRight: '16px' }}>
         
-        {/* Header Section — Fixed paragraph wrapping */}
-        <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-          <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '32px', fontWeight: 700, color: '#100f0d', marginBottom: '10px' }}>
+        {/* Header Section */}
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: 'clamp(22px, 5vw, 32px)', fontWeight: 700, color: '#100f0d', marginBottom: '10px' }}>
             Choisissez votre espace
           </h1>
           <p style={{ fontSize: '15px', color: '#4e4a46', maxWidth: '600px', width: '100%', margin: '0 auto', textAlign: 'center', lineHeight: '1.5' }}>
@@ -247,8 +247,8 @@ export default function BookingStep1({ session }) {
           ))}
         </div>
 
-        {/* Grid List — Clean Bootstrap Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
+        {/* Grid List */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: '20px' }}>
           {filteredSpaces.map((space) => (
             <div
               key={space.id}

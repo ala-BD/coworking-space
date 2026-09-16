@@ -148,7 +148,7 @@ export default function SuperAdminReservations({ session }) {
         )}
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard label="Total réservations" value={total.toLocaleString('fr-FR')} icon="event_available" accent="#f95d00" />
           <StatCard label="Confirmées (page)" value={kpiConfirmee.toLocaleString('fr-FR')} icon="check_circle" accent="#2fbe8f" />
           <StatCard label="Annulées (page)" value={kpiAnnulee.toLocaleString('fr-FR')} icon="cancel" accent="#ba1a1a" />

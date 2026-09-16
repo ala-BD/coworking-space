@@ -213,7 +213,7 @@ export default function MemberSubscription({ session }) {
               <h2 className="text-2xl font-bold mb-3" style={{ fontFamily: 'Sora, sans-serif' }}>
                 {SUBSCRIPTION_LABELS[activeSub.type] || activeSub.type}
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 <div>
                   <p className="text-xs opacity-60 mb-0.5">Début</p>
                   <p className="text-sm font-semibold">{new Date(activeSub.date_debut).toLocaleDateString('fr-FR')}</p>

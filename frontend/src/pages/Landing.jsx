@@ -675,7 +675,7 @@ export default function Landing({ session }) {
         .space-card img { width:100%; height:100%; object-fit:cover; transition:transform .6s ease; display:block; }
         .space-card:hover img { transform:scale(1.06); }
         .space-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(16,15,13,.92) 0%,transparent 65%); }
-        .space-body { position:absolute; bottom:0; left:0; right:0; padding:1.5rem; }
+        .space-body { position:absolute; bottom:0; left:0; right:0; padding:1.25rem; }
 
         /* CTA SECTION */
         .cta-sec { background:linear-gradient(135deg,#100f0d 0%,#26170a 100%); position:relative; overflow:hidden; }
@@ -742,10 +742,14 @@ export default function Landing({ session }) {
         .fa-2 { animation-delay:.24s; }
 
         @media(max-width:767px) {
-          .hero-wrap { min-height:86vh; padding:110px 0 70px; }
+          .hero-wrap { min-height:86vh; padding:90px 0 60px; }
           .hero-bg-slide img.kb-a, .hero-bg-slide img.kb-b { animation:none; }
-          .hero-shade { background:linear-gradient(180deg, rgba(16,15,13,.78) 0%, rgba(16,15,13,.6) 100%); }
+          .hero-shade { background:linear-gradient(180deg, rgba(16,15,13,.82) 0%, rgba(16,15,13,.65) 100%); }
           .hero-arrow { display:none; }
+        }
+        @media(max-width:479px) {
+          .hero-wrap { min-height:80vh; padding:80px 0 48px; }
+          .btn-primary-hero, .btn-ghost-hero { padding:11px 20px; font-size:.9rem; }
         }
         @media (prefers-reduced-motion: reduce) {
           .hero-bg-slide.active img.kb-a, .hero-bg-slide.active img.kb-b { animation:none; }
@@ -757,6 +761,22 @@ export default function Landing({ session }) {
         @keyframes promoPulse {
           0%,100% { box-shadow:0 4px 14px rgba(249,93,0,.55); }
           50%      { box-shadow:0 4px 22px rgba(249,93,0,.9); }
+        }
+
+        /* FOOTER LOGO responsive */
+        @media (max-width: 575px) {
+          .ec-footer-logo { transform: scale(1.6) !important; }
+        }
+
+        /* CONTACT FORM cols on mobile */
+        @media (max-width: 575px) {
+          .ec-contact-grid { grid-template-columns: 1fr !important; }
+        }
+
+        /* Space card address/phone truncate on small screens */
+        @media (max-width: 479px) {
+          .space-body p { font-size:.82rem; }
+          .space-body h3 { font-size:1rem; }
         }
       `}</style>
 
@@ -903,7 +923,7 @@ export default function Landing({ session }) {
             <div className="row g-4">
               {tenants.map((tenant) => (
                 <div key={tenant.id} className="col-lg-4">
-                  <div className="space-card" style={{ height: 380 }}>
+                  <div className="space-card" style={{ aspectRatio: '4/3', minHeight: 280 }}>
                     <img
                       src={tenant.cover_url || tenant.logo_url || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=600&fit=crop"}
                       alt={tenant.nom}
@@ -1167,7 +1187,7 @@ export default function Landing({ session }) {
           <div className="row g-4 mb-5 align-items-start">
             <div className="col-lg-4 col-md-6">
               <div style={{ marginBottom: '1.25rem' }}>
-                <img src="/logo 2.png" alt="DeskyWork" style={{ height: 54, width: 'auto', objectFit: 'contain', transform: 'scale(2.2)', transformOrigin: 'left center' }} />
+                <img src="/logo 2.png" alt="DeskyWork" className="ec-footer-logo" style={{ height: 40, width: 'auto', objectFit: 'contain', transform: 'scale(2.0)', transformOrigin: 'left center', maxWidth: 120 }} />
               </div>
               <p style={{ color: '#f8fafc', fontSize: '.95rem', lineHeight: 1.8, maxWidth: 330, margin: 0, fontWeight: 500 }}>
                 Espaces de travail premium pour les professionnels modernes. Situé au cœur de Tunis depuis 2021.

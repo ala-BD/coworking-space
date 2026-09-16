@@ -459,32 +459,32 @@ export default function AdminAgenda({ session }) {
       </header>
 
       {error && (
-        <div className="mb-md p-sm bg-error-container text-on-error-container text-body-sm rounded-xl">{error}</div>
+        <div className="mb-4 p-3 bg-error-container text-on-error-container text-sm rounded-xl">{error}</div>
       )}
       {success && (
-        <div className="mb-md p-sm bg-secondary-fixed text-on-secondary-fixed text-body-sm rounded-xl">{success}</div>
+        <div className="mb-4 p-3 bg-secondary-fixed text-on-secondary-fixed text-sm rounded-xl">{success}</div>
       )}
 
-      <form onSubmit={handleQrCheckIn} className="mb-md bg-surface-container-lowest rounded-xl p-md border border-outline-variant/10 flex flex-col sm:flex-row gap-sm items-end">
+      <form onSubmit={handleQrCheckIn} className="mb-4 bg-surface-container-lowest rounded-xl p-4 sm:p-5 border border-outline-variant/10 flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
         <div className="flex-grow">
-          <label className="block text-label-sm mb-xs">Check-in rapide par QR (staff)</label>
-          <div className="flex gap-xs">
+          <label className="block text-xs font-semibold mb-1">Check-in rapide par QR (staff)</label>
+          <div className="flex gap-2">
             <input
               value={qrInput}
               onChange={(e) => setQrInput(e.target.value)}
               placeholder="Coller le token QR ou scanner le payload JSON"
-              className="w-full border rounded-xl px-sm py-xs font-mono text-body-sm"
+              className="w-full border rounded-xl px-3 py-2 font-mono text-xs sm:text-sm"
             />
             <button
               type="button"
               onClick={toggleCameraScan}
-              className={`shrink-0 px-md py-xs rounded-xl font-semibold border ${
+              className={`shrink-0 px-3 py-2 rounded-xl font-semibold border text-xs sm:text-sm ${
                 showScanner
                   ? 'bg-error-container text-on-error-container border-error/20'
                   : 'bg-white border-outline-variant/30 text-primary hover:bg-surface-container-low'
               }`}
             >
-              <span className="flex items-center gap-xs">
+              <span className="flex items-center gap-1.5">
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                   {showScanner ? 'videocam_off' : 'qr_code_scanner'}
                 </span>
@@ -496,7 +496,7 @@ export default function AdminAgenda({ session }) {
         <button
           type="submit"
           disabled={actionId === 'qr'}
-          className="bg-secondary text-white px-md py-xs rounded-xl font-semibold disabled:opacity-50"
+          className="bg-secondary text-white px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm disabled:opacity-50"
         >
           Check-in QR
         </button>
@@ -504,11 +504,11 @@ export default function AdminAgenda({ session }) {
 
       <div
         id="qr-reader"
-        className="mx-auto max-w-sm mb-md"
+        className="mx-auto max-w-sm mb-4"
         style={{ display: showScanner ? 'block' : 'none' }}
       />
       {scannerError && (
-        <div className="mb-md p-sm bg-error-container text-on-error-container text-body-sm rounded-xl">
+        <div className="mb-4 p-3 bg-error-container text-on-error-container text-sm rounded-xl">
           {scannerError}
         </div>
       )}
@@ -650,8 +650,8 @@ export default function AdminAgenda({ session }) {
       </div>
 
       {selectedBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-md">
-          <div className="bg-surface-container-lowest rounded-3xl p-lg max-w-md w-full shadow-xl space-y-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setSelectedBooking(null)}>
+          <div className="bg-surface-container-lowest rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-xl space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-2">
                 {/* Pastille couleur de la salle */}
@@ -659,7 +659,7 @@ export default function AdminAgenda({ session }) {
                   className="w-3 h-3 rounded-full shrink-0"
                   style={{ background: getSpaceColor(selectedBooking.espace_id).border }}
                 />
-                <h2 className="font-sora text-headline-sm text-primary">Détail réservation</h2>
+                <h2 className="font-sora text-lg font-bold text-primary">Détail réservation</h2>
               </div>
               <button type="button" onClick={() => setSelectedBooking(null)} className="text-on-surface-variant hover:text-primary transition-colors">✕</button>
             </div>

@@ -209,14 +209,14 @@ export default function AdminReservations({ session }) {
 
       {/* En-tête */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="font-sora font-bold text-primary text-2xl sm:text-3xl">Gestion des Réservations</h1>
+        <div className="min-w-0">
+          <h1 className="font-sora font-bold text-primary" style={{ fontSize: 'clamp(20px, 4vw, 28px)' }}>Gestion des Réservations</h1>
           <p className="text-on-surface-variant text-sm mt-1">
             Visualisez, confirmez et gérez toutes les réservations des espaces de coworking.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
           <Link
             to="/admin/agenda"
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-outline-variant/30 text-primary rounded-xl font-semibold text-xs sm:text-sm hover:bg-surface-container transition-all shadow-sm"
@@ -242,7 +242,7 @@ export default function AdminReservations({ session }) {
       )}
 
       {/* Cartes de statistiques */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-outline-variant/15 shadow-sm">
           <div className="flex items-center justify-between text-on-surface-variant mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Total</span>
@@ -297,13 +297,13 @@ export default function AdminReservations({ session }) {
         </div>
 
         {/* Filtres statut & espace */}
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-on-surface-variant whitespace-nowrap">Statut :</span>
+        <div className="flex flex-col xs:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs font-semibold text-on-surface-variant whitespace-nowrap hidden sm:inline">Statut :</span>
             <select
               value={filterStatut}
               onChange={(e) => setFilterStatut(e.target.value)}
-              className="flex-1 sm:flex-none px-3 py-2 rounded-xl border border-outline-variant/30 text-sm font-medium bg-white outline-none focus:border-secondary transition-all"
+              className="flex-1 sm:flex-none px-3 py-2 rounded-xl border border-outline-variant/30 text-sm font-medium bg-white outline-none focus:border-secondary transition-all min-w-0"
             >
               <option value="all">Tous les statuts</option>
               <option value="pending">En attente</option>
@@ -312,12 +312,12 @@ export default function AdminReservations({ session }) {
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-on-surface-variant whitespace-nowrap">Espace :</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs font-semibold text-on-surface-variant whitespace-nowrap hidden sm:inline">Espace :</span>
             <select
               value={filterEspace}
               onChange={(e) => setFilterEspace(e.target.value)}
-              className="flex-1 sm:flex-none px-3 py-2 rounded-xl border border-outline-variant/30 text-sm font-medium bg-white outline-none focus:border-secondary transition-all"
+              className="flex-1 sm:flex-none px-3 py-2 rounded-xl border border-outline-variant/30 text-sm font-medium bg-white outline-none focus:border-secondary transition-all min-w-0"
             >
               <option value="all">Tous les espaces</option>
               {espaces.map((es) => (
@@ -453,7 +453,7 @@ export default function AdminReservations({ session }) {
 
                       {/* Actions */}
                       <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
                           {b.statut === 'pending' && (
                             <button
                               type="button"
@@ -463,7 +463,7 @@ export default function AdminReservations({ session }) {
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-xs disabled:opacity-50"
                             >
                               <span className="material-symbols-outlined" style={{ fontSize: 15 }}>check</span>
-                              <span>Accepter</span>
+                              <span className="hidden xs:inline">Accepter</span>
                             </button>
                           )}
 
@@ -476,7 +476,7 @@ export default function AdminReservations({ session }) {
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold transition-all disabled:opacity-50"
                             >
                               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
-                              <span>Annuler</span>
+                              <span className="hidden xs:inline">Annuler</span>
                             </button>
                           )}
 

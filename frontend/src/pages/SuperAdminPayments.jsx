@@ -135,7 +135,7 @@ export default function SuperAdminPayments({ session }) {
         )}
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard label="Total paiements" value={total.toLocaleString('fr-FR')} icon="account_balance_wallet" accent="#f95d00" />
           <StatCard label="Volume payé (page)" value={`${kpiPaye.toLocaleString('fr-TN')} DT`} icon="payments" accent="#2fbe8f" />
           <StatCard label="En attente (page)" value={kpiEnAttente.toLocaleString('fr-FR')} icon="schedule" accent="#f59e0b" />

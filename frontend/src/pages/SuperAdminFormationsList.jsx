@@ -139,7 +139,7 @@ export default function SuperAdminFormationsList({ session }) {
         )}
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard label="Total formations" value={total.toLocaleString('fr-FR')} icon="school" accent="#8b5cf6" />
           <StatCard label="En cours (page)" value={kpiEnCours.toLocaleString('fr-FR')} icon="play_circle" accent="#2fbe8f" />
           <StatCard label="Terminées (page)" value={kpiTerminees.toLocaleString('fr-FR')} icon="check_circle" accent="#0ea5e9" />

@@ -355,7 +355,7 @@ export default function MemberPayments({ session }) {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full min-w-[640px] text-left border-collapse">
                 <thead>
                   <tr className="bg-[#000d23]">
                     <th className="px-6 py-4 text-xs font-medium uppercase tracking-[0.08em] text-white">Date</th>

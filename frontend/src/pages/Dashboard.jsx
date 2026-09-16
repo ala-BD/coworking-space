@@ -514,22 +514,22 @@ export default function Dashboard({ session }) {
       {/* ═══════ HEADER ═══════ */}
       <header className="mb-7 bento-card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[.16em] text-on-surface-variant mb-1">
               {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
-            <h1 className="font-sora font-bold text-primary" style={{ fontSize: 28, lineHeight: '1.25' }}>
+            <h1 className="font-sora font-bold text-primary" style={{ fontSize: 'clamp(20px, 5vw, 28px)', lineHeight: '1.25' }}>
               {greeting()}, {profile?.prenom || 'Membre'}
             </h1>
             <p className="text-on-surface-variant text-sm mt-1">
               Gérez votre espace, vos réservations et votre abonnement
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
+          <div className="flex flex-row sm:flex-row sm:items-center gap-3 shrink-0 flex-wrap">
             <PeriodFilter value={period} onChange={setPeriod} />
             <Link
               to="/book/step1"
-              className="hidden sm:inline-flex items-center justify-center gap-2 text-sm font-semibold text-white px-5 py-2.5 rounded-xl shrink-0 transition-all hover:-translate-y-0.5 active:scale-[.97]"
+              className="inline-flex items-center justify-center gap-2 text-sm font-semibold text-white px-4 py-2.5 rounded-xl shrink-0 transition-all hover:-translate-y-0.5 active:scale-[.97]"
               style={{ background: '#f95d00', boxShadow: '0 4px 14px rgba(249,93,0,.3)' }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_circle</span>
@@ -560,9 +560,9 @@ export default function Dashboard({ session }) {
         <div className="md:col-span-8 bento-card">
           {activeSession ? (
             /* ── LIVE SESSION CARD ── */
-            <div className="bg-white rounded-3xl p-6 border border-outline-variant/10 h-full flex flex-col sm:flex-row items-center gap-6" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
-              {/* Circular timer */}
-              <div className="relative w-36 h-36 shrink-0">
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-outline-variant/10 h-full flex flex-col sm:flex-row items-center gap-5 sm:gap-6" style={{ boxShadow: '0 8px 24px rgba(16,35,63,.05)' }}>
+              {/* Circular timer — responsive size */}
+              <div className="relative shrink-0" style={{ width: 'clamp(100px, 28vw, 144px)', height: 'clamp(100px, 28vw, 144px)' }}>
                 <svg viewBox="0 0 100 100" className="w-full h-full">
                   <circle cx="50" cy="50" r={TIMER_RING_RADIUS} fill="transparent" stroke="#eef0f4" strokeWidth="8" />
                   <circle
@@ -575,7 +575,7 @@ export default function Dashboard({ session }) {
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className={`font-sora font-bold text-xl ${timerIsLow ? 'text-[#FF6F59]' : 'text-primary'}`}>
+                  <span className={`font-sora font-bold text-lg sm:text-xl ${timerIsLow ? 'text-[#FF6F59]' : 'text-primary'}`}>
                     {formatTimer(timerSeconds)}
                   </span>
                   <span className="text-[10px] text-on-surface-variant font-medium mt-0.5">restant</span>
@@ -1152,7 +1152,7 @@ export default function Dashboard({ session }) {
       </div>
 
       {/* ═══════ QUICK LINKS GRID ═══════ */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6">
         {[
           { icon: 'person', label: 'Profil', to: '/dashboard/profile', color: '#f95d00' },
           { icon: 'notifications', label: 'Notifications', to: '/dashboard/notifications', color: '#FF6F59' },
@@ -1162,16 +1162,16 @@ export default function Dashboard({ session }) {
           <Link
             key={link.label}
             to={link.to}
-            className="bento-card bg-white rounded-2xl p-5 border border-outline-variant/10 flex items-center gap-4 hover:-translate-y-0.5 hover:shadow-lg transition-all group"
+            className="bento-card bg-white rounded-2xl p-4 sm:p-5 border border-outline-variant/10 flex items-center gap-3 sm:gap-4 hover:-translate-y-0.5 hover:shadow-lg transition-all group min-w-0"
             style={{ boxShadow: '0 4px 16px rgba(16,35,63,.04)' }}
           >
             <span
-              className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 transition-transform group-hover:scale-110"
+              className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl shrink-0 transition-transform group-hover:scale-110"
               style={{ background: `${link.color}10`, color: link.color }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{link.icon}</span>
             </span>
-            <span className="text-sm font-semibold text-primary">{link.label}</span>
+            <span className="text-sm font-semibold text-primary truncate">{link.label}</span>
           </Link>
         ))}
       </div>
@@ -1252,7 +1252,7 @@ export default function Dashboard({ session }) {
           </div>
         ) : (
           <div className="px-6 pb-5 border-t border-outline-variant/10">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4">
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3 pt-4">
               {[
                 { label: 'Nom', value: `${profile?.prenom || ''} ${profile?.nom || ''}`.trim() || '—', icon: 'person' },
                 { label: 'Email', value: profile?.email || session?.user?.email || '—', icon: 'mail' },
@@ -1281,7 +1281,7 @@ export default function Dashboard({ session }) {
           <div className="space-y-2">
             {subscriptionHistory.map((sub) => (
               <div key={sub.id} className="flex items-center justify-between gap-3 p-3 rounded-xl hover:bg-surface-container-low/50 transition-colors">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-primary truncate">
                     {SUBSCRIPTION_LABELS[sub.type] || sub.type}
                   </p>
