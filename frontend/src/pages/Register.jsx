@@ -285,7 +285,7 @@ export default function Register() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${window.location.origin}/dashboard` },
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
       });
       if (error) throw error;
     } catch (err) {
@@ -609,29 +609,50 @@ export default function Register() {
                 {/* Card */}
                 <div className="glass-card rounded-3xl shadow-elevated p-4 space-y-3">
 
-                  {/* Inscription sociale */}
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1 h-px bg-outline-variant/30" />
-                    <span className="text-[10px] text-on-surface-variant font-medium whitespace-nowrap">OU CONTINUER AVEC</span>
-                    <div className="flex-1 h-px bg-outline-variant/30" />
-                  </div>
+                  {/* Inscription sociale — uniquement pour les membres */}
+                  {role === 'member' ? (
+                    <>
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 h-px bg-outline-variant/30" />
+                        <span className="text-[10px] text-on-surface-variant font-medium whitespace-nowrap">OU CONTINUER AVEC</span>
+                        <div className="flex-1 h-px bg-outline-variant/30" />
+                      </div>
 
-                  <div className="auth-social-grid grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleSocialLogin('google')}
-                      className="flex items-center justify-center gap-2 px-4 py-1.5 bg-white border border-outline-variant/30 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:-translate-y-px transition-all active:scale-[0.97] shadow-sm"
+                      <div className="auth-social-grid grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleSocialLogin('google')}
+                          className="flex items-center justify-center gap-2 px-4 py-1.5 bg-white border border-outline-variant/30 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:-translate-y-px transition-all active:scale-[0.97] shadow-sm"
+                        >
+                          <GoogleIcon /> Google
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSocialLogin('linkedin_oidc')}
+                          className="flex items-center justify-center gap-2 px-4 py-1.5 bg-white border border-outline-variant/30 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:-translate-y-px transition-all active:scale-[0.97] shadow-sm"
+                        >
+                          <LinkedInIcon /> LinkedIn
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 14px', borderRadius: 12,
+                        background: '#f1f5f9', border: '1px solid #e2e8f0',
+                      }}
                     >
-                      <GoogleIcon /> Google
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSocialLogin('linkedin_oidc')}
-                      className="flex items-center justify-center gap-2 px-4 py-1.5 bg-white border border-outline-variant/30 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:-translate-y-px transition-all active:scale-[0.97] shadow-sm"
-                    >
-                      <LinkedInIcon /> LinkedIn
-                    </button>
-                  </div>
+                      <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#64748b', flexShrink: 0 }}>
+                        info
+                      </span>
+                      <p style={{ margin: 0, color: '#475569', fontSize: 12, lineHeight: 1.5 }}>
+                        La connexion Google / LinkedIn est réservée aux membres.
+                        <br />
+                        <strong>Formateurs et admins</strong> utilisent email + mot de passe.
+                      </p>
+                    </div>
+                  )}
 
                   <form onSubmit={handleRegister} className="space-y-3">
 
