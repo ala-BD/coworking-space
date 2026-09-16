@@ -831,7 +831,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
             padding: mobileMenuOpen ? '20px 14px' : '24px 12px',
             overflowY: 'auto',
             boxShadow: mobileMenuOpen ? '4px 0 30px rgba(0,0,0,0.35)' : 'none',
-            transition: 'background 0.3s ease, transform 0.25s ease',
+            transition: 'background 0.3s ease',
           }}
         >
           {mobileMenuOpen && (
