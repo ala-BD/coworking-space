@@ -341,7 +341,6 @@ export default function PortalLayout({ children, profile, onLogout }) {
   }, [profile?.id]);
 
   const avatarUrl = profile?.photo_url || profile?.avatar_url || profile?.avatar || profile?.tenant?.logo_url || tenantLogo || null;
-  const initials = `${profile?.prenom?.[0] || ''}${profile?.nom?.[0] || ''}`.toUpperCase() || '?';
 
   const isSuperAdmin = profile?.role === 'super_admin';
   const isStaff = profile?.role === 'staff';
