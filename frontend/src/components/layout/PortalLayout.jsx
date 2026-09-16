@@ -811,7 +811,6 @@ export default function PortalLayout({ children, profile, onLogout }) {
         <aside
           className={`portal-sidebar ${mobileMenuOpen ? 'portal-sidebar-open' : 'portal-sidebar-desktop'}`}
           style={{
-            display: 'flex',
             flexDirection: 'column',
             flexShrink: 0,
             width: 250,
