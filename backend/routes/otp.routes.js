@@ -19,10 +19,11 @@ function createTransporter() {
     host: host,
     port: port,
     secure: secure,
-    auth: {
-      user: user,
-      pass: pass,
-    },
+    family: 4, // Forcer l'IPv4 (contourne le problème d'absence d'IPv6 sur Render)
+    auth: { user: user, pass: pass },
+    connectionTimeout: 8000, // Max 8s pour établir la connexion SMTP
+    greetingTimeout: 4000,   // Max 4s pour le message de bienvenue SMTP
+    socketTimeout: 8000,     // Max 8s d'inactivité réseau
     tls: { rejectUnauthorized: false },
   });
 }
@@ -155,7 +156,7 @@ router.post('/otp/send', async (req, res) => {
         
         const plainTextBody = `Bonjour ${prenom || ''},\n\nVotre code de confirmation pour votre compte ${coworkingName} est : ${code}\n\nCe code est valable pendant 10 minutes.\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n\nL'équipe ${coworkingName}`;
 
-        await transporter.sendMail({
+        const sendPromise = transporter.sendMail({
           from:    `"${coworkingName}" <${process.env.SMTP_USER}>`,
           to:      email,
           replyTo: process.env.SMTP_USER,
@@ -169,11 +170,18 @@ router.post('/otp/send', async (req, res) => {
             'Importance': 'high',
           },
         });
+
+        // Protection contre le blocage (Timeout 10s)
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Délai d\'attente SMTP dépassé (10s Timeout).')), 10000)
+        );
+
+        await Promise.race([sendPromise, timeoutPromise]);
         console.log(`✉️  OTP ${code} envoyé à ${email}`);
       } catch (mailErr) {
         console.error(`❌ Erreur d'envoi SMTP à ${email}:`, mailErr.message);
         return res.status(500).json({
-          error: `Erreur d'envoi d'email SMTP (${mailErr.message}). Vérifiez les identifiants SMTP (SMTP_USER / SMTP_PASS) sur Render.`
+          error: `Erreur d'envoi SMTP (${mailErr.message}). Vérifiez votre mot de passe d'application Gmail ou le port SMTP (587 / 465) sur Render.`
         });
       }
     } else {

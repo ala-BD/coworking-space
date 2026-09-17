@@ -16,6 +16,7 @@ function createTransporter() {
     host: host,
     port: port,
     secure: secure,
+    family: 4, // Forcer l'IPv4
     auth: { user, pass },
     tls: { rejectUnauthorized: false },
   });

@@ -2,6 +2,11 @@
 // Structure : config/ | middleware/ | models/ | controllers/ | routes/
 'use strict';
 
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
