@@ -677,11 +677,16 @@ a:hover.hover\:underline,
   }
 }
 
-/* Sidebar toujours visible sur desktop */
+/* Sidebar toujours visible et fixe sur desktop */
 @media (min-width: 1024px) {
   .portal-sidebar {
     display: flex !important;
-    flex-direction: column;
+    flex-direction: column !important;
+    position: sticky !important;
+    top: 68px !important;
+    height: calc(100vh - 68px) !important;
+    max-height: calc(100vh - 68px) !important;
+    overflow-y: auto !important;
   }
 }
 

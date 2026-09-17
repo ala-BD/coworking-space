@@ -814,6 +814,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
         <aside
           className={`portal-sidebar ${mobileMenuOpen ? 'portal-sidebar-open' : 'portal-sidebar-desktop'}`}
           style={{
+            display: 'flex',
             flexDirection: 'column',
             flexShrink: 0,
             width: 250,
@@ -823,7 +824,8 @@ export default function PortalLayout({ children, profile, onLogout }) {
             top: mobileMenuOpen ? 0 : 68,
             left: 0,
             bottom: mobileMenuOpen ? 0 : 'auto',
-            height: mobileMenuOpen ? '100vh' : 'auto',
+            height: mobileMenuOpen ? '100vh' : 'calc(100vh - 68px)',
+            maxHeight: mobileMenuOpen ? '100vh' : 'calc(100vh - 68px)',
             zIndex: mobileMenuOpen ? 100 : 20,
             alignSelf: 'flex-start',
             background: dark ? '#131210' : '#ffffff',
