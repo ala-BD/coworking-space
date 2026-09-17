@@ -37,11 +37,11 @@ async function sendEmailUniversal({ to, subject, html, text, attachments = [] })
   const coworkingName = process.env.COWORKING_NAME || 'DeskyWork';
   const fromUser = process.env.SMTP_USER || 'alabendawed@gmail.com';
 
-  // 1. Mailjet API (HTTPS Port 443 — 200 mails/jour gratuits, aucun SMS)
+  // 1. Mailjet API (HTTPS Port 443 — v3.1 Send)
   if (mailjetApiKey && mailjetSecretKey) {
-    console.log(`🚀 Envoi email à ${to} via Mailjet HTTP API...`);
+    console.log(`🚀 Envoi email à ${to} via Mailjet HTTP API v3.1...`);
     const auth = Buffer.from(`${mailjetApiKey.trim()}:${mailjetSecretKey.trim()}`).toString('base64');
-    const res = await fetch('https://api.mailjet.com/v3.5/send', {
+    const res = await fetch('https://api.mailjet.com/v3.1/send', {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${auth}`,
@@ -57,8 +57,14 @@ async function sendEmailUniversal({ to, subject, html, text, attachments = [] })
         }]
       }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(`Mailjet API: ${data.ErrorMessage || JSON.stringify(data)}`);
+    const responseText = await res.text();
+    let data;
+    try { data = JSON.parse(responseText); } catch { data = null; }
+
+    if (!res.ok) {
+      const errMsg = data?.Messages?.[0]?.Errors?.[0]?.ErrorMessage || data?.ErrorMessage || responseText.slice(0, 150);
+      throw new Error(`Mailjet API (${res.status}): ${errMsg}`);
+    }
     return data;
   }
 
