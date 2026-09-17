@@ -30,44 +30,36 @@ function createTransporter() {
  * Service universel d'envoi d'emails (HTTP API Resend / Brevo avec fallback SMTP)
  */
 async function sendEmailUniversal({ to, subject, html, text, attachments = [] }) {
+  const mailjetApiKey = process.env.MAILJET_API_KEY;
+  const mailjetSecretKey = process.env.MAILJET_SECRET_KEY;
   const resendApiKey = process.env.RESEND_API_KEY;
   const brevoApiKey = process.env.BREVO_API_KEY;
   const coworkingName = process.env.COWORKING_NAME || 'DeskyWork';
   const fromUser = process.env.SMTP_USER || 'alabendawed@gmail.com';
 
-  // 1. Resend API (HTTPS Port 443 — Idéal pour Render gratuit)
-  if (resendApiKey) {
-    console.log(`🚀 Envoi email à ${to} via Resend HTTP API...`);
-    try {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendApiKey.trim()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: process.env.RESEND_FROM || `${coworkingName} <onboarding@resend.dev>`,
-          to: [to],
-          subject: subject,
-          html: html,
-          text: text,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) return data;
-
-      // Si c'est la restriction du mode test Resend (envoi uniquement vers le compte propriétaire)
-      if (data.message && data.message.includes('only send testing emails')) {
-        console.warn(`⚠️ Resend mode test : envoi à ${to} refusé car le domaine n'est pas vérifié. Tentative de fallback...`);
-        if (!brevoApiKey) {
-          throw new Error(`Resend est en mode Test. En aménagement gratuit sans domaine, vous devez tester avec votre email propriétaire (${fromUser}) OU ajouter la clé BREVO_API_KEY (300 mails/jour gratuits vers tout destinataire).`);
-        }
-      } else {
-        throw new Error(`Resend API: ${data.message || res.statusText}`);
-      }
-    } catch (err) {
-      if (!brevoApiKey) throw err;
-    }
+  // 1. Mailjet API (HTTPS Port 443 — 200 mails/jour gratuits, aucun SMS)
+  if (mailjetApiKey && mailjetSecretKey) {
+    console.log(`🚀 Envoi email à ${to} via Mailjet HTTP API...`);
+    const auth = Buffer.from(`${mailjetApiKey.trim()}:${mailjetSecretKey.trim()}`).toString('base64');
+    const res = await fetch('https://api.mailjet.com/v3.5/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        Messages: [{
+          From: { Email: fromUser, Name: coworkingName },
+          To: [{ Email: to }],
+          Subject: subject,
+          HTMLPart: html,
+          TextPart: text,
+        }]
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Mailjet API: ${data.ErrorMessage || JSON.stringify(data)}`);
+    return data;
   }
 
   // 2. Brevo (Sendinblue) API (HTTPS Port 443)
@@ -110,43 +102,43 @@ async function sendEmailUniversal({ to, subject, html, text, attachments = [] })
 }
 
 // ── Palette couleurs (DeskyWork : Noir, Orange, Blanc) ───────────────────────
-const PRIMARY   = '#100F0D';
+const PRIMARY = '#100F0D';
 const SECONDARY = '#F95D00';
-const ACCENT    = '#F95D00';
-const LIGHT     = '#FFF7ED';
-const MUTED     = '#6B7280';
-const SUCCESS   = '#059669';
-const WARNING   = '#D97706';
-const WHITE     = '#FFFFFF';
+const ACCENT = '#F95D00';
+const LIGHT = '#FFF7ED';
+const MUTED = '#6B7280';
+const SUCCESS = '#059669';
+const WARNING = '#D97706';
+const WHITE = '#FFFFFF';
 
 // ── Labels ───────────────────────────────────────────────────────────────────
 const MODE_LABELS = {
-  cash:          'Espèces',
+  cash: 'Espèces',
   bank_transfer: 'Virement bancaire',
-  check:         'Chèque',
-  online:        'Paiement en ligne',
+  check: 'Chèque',
+  online: 'Paiement en ligne',
 };
 
 const STATUT_COLORS = {
-  paid:     SUCCESS,
-  pending:  WARNING,
-  failed:   '#DC2626',
+  paid: SUCCESS,
+  pending: WARNING,
+  failed: '#DC2626',
   refunded: '#7C3AED',
 };
 
 const STATUT_LABELS = {
-  paid:     'Payé ✓',
-  pending:  'En attente',
-  failed:   'Échoué',
+  paid: 'Payé ✓',
+  pending: 'En attente',
+  failed: 'Échoué',
   refunded: 'Remboursé',
 };
 
 const ABONNEMENT_LABELS = {
-  day_pass:     'Day Pass',
-  week_pass:    'Week Pass',
-  mensuel:      'Mensuel',
-  trimestriel:  'Trimestriel',
-  annuel:       'Annuel',
+  day_pass: 'Day Pass',
+  week_pass: 'Week Pass',
+  mensuel: 'Mensuel',
+  trimestriel: 'Trimestriel',
+  annuel: 'Annuel',
   bureau_prive: 'Bureau Privé',
 };
 
@@ -155,14 +147,14 @@ const ABONNEMENT_LABELS = {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function buildReceiptEmailHTML(payment, config) {
-  const membre      = payment.profiles || {};
-  const prenom      = membre.prenom || 'Membre';
+  const membre = payment.profiles || {};
+  const prenom = membre.prenom || 'Membre';
   const reservation = payment.reservations || null;
-  const abonnement  = payment.abonnements  || null;
+  const abonnement = payment.abonnements || null;
 
   const montant = parseFloat(payment.montant || 0).toFixed(3);
-  const statut  = payment.statut || 'pending';
-  const numero  = payment.numero_recu || payment.id;
+  const statut = payment.statut || 'pending';
+  const numero = payment.numero_recu || payment.id;
 
   const datePaiement = payment.date_paiement
     ? new Date(payment.date_paiement).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -170,10 +162,10 @@ function buildReceiptEmailHTML(payment, config) {
 
   let serviceDetail = 'Service coworking';
   if (reservation) {
-    const nom  = reservation.espaces?.nom || 'Espace';
+    const nom = reservation.espaces?.nom || 'Espace';
     const date = new Date(reservation.date_debut).toLocaleDateString('fr-FR');
-    const h1   = new Date(reservation.date_debut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    const h2   = new Date(reservation.date_fin).toLocaleTimeString('fr-FR',   { hour: '2-digit', minute: '2-digit' });
+    const h1 = new Date(reservation.date_debut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const h2 = new Date(reservation.date_fin).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     serviceDetail = `Réservation — ${nom} · ${date} de ${h1} à ${h2}`;
   } else if (abonnement) {
     const d1 = new Date(abonnement.date_debut).toLocaleDateString('fr-FR');
@@ -181,8 +173,8 @@ function buildReceiptEmailHTML(payment, config) {
     serviceDetail = `Abonnement ${ABONNEMENT_LABELS[abonnement.type] || abonnement.type} · ${d1} → ${d2}`;
   }
 
-  const statutColor = STATUT_COLORS[statut]  || WARNING;
-  const statutLabel = STATUT_LABELS[statut]  || statut;
+  const statutColor = STATUT_COLORS[statut] || WARNING;
+  const statutLabel = STATUT_LABELS[statut] || statut;
 
   return `
 <!DOCTYPE html>
@@ -245,9 +237,9 @@ function buildReceiptEmailHTML(payment, config) {
             </p>
             <p style="margin:0 0 28px;color:#374151;font-size:14px;line-height:1.6;">
               ${statut === 'paid'
-                ? 'Votre paiement a bien été enregistré. Vous trouverez votre reçu officiel en pièce jointe de cet email.'
-                : 'Votre paiement est en attente de validation. Vous recevrez une confirmation dès qu\'il sera traité.'
-              }
+      ? 'Votre paiement a bien été enregistré. Vous trouverez votre reçu officiel en pièce jointe de cet email.'
+      : 'Votre paiement est en attente de validation. Vous recevrez une confirmation dès qu\'il sera traité.'
+    }
             </p>
 
             <!-- Détail paiement -->
@@ -343,14 +335,14 @@ function buildReceiptEmailHTML(payment, config) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function buildReminderEmailHTML(payment, joursRetard, config) {
-  const membre  = payment.profiles || {};
-  const prenom  = membre.prenom || 'Membre';
+  const membre = payment.profiles || {};
+  const prenom = membre.prenom || 'Membre';
   const montant = parseFloat(payment.montant || 0).toFixed(3);
-  const numero  = payment.numero_recu || payment.id;
+  const numero = payment.numero_recu || payment.id;
 
-  const urgenceColor  = joursRetard >= 15 ? '#DC2626' : joursRetard >= 7 ? WARNING : '#D97706';
-  const urgenceText   = joursRetard >= 15 ? 'URGENT — Dernier rappel' : joursRetard >= 7 ? 'Rappel important' : 'Rappel de paiement';
-  const urgenceEmoji  = joursRetard >= 15 ? '🚨' : joursRetard >= 7 ? '⚠️' : '💳';
+  const urgenceColor = joursRetard >= 15 ? '#DC2626' : joursRetard >= 7 ? WARNING : '#D97706';
+  const urgenceText = joursRetard >= 15 ? 'URGENT — Dernier rappel' : joursRetard >= 7 ? 'Rappel important' : 'Rappel de paiement';
+  const urgenceEmoji = joursRetard >= 15 ? '🚨' : joursRetard >= 7 ? '⚠️' : '💳';
 
   return `
 <!DOCTYPE html>
@@ -389,9 +381,9 @@ function buildReminderEmailHTML(payment, joursRetard, config) {
               Nous vous contactons car un paiement de votre compte est toujours en attente 
               depuis <strong>${joursRetard} jour${joursRetard > 1 ? 's' : ''}</strong>.
               ${joursRetard >= 15
-                ? ' <strong>Sans régularisation dans les prochaines 48h, votre accès pourra être suspendu.</strong>'
-                : ' Merci de régulariser votre situation dès que possible.'
-              }
+      ? ' <strong>Sans régularisation dans les prochaines 48h, votre accès pourra être suspendu.</strong>'
+      : ' Merci de régulariser votre situation dès que possible.'
+    }
             </p>
 
             <!-- Détail paiement -->
@@ -475,29 +467,29 @@ function buildReminderEmailHTML(payment, joursRetard, config) {
  */
 async function sendReceiptEmail(payment, pdfBuffer, config) {
   const transporter = createTransporter();
-  const membre      = payment.profiles || {};
-  const toEmail     = membre.email;
+  const membre = payment.profiles || {};
+  const toEmail = membre.email;
 
   if (!toEmail) {
     console.warn(`⚠️  sendReceiptEmail : pas d'email pour le membre ${payment.user_id}, email non envoyé.`);
     return null;
   }
 
-  const numero    = payment.numero_recu || payment.id;
-  const montant   = parseFloat(payment.montant || 0).toFixed(3);
-  const isPayee   = payment.statut === 'paid';
+  const numero = payment.numero_recu || payment.id;
+  const montant = parseFloat(payment.montant || 0).toFixed(3);
+  const isPayee = payment.statut === 'paid';
 
   const mailOptions = {
-    from:    process.env.EMAIL_FROM || `"${config.coworkingName}" <${config.coworkingEmail}>`,
-    to:      toEmail,
+    from: process.env.EMAIL_FROM || `"${config.coworkingName}" <${config.coworkingEmail}>`,
+    to: toEmail,
     subject: isPayee
       ? `✅ Reçu de paiement ${numero} — ${montant} DT — ${config.coworkingName}`
       : `💳 Paiement enregistré ${numero} — ${config.coworkingName}`,
     html: buildReceiptEmailHTML(payment, config),
     attachments: isPayee && pdfBuffer ? [
       {
-        filename:    `recu-${numero}.pdf`,
-        content:     pdfBuffer,
+        filename: `recu-${numero}.pdf`,
+        content: pdfBuffer,
         contentType: 'application/pdf',
       },
     ] : [],
@@ -522,28 +514,28 @@ async function sendReceiptEmail(payment, pdfBuffer, config) {
  */
 async function sendReminderEmail(payment, joursRetard, config) {
   const transporter = createTransporter();
-  const membre      = payment.profiles || {};
-  const toEmail     = membre.email;
+  const membre = payment.profiles || {};
+  const toEmail = membre.email;
 
   if (!toEmail) {
     console.warn(`⚠️  sendReminderEmail : pas d'email pour ${payment.user_id}, email non envoyé.`);
     return null;
   }
 
-  const numero  = payment.numero_recu || payment.id;
+  const numero = payment.numero_recu || payment.id;
   const montant = parseFloat(payment.montant || 0).toFixed(3);
 
   const subjectMap = {
-    3:  `💳 Rappel : paiement ${numero} en attente — ${montant} DT`,
-    7:  `⚠️ Rappel urgent : paiement ${numero} toujours impayé — ${montant} DT`,
+    3: `💳 Rappel : paiement ${numero} en attente — ${montant} DT`,
+    7: `⚠️ Rappel urgent : paiement ${numero} toujours impayé — ${montant} DT`,
     15: `🚨 URGENT : régularisez votre paiement ${numero} — ${montant} DT`,
   };
 
   const mailOptions = {
-    from:    process.env.EMAIL_FROM || `"${config.coworkingName}" <${config.coworkingEmail}>`,
-    to:      toEmail,
+    from: process.env.EMAIL_FROM || `"${config.coworkingName}" <${config.coworkingEmail}>`,
+    to: toEmail,
     subject: subjectMap[joursRetard] || `Rappel de paiement — ${numero}`,
-    html:    buildReminderEmailHTML(payment, joursRetard, config),
+    html: buildReminderEmailHTML(payment, joursRetard, config),
   };
 
   try {

@@ -150,8 +150,8 @@ router.post('/otp/send', async (req, res) => {
 
     if (insertError) throw insertError;
 
-    // Envoyer l'email (Resend/Brevo HTTP API ou SMTP)
-    if (process.env.RESEND_API_KEY || process.env.BREVO_API_KEY || (process.env.SMTP_USER && process.env.SMTP_PASS)) {
+    // Envoyer l'email (Mailjet/Resend/Brevo HTTP API ou SMTP)
+    if (process.env.MAILJET_API_KEY || process.env.RESEND_API_KEY || process.env.BREVO_API_KEY || (process.env.SMTP_USER && process.env.SMTP_PASS)) {
       try {
         const coworkingName = process.env.COWORKING_NAME || 'DeskyWork';
         const plainTextBody = `Bonjour ${prenom || ''},\n\nVotre code de confirmation pour votre compte ${coworkingName} est : ${code}\n\nCe code est valable pendant 10 minutes.\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n\nL'équipe ${coworkingName}`;
