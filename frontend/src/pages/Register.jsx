@@ -242,15 +242,43 @@ export default function Register() {
         password,
         options: { data: userData },
       });
-      if (signUpError) throw signUpError;
+
+      // Si l'email existe déjà dans Supabase Auth, Supabase ne renvoie pas d'erreur
+      // mais retourne un objet user avec identities vide — on le détecte ici
+      if (signUpError) {
+        // Cas particulier : email déjà utilisé
+        if (signUpError.message?.toLowerCase().includes('already registered') ||
+            signUpError.message?.toLowerCase().includes('already been registered') ||
+            signUpError.message?.toLowerCase().includes('user already exists')) {
+          throw new Error('Cette adresse email est déjà utilisée. Veuillez vous connecter ou utiliser une autre adresse.');
+        }
+        throw signUpError;
+      }
+
+      // Détection du cas "email déjà enregistré" sans erreur explicite de Supabase
+      if (signUpData?.user && signUpData.user.identities?.length === 0) {
+        throw new Error('Cette adresse email est déjà associée à un compte. Veuillez vous connecter.');
+      }
 
       // 3. Auto-confirmer l'email via le backend (car l'utilisateur a déjà vérifié son OTP)
       if (signUpData?.user?.id) {
-        await fetch(`${API_URL}/api/otp/auto-confirm`, {
+        const confirmRes = await fetch(`${API_URL}/api/otp/auto-confirm`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: signUpData.user.id, email: cleanEmail, role }),
         });
+        if (!confirmRes.ok) {
+          const confirmData = await confirmRes.json().catch(() => ({}));
+          console.warn('⚠️ Auto-confirm partiel:', confirmData?.error || 'erreur inconnue');
+          // On continue quand même — le compte est créé, juste la confirmation peut nécessiter
+          // une validation manuelle dans Supabase
+        }
+      } else if (!signUpData?.user) {
+        // Supabase a accepté mais n'a pas renvoyé d'user — probable email de confirmation en attente
+        throw new Error(
+          'Un email de confirmation a été envoyé par notre système. ' +
+          'Vérifiez votre boîte de réception (et les spams) puis réessayez.'
+        );
       }
 
       // 4. Succès

@@ -9,25 +9,18 @@ const { supabaseAdmin } = require('../config/supabase');
 
 // ── Transporter SMTP (réutilise la config existante) ─────────────────────────
 function createTransporter() {
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = parseInt(process.env.SMTP_PORT) || 587;
+  const user = process.env.SMTP_USER;
   const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
-  const isGmail = (process.env.SMTP_HOST || '').includes('gmail') || (process.env.SMTP_USER || '').endsWith('@gmail.com');
-
-  if (isGmail) {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: pass,
-      },
-    });
-  }
+  const secure = port === 465;
 
   return nodemailer.createTransport({
-    host:   process.env.SMTP_HOST || 'smtp.gmail.com',
-    port:   parseInt(process.env.SMTP_PORT) || 587,
-    secure: false,
+    host: host,
+    port: port,
+    secure: secure,
     auth: {
-      user: process.env.SMTP_USER,
+      user: user,
       pass: pass,
     },
     tls: { rejectUnauthorized: false },
@@ -178,8 +171,16 @@ router.post('/otp/send', async (req, res) => {
         });
         console.log(`✉️  OTP ${code} envoyé à ${email}`);
       } catch (mailErr) {
-        console.error(`⚠️ Erreur d'envoi SMTP à ${email}:`, mailErr.message);
+        console.error(`❌ Erreur d'envoi SMTP à ${email}:`, mailErr.message);
+        return res.status(500).json({
+          error: `Erreur d'envoi d'email SMTP (${mailErr.message}). Vérifiez les identifiants SMTP (SMTP_USER / SMTP_PASS) sur Render.`
+        });
       }
+    } else {
+      console.warn(`⚠️ SMTP non configuré sur Render. Code OTP généré en console : ${code}`);
+      return res.status(500).json({
+        error: "Le service d'envoi d'emails n'est pas configuré sur le serveur Render. (SMTP_USER et SMTP_PASS manquants)."
+      });
     }
 
     console.log(`\n========================================\n🔐 CODE OTP envoyé à ${email} : ${code}\n========================================\n`);
