@@ -38,25 +38,36 @@ async function sendEmailUniversal({ to, subject, html, text, attachments = [] })
   // 1. Resend API (HTTPS Port 443 — Idéal pour Render gratuit)
   if (resendApiKey) {
     console.log(`🚀 Envoi email à ${to} via Resend HTTP API...`);
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey.trim()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM || `${coworkingName} <onboarding@resend.dev>`,
-        to: [to],
-        subject: subject,
-        html: html,
-        text: text,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(`Resend API: ${data.message || res.statusText}`);
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey.trim()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM || `${coworkingName} <onboarding@resend.dev>`,
+          to: [to],
+          subject: subject,
+          html: html,
+          text: text,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) return data;
+
+      // Si c'est la restriction du mode test Resend (envoi uniquement vers le compte propriétaire)
+      if (data.message && data.message.includes('only send testing emails')) {
+        console.warn(`⚠️ Resend mode test : envoi à ${to} refusé car le domaine n'est pas vérifié. Tentative de fallback...`);
+        if (!brevoApiKey) {
+          throw new Error(`Resend est en mode Test. En aménagement gratuit sans domaine, vous devez tester avec votre email propriétaire (${fromUser}) OU ajouter la clé BREVO_API_KEY (300 mails/jour gratuits vers tout destinataire).`);
+        }
+      } else {
+        throw new Error(`Resend API: ${data.message || res.statusText}`);
+      }
+    } catch (err) {
+      if (!brevoApiKey) throw err;
     }
-    return data;
   }
 
   // 2. Brevo (Sendinblue) API (HTTPS Port 443)
