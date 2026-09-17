@@ -45,7 +45,7 @@ async function sendEmailUniversal({ to, subject, html, text, attachments = [] })
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || `${coworkingName} <onboarding@resend.dev>`,
+        from: process.env.RESEND_FROM || `${coworkingName} <onboarding@resend.dev>`,
         to: [to],
         subject: subject,
         html: html,
