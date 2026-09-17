@@ -26,6 +26,78 @@ function createTransporter() {
   });
 }
 
+/**
+ * Service universel d'envoi d'emails (HTTP API Resend / Brevo avec fallback SMTP)
+ */
+async function sendEmailUniversal({ to, subject, html, text, attachments = [] }) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const brevoApiKey = process.env.BREVO_API_KEY;
+  const coworkingName = process.env.COWORKING_NAME || 'DeskyWork';
+  const fromUser = process.env.SMTP_USER || 'alabendawed@gmail.com';
+
+  // 1. Resend API (HTTPS Port 443 — Idéal pour Render gratuit)
+  if (resendApiKey) {
+    console.log(`🚀 Envoi email à ${to} via Resend HTTP API...`);
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey.trim()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM || `${coworkingName} <onboarding@resend.dev>`,
+        to: [to],
+        subject: subject,
+        html: html,
+        text: text,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(`Resend API: ${data.message || res.statusText}`);
+    }
+    return data;
+  }
+
+  // 2. Brevo (Sendinblue) API (HTTPS Port 443)
+  if (brevoApiKey) {
+    console.log(`🚀 Envoi email à ${to} via Brevo HTTP API...`);
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': brevoApiKey.trim(),
+        'Content-Type': 'application/json',
+        'accept': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: coworkingName, email: fromUser },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: html,
+        textContent: text,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(`Brevo API: ${data.message || res.statusText}`);
+    }
+    return data;
+  }
+
+  // 3. Fallback Nodemailer SMTP
+  const transporter = createTransporter();
+  const sendPromise = transporter.sendMail({
+    from: process.env.EMAIL_FROM || `"${coworkingName}" <${fromUser}>`,
+    to, subject, text, html, attachments,
+  });
+
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Délai SMTP dépassé. Sur Render gratuit, les ports SMTP (587/465) sont bloqués. Ajoutez RESEND_API_KEY dans vos variables Render.')), 10000)
+  );
+
+  return await Promise.race([sendPromise, timeoutPromise]);
+}
+
 // ── Palette couleurs (DeskyWork : Noir, Orange, Blanc) ───────────────────────
 const PRIMARY   = '#100F0D';
 const SECONDARY = '#F95D00';
@@ -484,4 +556,5 @@ module.exports = {
   sendReceiptEmail,
   sendReminderEmail,
   isEmailConfigured,
+  sendEmailUniversal,
 };

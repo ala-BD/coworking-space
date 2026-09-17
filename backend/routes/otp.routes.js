@@ -6,6 +6,7 @@ const express    = require('express');
 const nodemailer = require('nodemailer');
 const router     = express.Router();
 const { supabaseAdmin } = require('../config/supabase');
+const { sendEmailUniversal } = require('../utils/sendEmail');
 
 // ── Transporter SMTP (réutilise la config existante) ─────────────────────────
 function createTransporter() {
@@ -149,46 +150,30 @@ router.post('/otp/send', async (req, res) => {
 
     if (insertError) throw insertError;
 
-    // Envoyer l'email (si SMTP configuré)
-    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    // Envoyer l'email (Resend/Brevo HTTP API ou SMTP)
+    if (process.env.RESEND_API_KEY || process.env.BREVO_API_KEY || (process.env.SMTP_USER && process.env.SMTP_PASS)) {
       try {
-        const transporter = createTransporter();
         const coworkingName = process.env.COWORKING_NAME || 'DeskyWork';
-        
         const plainTextBody = `Bonjour ${prenom || ''},\n\nVotre code de confirmation pour votre compte ${coworkingName} est : ${code}\n\nCe code est valable pendant 10 minutes.\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n\nL'équipe ${coworkingName}`;
 
-        const sendPromise = transporter.sendMail({
-          from:    `"${coworkingName}" <${process.env.SMTP_USER}>`,
-          to:      email,
-          replyTo: process.env.SMTP_USER,
+        await sendEmailUniversal({
+          to: email,
           subject: `${coworkingName} - Code de confirmation : ${code}`,
-          text:    plainTextBody,
-          html:    buildOtpEmailHTML(code, prenom || ''),
-          headers: {
-            'X-Entity-Ref-Type': 'transactional',
-            'Auto-Submitted': 'auto-generated',
-            'X-Priority': '1',
-            'Importance': 'high',
-          },
+          text: plainTextBody,
+          html: buildOtpEmailHTML(code, prenom || ''),
         });
 
-        // Protection contre le blocage (Timeout 10s)
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Délai d\'attente SMTP dépassé (10s Timeout).')), 10000)
-        );
-
-        await Promise.race([sendPromise, timeoutPromise]);
         console.log(`✉️  OTP ${code} envoyé à ${email}`);
       } catch (mailErr) {
-        console.error(`❌ Erreur d'envoi SMTP à ${email}:`, mailErr.message);
+        console.error(`❌ Erreur d'envoi d'email à ${email}:`, mailErr.message);
         return res.status(500).json({
-          error: `Erreur d'envoi SMTP (${mailErr.message}). Vérifiez votre mot de passe d'application Gmail ou le port SMTP (587 / 465) sur Render.`
+          error: `Erreur d'envoi d'email : ${mailErr.message}`
         });
       }
     } else {
-      console.warn(`⚠️ SMTP non configuré sur Render. Code OTP généré en console : ${code}`);
+      console.warn(`⚠️ Aucun service email configuré sur Render. Code OTP généré en console : ${code}`);
       return res.status(500).json({
-        error: "Le service d'envoi d'emails n'est pas configuré sur le serveur Render. (SMTP_USER et SMTP_PASS manquants)."
+        error: "Le service d'envoi d'emails n'est pas configuré sur le serveur Render. (RESEND_API_KEY ou SMTP_USER/SMTP_PASS requis)."
       });
     }
 
