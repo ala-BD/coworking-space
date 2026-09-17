@@ -2,12 +2,22 @@ const nodemailer = require('nodemailer');
 const { supabaseAdmin } = require('../config/supabase');
 
 function createTransporter() {
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const user = process.env.SMTP_USER;
+  const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
+  const isGmail = host.includes('gmail') || (user || '').endsWith('@gmail.com');
+  const port = Number(process.env.SMTP_PORT) || (isGmail ? 465 : 587);
+  const secure = port === 465 || isGmail;
+
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: false,
+    host: isGmail ? 'smtp.gmail.com' : host,
+    port: isGmail ? 465 : port,
+    secure: secure,
     family: 4,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    auth: { user, pass },
+    connectionTimeout: 8000,
+    greetingTimeout: 4000,
+    socketTimeout: 8000,
     tls: { rejectUnauthorized: false },
   });
 }

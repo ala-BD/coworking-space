@@ -7,17 +7,21 @@ const nodemailer = require('nodemailer');
 // ── Configuration du transporteur SMTP ──────────────────────────────────────
 function createTransporter() {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = parseInt(process.env.SMTP_PORT) || 587;
   const user = process.env.SMTP_USER;
   const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
-  const secure = port === 465;
+  const isGmail = host.includes('gmail') || (user || '').endsWith('@gmail.com');
+  const port = parseInt(process.env.SMTP_PORT) || (isGmail ? 465 : 587);
+  const secure = port === 465 || isGmail;
 
   return nodemailer.createTransport({
-    host: host,
-    port: port,
+    host: isGmail ? 'smtp.gmail.com' : host,
+    port: isGmail ? 465 : port,
     secure: secure,
     family: 4, // Forcer l'IPv4
     auth: { user, pass },
+    connectionTimeout: 8000,
+    greetingTimeout: 4000,
+    socketTimeout: 8000,
     tls: { rejectUnauthorized: false },
   });
 }

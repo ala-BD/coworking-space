@@ -10,20 +10,21 @@ const { supabaseAdmin } = require('../config/supabase');
 // ── Transporter SMTP (réutilise la config existante) ─────────────────────────
 function createTransporter() {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = parseInt(process.env.SMTP_PORT) || 587;
   const user = process.env.SMTP_USER;
   const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
-  const secure = port === 465;
+  const isGmail = host.includes('gmail') || (user || '').endsWith('@gmail.com');
+  const port = parseInt(process.env.SMTP_PORT) || (isGmail ? 465 : 587);
+  const secure = port === 465 || isGmail;
 
   return nodemailer.createTransport({
-    host: host,
-    port: port,
+    host: isGmail ? 'smtp.gmail.com' : host,
+    port: isGmail ? 465 : port,
     secure: secure,
-    family: 4, // Forcer l'IPv4 (contourne le problème d'absence d'IPv6 sur Render)
+    family: 4, // Forcer l'IPv4 sur Render
     auth: { user: user, pass: pass },
-    connectionTimeout: 8000, // Max 8s pour établir la connexion SMTP
-    greetingTimeout: 4000,   // Max 4s pour le message de bienvenue SMTP
-    socketTimeout: 8000,     // Max 8s d'inactivité réseau
+    connectionTimeout: 8000,
+    greetingTimeout: 4000,
+    socketTimeout: 8000,
     tls: { rejectUnauthorized: false },
   });
 }
