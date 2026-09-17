@@ -192,20 +192,55 @@ canvas {
 /* Fix Tailwind v4: les tokens custom --spacing-sm/md/lg/xl (tokens Material 3)
    détournent les utilitaires max-w-sm/md/lg/xl → largeurs cassées (ex: modale à 24px).
    On restaure les tailles de conteneur standard. */
-.max-w-xs { max-width: min(20rem, calc(100vw - 24px)); }
-.max-w-sm { max-width: min(24rem, calc(100vw - 24px)); }
-.max-w-md { max-width: min(28rem, calc(100vw - 24px)); }
-.max-w-lg { max-width: min(32rem, calc(100vw - 24px)); }
-.max-w-xl { max-width: min(36rem, calc(100vw - 24px)); }
-.max-w-2xl { max-width: min(42rem, calc(100vw - 24px)); }
-.max-w-3xl { max-width: min(48rem, calc(100vw - 24px)); }
-.max-w-4xl { max-width: min(56rem, calc(100vw - 24px)); }
-.max-w-5xl { max-width: min(64rem, calc(100vw - 24px)); }
-.max-w-6xl { max-width: min(72rem, calc(100vw - 24px)); }
-.max-w-7xl { max-width: min(80rem, calc(100vw - 24px)); }
+.max-w-xs {
+  max-width: min(20rem, calc(100vw - 24px));
+}
+
+.max-w-sm {
+  max-width: min(24rem, calc(100vw - 24px));
+}
+
+.max-w-md {
+  max-width: min(28rem, calc(100vw - 24px));
+}
+
+.max-w-lg {
+  max-width: min(32rem, calc(100vw - 24px));
+}
+
+.max-w-xl {
+  max-width: min(36rem, calc(100vw - 24px));
+}
+
+.max-w-2xl {
+  max-width: min(42rem, calc(100vw - 24px));
+}
+
+.max-w-3xl {
+  max-width: min(48rem, calc(100vw - 24px));
+}
+
+.max-w-4xl {
+  max-width: min(56rem, calc(100vw - 24px));
+}
+
+.max-w-5xl {
+  max-width: min(64rem, calc(100vw - 24px));
+}
+
+.max-w-6xl {
+  max-width: min(72rem, calc(100vw - 24px));
+}
+
+.max-w-7xl {
+  max-width: min(80rem, calc(100vw - 24px));
+}
 
 /* Responsive Input & Textarea safety */
-input, select, textarea, button {
+input,
+select,
+textarea,
+button {
   max-width: 100%;
 }
 
@@ -672,31 +707,16 @@ a:hover.hover\:underline,
     padding: 16px 12px 32px !important;
   }
 
-  .portal-main > div {
+  .portal-main>div {
     max-width: 100% !important;
   }
 }
 
-/* Sidebar toujours visible et 100% fixe sur desktop */
+/* Sidebar toujours visible sur desktop */
 @media (min-width: 1024px) {
   .portal-sidebar {
     display: flex !important;
-    flex-direction: column !important;
-    position: fixed !important;
-    top: 68px !important;
-    left: 0 !important;
-    bottom: 0 !important;
-    width: 250px !important;
-    height: calc(100vh - 68px) !important;
-    max-height: calc(100vh - 68px) !important;
-    overflow-y: auto !important;
-    z-index: 30 !important;
-  }
-
-  .portal-main {
-    margin-left: 250px !important;
-    width: calc(100% - 250px) !important;
-    min-width: 0 !important;
+    flex-direction: column;
   }
 }
 
@@ -758,25 +778,25 @@ a:hover.hover\:underline,
     padding: 12px 16px !important;
   }
 
-  .auth-mobile-header > a:last-child {
+  .auth-mobile-header>a:last-child {
     margin-left: auto;
     white-space: nowrap;
   }
 }
 
 @media (max-width: 359px) {
-  .auth-mobile-header > a:last-child {
+  .auth-mobile-header>a:last-child {
     width: 100%;
     margin-left: 0;
     text-align: right;
   }
 
-  .auth-mobile-header + main {
+  .auth-mobile-header+main {
     padding-left: 12px !important;
     padding-right: 12px !important;
   }
 
-  .auth-mobile-header + main .glass-card {
+  .auth-mobile-header+main .glass-card {
     padding: 16px !important;
   }
 }
@@ -789,6 +809,7 @@ a:hover.hover\:underline,
     opacity: 0;
     transform: translateY(16px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -799,6 +820,7 @@ a:hover.hover\:underline,
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -809,6 +831,7 @@ a:hover.hover\:underline,
     opacity: 0;
     transform: translateX(-24px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -819,18 +842,23 @@ a:hover.hover\:underline,
   0% {
     box-shadow: 0 0 0 0 rgba(249, 93, 0, 0.35);
   }
+
   70% {
     box-shadow: 0 0 0 12px rgba(249, 93, 0, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(249, 93, 0, 0);
   }
 }
 
 @keyframes pulseNotif {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.15);
   }
@@ -873,6 +901,7 @@ a:hover.hover\:underline,
    Responsive helpers
    ═══════════════════════════════════════════════ */
 @media (max-width: 767px) {
+
   /* Bottom nav offset */
   .portal-mobile-offset {
     padding-bottom: 72px;
@@ -881,6 +910,12 @@ a:hover.hover\:underline,
 
 /* ── Notification badge pulse ── */
 @keyframes pulseNotif {
-  0%, 100% { box-shadow: 0 2px 6px rgba(249, 93, 0, 0.5); }
-  50%       { box-shadow: 0 2px 14px rgba(249, 93, 0, 0.9); }
+  0%,
+  100% {
+    box-shadow: 0 2px 6px rgba(249, 93, 0, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 2px 14px rgba(249, 93, 0, 0.9);
+  }
 }
