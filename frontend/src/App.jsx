@@ -96,9 +96,14 @@ export default function App() {
 
 
   useEffect(() => {
-    const isRecoveryLink = window.location.hash.includes('access_token=')
-      || window.location.search.includes('type=recovery')
-      || window.location.search.includes('code=');
+    // Détection lien de réinitialisation de mot de passe :
+    // - hash avec access_token (flow implicite Supabase)
+    // - OU type=recovery dans les query params (flow PKCE avec type explicite)
+    // ⚠️  Ne PAS inclure "code=" seul : ce paramètre est aussi utilisé par Google/LinkedIn OAuth
+    //     et ne doit PAS être traité comme un lien de reset mot de passe.
+    const isRecoveryLink =
+      window.location.hash.includes('access_token=') && window.location.hash.includes('type=recovery')
+      || window.location.search.includes('type=recovery');
     if (isRecoveryLink && window.location.pathname === '/') {
       window.location.replace(`/reset-password${window.location.search}${window.location.hash}`);
       return undefined;

@@ -796,7 +796,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
         </div>
       </header>
 
-      <div className="portal-shell" style={{ display: 'flex', paddingTop: 68 }}>
+      <div className="portal-shell" style={{ display: 'flex', paddingTop: 68, position: 'relative' }}>
 
         {/* Mobile Overlay Backdrop */}
         {mobileMenuOpen && (
@@ -810,30 +810,29 @@ export default function PortalLayout({ children, profile, onLogout }) {
           />
         )}
 
-        {/* Sidebar (Desktop + Mobile Drawer) */}
+        {/* Sidebar (Desktop fixed + Mobile Drawer) */}
         <aside
           className={`portal-sidebar ${mobileMenuOpen ? 'portal-sidebar-open' : 'portal-sidebar-desktop'}`}
           style={{
+            display: 'flex',
             flexDirection: 'column',
             flexShrink: 0,
             width: 250,
             maxWidth: '85vw',
-            minHeight: mobileMenuOpen ? '100vh' : 'calc(100vh - 68px)',
-            position: mobileMenuOpen ? 'fixed' : 'sticky',
+            height: '100vh',
+            position: 'fixed',
             top: mobileMenuOpen ? 0 : 68,
             left: 0,
-            bottom: mobileMenuOpen ? 0 : 'auto',
-            height: mobileMenuOpen ? '100vh' : 'auto',
-            zIndex: mobileMenuOpen ? 100 : 20,
-            alignSelf: 'flex-start',
+            bottom: 0,
+            zIndex: mobileMenuOpen ? 100 : 40,
             background: dark ? '#131210' : '#ffffff',
             backdropFilter: 'blur(12px)',
             WebkitBackdropFilter: 'blur(12px)',
             borderRight: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(16,15,13,0.08)',
             padding: mobileMenuOpen ? '20px 14px' : '24px 12px',
             overflowY: 'auto',
-            boxShadow: mobileMenuOpen ? '4px 0 30px rgba(0,0,0,0.35)' : 'none',
-            transition: 'background 0.3s ease',
+            boxShadow: mobileMenuOpen ? '4px 0 30px rgba(0,0,0,0.35)' : '2px 0 20px rgba(0,0,0,0.06)',
+            transition: 'background 0.3s ease, transform 0.3s ease',
           }}
         >
           {mobileMenuOpen && (
@@ -933,6 +932,7 @@ export default function PortalLayout({ children, profile, onLogout }) {
           flex: 1, overflowX: 'hidden',
           minHeight: 'calc(100vh - 68px)',
           minWidth: 0,
+          marginLeft: 250,
         }}>
           <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%' }}>
             {/* Breadcrumb — Fil d'ariane (Spec §13) */}

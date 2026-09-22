@@ -705,6 +705,7 @@ a:hover.hover\:underline,
     width: 100% !important;
     min-width: 0 !important;
     padding: 16px 12px 32px !important;
+    margin-left: 0 !important;
   }
 
   .portal-main>div {
@@ -714,10 +715,6 @@ a:hover.hover\:underline,
 
 /* Sidebar toujours visible sur desktop */
 @media (min-width: 1024px) {
-  .portal-shell {
-    padding-left: 250px !important;
-  }
-
   .portal-sidebar {
     display: flex !important;
     flex-direction: column;
@@ -926,6 +923,7 @@ a:hover.hover\:underline,
 
 /* ── Notification badge pulse ── */
 @keyframes pulseNotif {
+
   0%,
   100% {
     box-shadow: 0 2px 6px rgba(249, 93, 0, 0.5);
